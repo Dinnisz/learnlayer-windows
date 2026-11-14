@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "../../styles/base.css";
 import "../../components/settings/settings.css";
 import "./home.css";
+import "./account.css";
 import { LocalizationProvider, systemLanguage } from "../../i18n";
 import { HomeWindow } from "./HomeWindow";
 

@@ -1,0 +1,276 @@
+/* Account, Plan & usage, and the sheets over the LearnLayer window. */
+
+.account-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+}
+
+.account-profile strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.account-avatar {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+
+.plan-banner {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.plan-current {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.plan-current-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.plan-current-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.plan-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-usage-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-usage-count {
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+.plan-card-name {
+  height: 20px;
+  font-weight: 600;
+}
+
+.plan-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+}
+
+.plan-card-price .small {
+  font-size: 16px;
+}
+
+.plan-card-price .settings-row-detail {
+  font-family: var(--font-text);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.plan-card-perk {
+  margin: 0;
+  min-height: 32px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.plan-card-spacer {
+  height: 26px;
+}
+
+/* Sheets */
+
+.sheet {
+  padding: 0;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--window);
+  color: var(--text);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 35%);
+  animation: sheet-in 0.22s var(--spring);
+}
+
+.sheet::backdrop {
+  background: rgb(0 0 0 / 30%);
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+}
+
+.sheet-body h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.sheet-body p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.sheet-body .sheet-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.sheet-field {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--card-border);
+  border-radius: 7px;
+  background: var(--field);
+  user-select: text;
+}
+
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sheet-links {
+  display: flex;
+  gap: 16px;
+}
+
+.sheet-links button,
+.signin-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+}
+
+/* The sign-in card: always dark, as on the Mac. */
+
+.sheet.dark {
+  border-radius: 24px;
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(28 28 30 / 92%);
+  backdrop-filter: blur(30px);
+  color: #fff;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .sheet.dark {
+    background: #000;
+    backdrop-filter: none;
+  }
+}
+
+.signin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  min-height: 580px;
+  padding: 28px;
+  justify-content: center;
+}
+
+.signin h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.signin p {
+  margin: 0;
+  max-width: 360px;
+  font-size: 15px;
+  text-align: center;
+  color: rgb(255 255 255 / 62%);
+}
+
+.signin-field,
+.signin-action {
+  width: 280px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.signin-field {
+  padding: 0 14px;
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+  user-select: text;
+}
+
+.signin-field::placeholder {
+  color: rgb(255 255 255 / 35%);
+}
+
+.signin-action {
+  background: #0a84ff;
+  color: #fff;
+  font-weight: 600;
+}
+
+.signin-action:disabled {
+  opacity: 0.5;
+}
+
+.signin .signin-link {
+  color: rgb(255 255 255 / 70%);
+}
+
+.signin .signin-message {
+  font-size: 13px;
+  color: rgb(255 255 255 / 75%);
+}
