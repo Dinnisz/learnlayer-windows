@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
-import { AccountModel, deviceNameFor, type AccountState } from "@core/account/accountModel";
+import { AccountModel, type AccountState } from "@core/account/accountModel";
 import { BackendClient } from "@core/ai/backendClient";
+import { deviceNameFor } from "@core/platform";
 import { appConfig, nativeFetch, openExternal, preferences, session } from "../native";
 import { demoFetch, demoSession, isDemo } from "./demo";
 
@@ -16,7 +17,7 @@ export function accountModel(): Promise<AccountModel> {
         preferences,
         environment: { ...config.environment, LEARNLAYER_SITE_BASE: config.siteBase },
         open: (url) => void openExternal(url),
-        deviceName: () => deviceNameFor(config.computerName),
+        deviceName: () => deviceNameFor(config.computerName, config.platform),
       }),
   );
   return shared;

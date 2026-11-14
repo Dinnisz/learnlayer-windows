@@ -13,7 +13,7 @@ import {
   SettingsRow,
 } from "../../../components/settings/SettingsKit";
 import { Sheet } from "../../../components/Sheet";
-import { useLanguage, useT } from "../../../i18n";
+import { useLanguage, usePlatform, useT } from "../../../i18n";
 import { saveTextFile } from "../../../native";
 
 /** Account: sign-in against the LearnLayer API, plus the data that stays on this computer. */
@@ -88,6 +88,7 @@ export function SignInRow() {
 function AccountDevicesGroup() {
   const t = useT();
   const language = useLanguage();
+  const { unnamedDevice } = usePlatform();
   const { state, model } = useAccount();
   const [revoking, setRevoking] = useState<RemoteDevice | null>(null);
 
@@ -113,7 +114,7 @@ function AccountDevicesGroup() {
         {state.devices.map((device) => (
           <SettingsRow
             key={device.id}
-            title={device.name || "Windows"}
+            title={device.name || unnamedDevice}
             detail={lastUsed(device)}
             symbol="laptopcomputer"
           >

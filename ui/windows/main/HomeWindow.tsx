@@ -16,8 +16,8 @@ import {
 import { Icon } from "../../components/Icon";
 import { SettingsPage } from "../../components/settings/SettingsKit";
 import { accountModel } from "../../account/accountStore";
-import { useT } from "../../i18n";
-import { appConfig, onDeepLink } from "../../native";
+import { usePlatform, useT } from "../../i18n";
+import { appConfig, onDeepLink, onNavigate, setTrayLabels } from "../../native";
 import { AccountPane } from "./panes/AccountPane";
 import { PlanPane } from "./panes/PlanPane";
 import { ConsentSheet, SignInSheet } from "./sheets/SignInSheet";
@@ -37,11 +37,14 @@ function useHomeRoute(): [HomeRoute, (route: HomeRoute) => void] {
 /** The LearnLayer window: a sidebar of eight sections in three groups and one pane. */
 export function HomeWindow() {
   const [route, select] = useHomeRoute();
+  const t = useT();
+  const { shortcutModifier } = usePlatform();
 
-  // Ctrl+1…Ctrl+8 jump to a section in sidebar order (⌘1…⌘8 on the Mac).
+  // The first eight digits jump to a section in sidebar order, with the platform's modifier.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return;
+      const modifiers = ["ctrlKey", "metaKey", "altKey", "shiftKey"] as const;
+      if (modifiers.some((modifier) => event[modifier] !== (modifier === shortcutModifier))) return;
       const target = homeRoutes.find((candidate) => String(shortcutDigit(candidate)) === event.key);
       if (target) {
         event.preventDefault();
@@ -51,7 +54,20 @@ export function HomeWindow() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [shortcutModifier]);
+
+  // The tray menu, the pill or a second launch name a section; the tray menu is told its labels.
+  useEffect(() => {
+    void setTrayLabels({ open: t("Open window"), settings: t("Settings"), quit: t("Quit LearnLayer") });
+    let stop = () => {};
+    let cancelled = false;
+    void onNavigate((name) => select(resolve(name))).then((unlisten) => (cancelled ? unlisten() : (stop = unlisten)));
+    return () => {
+      cancelled = true;
+      stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   // `learnlayer://` links: finish a sign-in, refresh after a payment, or open a section.
   useEffect(() => {
@@ -83,6 +99,7 @@ export function HomeWindow() {
 
 function HomeSidebar({ selection, onSelect }: { selection: HomeRoute; onSelect: (route: HomeRoute) => void }) {
   const t = useT();
+  const { shortcutPrefix } = usePlatform();
   const [version, setVersion] = useState("");
   useEffect(() => {
     void appConfig().then((config) => setVersion(config.version));
@@ -103,7 +120,10 @@ function HomeSidebar({ selection, onSelect }: { selection: HomeRoute; onSelect: 
             >
               <Icon symbol={systemImage(route)} size={14} />
               <span className="home-sidebar-title">{t(titleKey(route))}</span>
-              <kbd aria-hidden="true">Ctrl+{shortcutDigit(route)}</kbd>
+              <kbd aria-hidden="true">
+                {shortcutPrefix}
+                {shortcutDigit(route)}
+              </kbd>
             </button>
           ))}
         </section>

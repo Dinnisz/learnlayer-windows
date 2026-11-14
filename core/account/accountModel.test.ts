@@ -7,12 +7,12 @@ import { BackendClient, type AuthTokens, type Fetch } from "../ai/backendClient"
 import {
   AccountModel,
   consentToAsk,
-  deviceNameFor,
   planKey,
   PlanDefaults,
   type Preferences,
   type SessionGateway,
 } from "./accountModel";
+import { deviceNameFor } from "../platform";
 import { codeChallenge } from "./appLogin";
 
 type Reply = [number, string];
@@ -380,8 +380,9 @@ describe("PlanDefaults (SettingsTests)", () => {
 
 describe("deviceNameFor", () => {
   it("names the computer and stays within 80 characters", () => {
-    expect(deviceNameFor("DESKTOP-ABC")).toBe("Windows · DESKTOP-ABC");
-    expect(deviceNameFor("  ")).toBe("Windows");
-    expect(deviceNameFor("X".repeat(200))).toHaveLength(80);
+    expect(deviceNameFor("DESKTOP-ABC", "windows")).toBe("Windows · DESKTOP-ABC");
+    expect(deviceNameFor("  ", "windows")).toBe("Windows");
+    expect(deviceNameFor("X".repeat(200), "windows")).toHaveLength(80);
+    expect(deviceNameFor("MacBook-Air-da-Ana.local", "macos")).toBe("MacBook-Air-da-Ana.local");
   });
 });

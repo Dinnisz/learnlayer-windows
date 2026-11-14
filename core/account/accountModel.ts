@@ -51,7 +51,7 @@ export interface AccountDependencies {
   environment: Environment;
   /** Opens a link in the default browser. */
   open: (url: string) => void;
-  /** "Windows · DESKTOP-ABC", at most 80 characters. */
+  /** The name of this computer in the device list (`deviceNameFor` in core/platform.ts). */
   deviceName: () => string;
   /** Called with the user id after the account is deleted, so the memory sync keys are forgotten too. */
   forgetSyncKeys?: (userID: string) => void;
@@ -80,12 +80,6 @@ const unreachable = "Couldn’t reach LearnLayer. Try again.";
 
 export function consentToAsk(status: ConsentStatus): ConsentVersions | null {
   return status.upToDate ? null : status.current;
-}
-
-/** "Windows · DESKTOP-ABC", cut to the 80 characters the API keeps. */
-export function deviceNameFor(computerName: string): string {
-  const name = computerName.trim();
-  return (name === "" ? "Windows" : `Windows · ${name}`).slice(0, 80);
 }
 
 /** The signed-in student, the plans the server published, and the checkout on the site. */

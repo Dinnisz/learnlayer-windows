@@ -18,6 +18,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: here("./ui/index.html"),
+        pill: here("./ui/pill.html"),
       },
     },
   },

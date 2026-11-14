@@ -1,0 +1,165 @@
+/* The pill: black, fully rounded, about 180×32 at rest, opening downward with a spring (CLAUDE.md §7). */
+
+.pill-body {
+  background: transparent;
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.pill-body #root {
+  height: auto;
+}
+
+.pill {
+  background: #000;
+  color: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  transition:
+    width 0.35s var(--spring),
+    height 0.35s var(--spring),
+    border-radius 0.35s var(--ease-out);
+}
+
+.pill.open {
+  border-radius: 18px;
+}
+
+.pill-ears {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+}
+
+.pill-ear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill-accent {
+  color: #0a84ff;
+}
+
+.pill-quiet {
+  color: rgb(255 255 255 / 70%);
+}
+
+.pill-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: #0a84ff;
+}
+
+.pill-options {
+  animation: pill-options-in 0.25s var(--ease-out);
+}
+
+@keyframes pill-options-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+    transform-origin: top;
+  }
+}
+
+.pill-glyphs {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pill-glyph {
+  width: 34px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #0a84ff;
+  transition:
+    background 0.12s var(--ease-out),
+    transform 0.25s var(--spring);
+}
+
+.pill-glyph.primary {
+  background: rgb(10 132 255 / 20%);
+}
+
+.pill-glyph:hover:not(:disabled) {
+  background: rgb(255 255 255 / 12%);
+}
+
+.pill-glyph:active:not(:disabled) {
+  background: rgb(255 255 255 / 22%);
+  transform: scale(0.92);
+}
+
+.pill-glyph:disabled {
+  opacity: 0.35;
+}
+
+.pill-separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.pill-follow-up {
+  width: 100%;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.pill-follow-up .icon {
+  width: 16px;
+  color: rgb(255 255 255 / 60%);
+}
+
+.pill-follow-up span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill-follow-up:hover span {
+  color: #0a84ff;
+}
+
+.pill-follow-up:first-of-type {
+  margin-top: 4px;
+}
+
+.waveform {
+  display: inline-flex;
+  align-items: center;
+}
+
+.waveform span {
+  border-radius: 999px;
+  background: #0a84ff;
+  transition: height 0.12s var(--spring);
+}

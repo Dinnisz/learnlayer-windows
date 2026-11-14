@@ -5,6 +5,7 @@ import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { Preferences, SessionGateway } from "@core/account/accountModel";
 import { productionBase, productionSite, type Environment } from "@core/ai/aiGateway";
 import type { AuthTokens, Fetch } from "@core/ai/backendClient";
+import { platformNamed, type PlatformName } from "@core/platform";
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -13,6 +14,8 @@ export interface AppConfig {
   siteBase: string;
   debug: boolean;
   version: string;
+  /** Which operating system the native side is built for (src-tauri/src/platform). */
+  platform: PlatformName;
   computerName: string;
   environment: Environment;
 }
@@ -22,6 +25,10 @@ const browserConfig: AppConfig = {
   siteBase: productionSite,
   debug: true,
   version: "0.0.0",
+  // `?platform=macos` shows the other wording while working on the interface in a browser.
+  platform: platformNamed(
+    typeof location === "undefined" ? null : new URLSearchParams(location.search).get("platform"),
+  ),
   computerName: "BROWSER",
   environment: {},
 };
@@ -33,7 +40,9 @@ export async function invoke<T>(command: string, args?: Record<string, unknown>)
 let cachedConfig: Promise<AppConfig> | null = null;
 
 export function appConfig(): Promise<AppConfig> {
-  cachedConfig ??= isTauri ? invoke<AppConfig>("app_config") : Promise.resolve(browserConfig);
+  cachedConfig ??= isTauri
+    ? invoke<AppConfig>("app_config").then((config) => ({ ...config, platform: platformNamed(config.platform) }))
+    : Promise.resolve(browserConfig);
   return cachedConfig;
 }
 
@@ -122,6 +131,29 @@ export const preferences: Preferences = {
   set: (key, value) => localStorage.setItem(key, value),
   remove: (key) => localStorage.removeItem(key),
 };
+
+// MARK: Windows (src-tauri/src/lib.rs, pill.rs, tray.rs)
+
+/** Shows the LearnLayer window, on a section when one is named. */
+export async function showMain(route: string | null): Promise<void> {
+  if (isTauri) await invoke<void>("show_main", { route });
+  else window.open(route ? `/?route=${route}` : "/", "learnlayer-main");
+}
+
+/** The main window is told which section to show (the tray menu, the pill, a second launch). */
+export async function onNavigate(handler: (route: string) => void): Promise<() => void> {
+  if (!isTauri) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<string>("navigate", (event) => handler(event.payload));
+}
+
+export async function resizePill(width: number, height: number): Promise<void> {
+  if (isTauri) await invoke<void>("pill_resize", { width, height });
+}
+
+export async function setTrayLabels(labels: { open: string; settings: string; quit: string }): Promise<void> {
+  if (isTauri) await invoke<void>("set_tray_labels", { labels });
+}
 
 /** Asks where to save, then writes the text there. False when the student cancelled or it failed. */
 export async function saveTextFile(defaultName: string, contents: string): Promise<boolean> {
