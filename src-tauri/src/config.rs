@@ -2,7 +2,7 @@
 //! (port of LearnLayer/AI/AIGateway.swift @ ref 2026-11-04), kept here too because the session
 //! refresh happens on the native side.
 //!
-//! Values come from the process environment first, then from `%APPDATA%\LearnLayer\config.json`
+//! Values come from the process environment first, then from `config.json` in the app's data folder
 //! (`{"LEARNLAYER_API_BASE": "…", "LEARNLAYER_SITE_BASE": "…"}`), then the production defaults.
 
 use std::collections::HashMap;
@@ -10,6 +10,8 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 use url::Url;
+
+use crate::platform;
 
 pub const PRODUCTION_BASE: &str = "https://api.learnlayer.app";
 pub const PRODUCTION_SITE: &str = "https://learnlayer.app";
@@ -23,12 +25,9 @@ pub const ALLOWS_INSECURE_API_BASE: bool = cfg!(debug_assertions);
 
 pub type Environment = HashMap<String, String>;
 
-/// `%APPDATA%\LearnLayer`, the Windows counterpart of `~/Library/Application Support/LearnLayer`.
+/// The app's data folder, wherever the operating system keeps it.
 pub fn data_dir() -> PathBuf {
-    let base = std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
-    base.join("LearnLayer")
+    platform::current().data_dir()
 }
 
 /// An absolute http(s) URL with a host, as written; `None` for anything else.
@@ -99,6 +98,10 @@ pub struct AppConfig {
     pub site_base: String,
     pub debug: bool,
     pub version: String,
+    /// "windows" or "macos": the interface picks its wording, shortcuts and glyphs from this.
+    pub platform: String,
+    /// For the device name the API shows in Account › Devices ("Windows · DESKTOP-ABC").
+    pub computer_name: String,
     /// The `LEARNLAYER_*` values in effect, for the pure routing rules in `core/`.
     pub environment: Environment,
 }
@@ -110,6 +113,8 @@ impl AppConfig {
             site_base: site_base(&environment),
             debug,
             version: env!("CARGO_PKG_VERSION").to_string(),
+            platform: platform::current().name().to_string(),
+            computer_name: platform::current().computer_name(),
             environment,
         }
     }
