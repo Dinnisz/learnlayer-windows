@@ -1,0 +1,163 @@
+{
+  "subject": "Electromagnetism",
+  "parts": [
+    {
+      "label": "I.1",
+      "asks": "The potential V(z) on the axis of the charged disc.",
+      "hint": "Split the disc into thin rings of radius r and add up their potentials.",
+      "steps": [
+        "A ring of radius r and width dr holds dq = σ·2πr dr.",
+        "Every point of the ring is √(r² + z²) from P, so dV = dq / (4πε₀√(r² + z²)).",
+        "V(z) = (σ/2ε₀) ∫₀ᴿ r dr / √(r² + z²) = (σ/2ε₀)[√(r² + z²)]₀ᴿ."
+      ],
+      "answer": {
+        "text": "V(z) = (σ/2ε₀)(√(R² + z²) − |z|)",
+        "expression": "sigma/(2*eps0)*(sqrt(R^2+z^2)-abs(z))"
+      },
+      "uses": [],
+      "followUps": [
+        "Why add up rings instead of points?",
+        "Where does the |z| come from?",
+        "What happens to V far from the disc?"
+      ]
+    },
+    {
+      "label": "I.2",
+      "asks": "The field E at the same point P.",
+      "hint": "By symmetry only E_z survives; get it from the potential you found.",
+      "steps": [
+        "On the axis the field points along z, so E = −dV/dz ẑ.",
+        "Differentiate √(R² + z²) − |z|: z/√(R² + z²) − z/|z|."
+      ],
+      "answer": {
+        "text": "E_z(z) = (σ/2ε₀)(z/|z| − z/√(R² + z²))",
+        "expression": "sigma/(2*eps0)*(z/abs(z)-z/sqrt(R^2+z^2))"
+      },
+      "uses": [
+        "I.1"
+      ],
+      "followUps": [
+        "Why does only E_z survive on the axis?",
+        "How is E related to V?",
+        "What does E look like far away?"
+      ],
+      "cards": [
+        {
+          "title": "Field from the potential",
+          "note": "On the axis only E_z survives",
+          "latex": "E_z = -\\frac{dV}{dz}",
+          "branches": []
+        },
+        {
+          "title": "Differentiate",
+          "note": null,
+          "latex": "\\frac{d}{dz}\\left(\\color{accent}{\\sqrt{R^2+z^2}} - \\color{second}{|z|}\\right) = \\color{accent}{\\frac{z}{\\sqrt{R^2+z^2}}} - \\color{second}{\\frac{z}{|z|}}",
+          "branches": [
+            {
+              "title": "Above (z > 0)",
+              "latex": "E_z = \\frac{\\sigma}{2\\varepsilon_0}\\left(1 - \\frac{z}{\\sqrt{R^2+z^2}}\\right)"
+            },
+            {
+              "title": "Below (z < 0)",
+              "latex": "E_z = -\\frac{\\sigma}{2\\varepsilon_0}\\left(1 + \\frac{z}{\\sqrt{R^2+z^2}}\\right)"
+            }
+          ]
+        }
+      ],
+      "answerLatex": "E_z(z) = \\frac{\\sigma}{2\\varepsilon_0}\\left(\\frac{z}{|z|} - \\frac{z}{\\sqrt{R^2+z^2}}\\right)"
+    },
+    {
+      "label": "I.3",
+      "asks": "The jump of E_z across the disc, and sketches of E_z and V.",
+      "hint": "Compare E_z just above and just below the disc (z → 0⁺ and z → 0⁻).",
+      "steps": [
+        "Just above, E_z → σ/2ε₀; just below, E_z → −σ/2ε₀.",
+        "The jump is σ/ε₀, as for any charged surface; V is continuous."
+      ],
+      "answer": {
+        "text": "ΔE_z = σ/ε₀, V continuous",
+        "expression": "sigma/eps0"
+      },
+      "uses": [
+        "I.2"
+      ],
+      "followUps": [
+        "Why does E_z jump across the disc?",
+        "Is V continuous at z = 0?",
+        "How does this compare with an infinite plane?"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "kind": "derivative",
+      "left": "sigma/(2*eps0)*(sqrt(R^2+z^2)-abs(z))",
+      "right": "-sigma/(2*eps0)*(z/abs(z)-z/sqrt(R^2+z^2))",
+      "variable": "z",
+      "from": null,
+      "to": null,
+      "domain": "any"
+    },
+    {
+      "kind": "jump",
+      "left": "sigma/(2*eps0)*(z/abs(z)-z/sqrt(R^2+z^2))",
+      "right": "sigma/eps0",
+      "variable": "z",
+      "from": null,
+      "to": null,
+      "domain": "any"
+    },
+    {
+      "kind": "limit",
+      "left": "sigma/(2*eps0)*(1-z/sqrt(R^2+z^2))",
+      "right": "sigma*R^2/(4*eps0*z^2)",
+      "variable": "z",
+      "from": null,
+      "to": null,
+      "domain": "positive"
+    }
+  ],
+  "graph": {
+    "xLabel": "z",
+    "yLabel": "E",
+    "variable": "z",
+    "expression": "sigma/(2*eps0)*(z/abs(z)-z/sqrt(R^2+z^2))",
+    "xMin": -3,
+    "xMax": 3,
+    "parameters": [
+      {
+        "name": "sigma",
+        "value": 1,
+        "min": 1,
+        "max": 1
+      },
+      {
+        "name": "eps0",
+        "value": 1,
+        "min": 1,
+        "max": 1
+      },
+      {
+        "name": "R",
+        "value": 1,
+        "min": 0.2,
+        "max": 3
+      }
+    ],
+    "draggable": "R",
+    "area": null,
+    "showsCar": false
+  },
+  "needsFigure": false,
+  "drawing": true,
+  "formulas": [
+    {
+      "name": "Field from the potential",
+      "latex": "E_z = -\\frac{dV}{dz}"
+    },
+    {
+      "name": "Potential of a ring",
+      "latex": "dV = \\frac{1}{4\\pi\\varepsilon_0}\\frac{dq}{\\sqrt{r^2+z^2}}"
+    }
+  ]
+}

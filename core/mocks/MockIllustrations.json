@@ -1,0 +1,57 @@
+[
+  {
+    "title": "Projectile launched at an angle",
+    "width": 12, "height": 6, "duration": 3,
+    "parameters": [
+      {"name": "theta", "label": "Launch angle (rad)", "value": 0.8, "min": 0.2, "max": 1.4},
+      {"name": "v0", "label": "Speed v₀ (m/s)", "value": 10, "min": 5, "max": 11}
+    ],
+    "elements": [
+      {"kind": "line", "x": "0", "y": "0.5", "x2": "12", "y2": "0.5", "color": "muted"},
+      {"kind": "curve", "curveX": "0.5 + v0*cos(theta)*s", "curveY": "0.5 + v0*sin(theta)*s - 4.905*s^2", "from": "0", "to": "2*v0*sin(theta)/9.81", "dashed": true, "color": "muted"},
+      {"kind": "point", "x": "0.5 + v0*cos(theta)*t*2*v0*sin(theta)/9.81/3", "y": "0.5 + v0*sin(theta)*t*2*v0*sin(theta)/9.81/3 - 4.905*(t*2*v0*sin(theta)/9.81/3)^2", "color": "accent"},
+      {"kind": "arrow", "x": "0.5", "y": "0.5", "x2": "0.5 + 0.15*v0*cos(theta)", "y2": "0.5 + 0.15*v0*sin(theta)", "text": "v₀", "color": "second"}
+    ]
+  },
+  {
+    "title": "Field of a dipole",
+    "width": 10, "height": 6,
+    "parameters": [
+      {"name": "q2", "label": "Second charge", "value": -1, "min": -2, "max": 2}
+    ],
+    "elements": [
+      {"kind": "fieldLines"},
+      {"kind": "charge", "x": "3.5", "y": "3", "q": "1", "text": "+q"},
+      {"kind": "charge", "x": "6.5", "y": "3", "q": "q2"}
+    ]
+  },
+  {
+    "title": "Circuit in steady state",
+    "width": 10, "height": 6, "duration": 4,
+    "elements": [
+      {"kind": "component", "component": "source", "x": "1", "y": "1", "x2": "1", "y2": "5", "text": "20 V"},
+      {"kind": "line", "x": "1", "y": "5", "x2": "1.5", "y2": "5", "current": "0.2"},
+      {"kind": "component", "component": "resistor", "x": "1.5", "y": "5", "x2": "4.5", "y2": "5", "text": "R₂ 75 kΩ", "current": "0.2"},
+      {"kind": "component", "component": "resistor", "x": "4.5", "y": "5", "x2": "7.5", "y2": "5", "text": "R₃ 50 kΩ", "current": "0.1"},
+      {"kind": "component", "component": "resistor", "x": "4.5", "y": "5", "x2": "4.5", "y2": "1", "text": "R₄ 50 kΩ", "current": "0.1"},
+      {"kind": "line", "x": "7.5", "y": "5", "x2": "8.5", "y2": "5", "current": "0.1"},
+      {"kind": "component", "component": "inductor", "x": "8.5", "y": "5", "x2": "8.5", "y2": "1", "text": "L₅ (short)", "current": "0.1"},
+      {"kind": "line", "x": "8.5", "y": "1", "x2": "4.5", "y2": "1", "current": "0.1"},
+      {"kind": "line", "x": "4.5", "y": "1", "x2": "1", "y2": "1", "current": "0.2"}
+    ]
+  },
+  {
+    "title": "Counter 6 → 10 → 5 → 11",
+    "width": 8, "height": 8, "duration": 4,
+    "elements": [
+      {"kind": "state", "x": "4", "y": "6.5", "r": "0.8", "text": "0110", "active": "1 - abs(sign(floor(t) - 0))"},
+      {"kind": "state", "x": "6.5", "y": "4", "r": "0.8", "text": "1010", "active": "1 - abs(sign(floor(t) - 1))"},
+      {"kind": "state", "x": "4", "y": "1.5", "r": "0.8", "text": "0101", "active": "1 - abs(sign(floor(t) - 2))"},
+      {"kind": "state", "x": "1.5", "y": "4", "r": "0.8", "text": "1011", "active": "1 - abs(sign(floor(t) - 3))"},
+      {"kind": "transition", "x": "4", "y": "6.5", "x2": "6.5", "y2": "4", "r": "0.8", "text": "CLK"},
+      {"kind": "transition", "x": "6.5", "y": "4", "x2": "4", "y2": "1.5", "r": "0.8", "text": "CLK"},
+      {"kind": "transition", "x": "4", "y": "1.5", "x2": "1.5", "y2": "4", "r": "0.8", "text": "CLK"},
+      {"kind": "transition", "x": "1.5", "y": "4", "x2": "4", "y2": "6.5", "r": "0.8", "text": "CLK"}
+    ]
+  }
+]

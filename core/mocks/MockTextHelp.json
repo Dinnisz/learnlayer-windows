@@ -1,0 +1,11 @@
+{
+  "subject": "Physics",
+  "asks": "It describes how position changes with time when the acceleration is constant.",
+  "hint": "Think about which term grows fastest as time goes on.",
+  "explanation": [
+    "The car starts at x₀ and already moves at v₀.",
+    "The term ½at² adds the extra distance from speeding up, and grows with t².",
+    "That t² is why the graph of position against time is a parabola."
+  ],
+  "graph": null
+}

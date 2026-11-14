@@ -9,3 +9,4 @@ core/i18n/locales/
 package-lock.json
 *.md
 COMO-COMECAR.txt
+core/mocks/

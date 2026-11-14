@@ -1,0 +1,123 @@
+{
+  "subject": "Physics",
+  "equation": "x(t) = x₀ + v₀t + ½at²",
+  "steps": [
+    {
+      "kind": "question",
+      "text": "Which letter tells you how quickly the car speeds up? Click it in the equation.",
+      "answer": "a",
+      "marks": []
+    },
+    {
+      "kind": "hint",
+      "text": "Look for the term that grows with t². It's the one that bends the curve.",
+      "answer": null,
+      "marks": []
+    },
+    {
+      "kind": "step",
+      "text": "½at² is the extra distance from speeding up; it grows with t², so the line bends.",
+      "answer": null,
+      "marks": [
+        {
+          "style": "underline",
+          "target": "½at²"
+        }
+      ]
+    },
+    {
+      "kind": "step",
+      "text": "a is the acceleration: the bigger it is, the faster the car gains speed.",
+      "answer": null,
+      "marks": [
+        {
+          "style": "circle",
+          "target": "a"
+        }
+      ]
+    },
+    {
+      "kind": "animation",
+      "text": "Drag the curve to change a and watch the car.",
+      "answer": null,
+      "marks": []
+    }
+  ],
+  "graph": {
+    "xLabel": "t",
+    "yLabel": "x",
+    "variable": "t",
+    "expression": "x0 + v0*t + 0.5*a*t^2",
+    "xMin": 0,
+    "xMax": 4,
+    "parameters": [
+      {
+        "name": "x0",
+        "value": 0,
+        "min": 0,
+        "max": 0
+      },
+      {
+        "name": "v0",
+        "value": 2,
+        "min": 0,
+        "max": 5
+      },
+      {
+        "name": "a",
+        "value": 2,
+        "min": -1,
+        "max": 4
+      }
+    ],
+    "draggable": "a",
+    "area": null,
+    "showsCar": true
+  },
+  "checks": [
+    {
+      "kind": "derivative",
+      "left": "x0 + v0*t + 0.5*a*t^2",
+      "right": "v0 + a*t",
+      "variable": "t",
+      "from": null,
+      "to": null
+    }
+  ],
+  "symbols": [
+    {
+      "target": "x₀",
+      "meaning": "starting position"
+    },
+    {
+      "target": "v₀",
+      "meaning": "starting speed"
+    },
+    {
+      "target": "a",
+      "meaning": "acceleration"
+    },
+    {
+      "target": "t",
+      "meaning": "time"
+    }
+  ],
+  "solving": [
+    {
+      "line": "x(t) = x₀ + v₀t + ½at²",
+      "move": ""
+    },
+    {
+      "line": "x − x₀ − v₀t = ½at²",
+      "move": "Subtract x₀ and v₀t from both sides"
+    },
+    {
+      "line": "2(x − x₀ − v₀t) = at²",
+      "move": "Multiply both sides by 2"
+    },
+    {
+      "line": "a = 2(x − x₀ − v₀t)/t²",
+      "move": "Divide both sides by t²"
+    }
+  ]
+}
