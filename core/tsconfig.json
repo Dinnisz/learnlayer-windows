@@ -1,0 +1,10 @@
+{
+  // core/ is pure TypeScript: web-platform APIs (URL, fetch, crypto, TextEncoder) but no DOM.
+  // The "WebWorker" lib has exactly those, so `document` or `window` here is a compile error.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "WebWorker"],
+    "types": []
+  },
+  "include": ["./**/*.ts"]
+}

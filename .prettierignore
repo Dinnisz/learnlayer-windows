@@ -1,0 +1,11 @@
+referencia-mac/
+exames/
+node_modules/
+dist/
+dist-ui/
+src-tauri/target/
+src-tauri/gen/
+core/i18n/locales/
+package-lock.json
+*.md
+COMO-COMECAR.txt

@@ -1,0 +1,136 @@
+/*
+  One look for every LearnLayer window (CLAUDE.md, rule 8 and section 7): white/black and a single
+  blue accent, Segoe UI Variable for text, Cascadia Mono for code, Segoe Fluent Icons for glyphs.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  --accent: #007aff;
+  --accent-soft: rgb(0 122 255 / 14%);
+  --text: rgb(0 0 0 / 88%);
+  --text-strong: #000;
+  --text-secondary: rgb(0 0 0 / 55%);
+  --text-tertiary: rgb(0 0 0 / 32%);
+  --window: #f6f6f6;
+  --sidebar: rgb(0 0 0 / 3.5%);
+  --hairline: rgb(0 0 0 / 7%);
+  --card: #fff;
+  --card-border: rgb(0 0 0 / 9%);
+  --field: rgb(0 0 0 / 4%);
+  --field-pressed: rgb(0 0 0 / 8%);
+  --row-hover: rgb(0 0 0 / 5%);
+  --row-selected: rgb(0 0 0 / 7%);
+  --danger: #d70015;
+
+  --font-text: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --font-icons: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+
+  --spring: cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #0a84ff;
+    --accent-soft: rgb(10 132 255 / 18%);
+    --text: rgb(255 255 255 / 88%);
+    --text-strong: #fff;
+    --text-secondary: rgb(255 255 255 / 55%);
+    --text-tertiary: rgb(255 255 255 / 30%);
+    --window: #1e1e1e;
+    --sidebar: rgb(0 0 0 / 22%);
+    --hairline: rgb(255 255 255 / 7%);
+    --card: rgb(255 255 255 / 5%);
+    --card-border: rgb(255 255 255 / 9%);
+    --field: rgb(255 255 255 / 6%);
+    --field-pressed: rgb(255 255 255 / 11%);
+    --row-hover: rgb(255 255 255 / 5%);
+    --row-selected: rgb(255 255 255 / 10%);
+    --danger: #ff453a;
+  }
+}
+
+/* High Contrast: let the system colours through (CLAUDE.md, rule 9). */
+@media (forced-colors: active) {
+  :root {
+    --accent: Highlight;
+    --text: CanvasText;
+    --text-strong: CanvasText;
+    --text-secondary: CanvasText;
+    --text-tertiary: GrayText;
+    --window: Canvas;
+    --card: Canvas;
+    --card-border: CanvasText;
+    --hairline: CanvasText;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--window);
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: 13px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.icon {
+  font-family: var(--font-icons);
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  display: inline-block;
+  text-align: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* "Show animations in Windows" off: fades only (CLAUDE.md, rule 9). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

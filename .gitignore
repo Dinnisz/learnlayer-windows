@@ -1,0 +1,11 @@
+referencia-mac/
+exames/
+node_modules/
+target/
+dist/
+.env
+.env.*
+*.log
+dist-ui/
+src-tauri/gen/
+.claude/settings.local.json

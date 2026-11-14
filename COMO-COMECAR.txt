@@ -1,0 +1,6 @@
+1. Descompacta esta pasta (LearnLayer-Windows) onde quiseres.
+2. Abre um terminal dentro dela e corre:  claude
+3. Escreve:  começa
+O Claude lê o CLAUDE.md e trabalha sozinho até ao fim. O progresso fica em docs/PROGRESSO.md
+e o que precisa de ti (entrar na conta, chaves, assinatura) fica em docs/PARA-O-DINIS.md.
+Se a sessão parar, abre outra vez e escreve: continua

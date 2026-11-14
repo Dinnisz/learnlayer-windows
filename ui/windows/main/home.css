@@ -1,0 +1,121 @@
+/* Port of the layout in LearnLayer/Home/HomeWindowView.swift */
+
+.home {
+  display: flex;
+  height: 100%;
+}
+
+.home-sidebar {
+  width: 224px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 10px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--hairline);
+}
+
+.home-sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-sidebar-group + .home-sidebar-group {
+  margin-top: 16px;
+}
+
+.home-sidebar-group h2 {
+  margin: 0;
+  padding: 0 0 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.home-sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  color: var(--text);
+  transition: background 0.12s var(--ease-out);
+}
+
+.home-sidebar-row .icon {
+  width: 20px;
+  color: var(--text-secondary);
+}
+
+.home-sidebar-row:hover {
+  background: var(--row-hover);
+}
+
+.home-sidebar-row[aria-current="page"] {
+  background: var(--row-selected);
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
+.home-sidebar-row[aria-current="page"] .icon {
+  color: var(--accent);
+}
+
+.home-sidebar-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-sidebar-row kbd {
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: none;
+}
+
+/* "Ctrl+8" is wider than "⌘8", so the hint only takes room while the row is hovered. */
+.home-sidebar-row:hover kbd {
+  display: inline;
+}
+
+.home-sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 10px 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.home-sidebar-version {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-detail {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  animation: home-fade 0.15s var(--ease-out);
+}
+
+@keyframes home-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
