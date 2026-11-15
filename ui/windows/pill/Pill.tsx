@@ -8,7 +8,7 @@ import { announcementKey, resolveNotchMode } from "@core/notch/notchMode";
 import { Icon } from "../../components/Icon";
 import { useT } from "../../i18n";
 import { emptyIsland, onIsland, sendIslandCommand, type IslandSnapshot } from "../../island";
-import { resizePill, showMain } from "../../native";
+import { anywhereEnabled, onAnywhereHookRemoved, resizePill, setAnywhereEnabled, showMain } from "../../native";
 
 /** At rest (CLAUDE.md §7). The window is this size plus a small gap above, so it reads as a pill. */
 export const pillMetrics = { width: 180, height: 32, topGap: 4, openWidth: 264 };
@@ -17,7 +17,7 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
 
 export function Pill() {
   const t = useT();
-  const [island, setIsland] = useState<IslandSnapshot>(emptyIsland);
+  const [island, setIsland] = useState<IslandSnapshot>(() => ({ ...emptyIsland, offersAnywhere: !anywhereEnabled() }));
   const [isExpanded, setExpanded] = useState(false);
   const collapse = useRef<number | undefined>(undefined);
 
@@ -25,6 +25,20 @@ export function Pill() {
     let stop = () => {};
     let cancelled = false;
     void onIsland((change) => setIsland((current) => ({ ...current, ...change }))).then((unlisten) =>
+      cancelled ? unlisten() : (stop = unlisten),
+    );
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, []);
+
+  // Alt-click as Settings left it; if Windows takes the hook away, the pill offers to turn it on again.
+  useEffect(() => {
+    void setAnywhereEnabled(anywhereEnabled());
+    let stop = () => {};
+    let cancelled = false;
+    void onAnywhereHookRemoved(() => setIsland((current) => ({ ...current, offersAnywhere: true }))).then((unlisten) =>
       cancelled ? unlisten() : (stop = unlisten),
     );
     return () => {
@@ -74,7 +88,12 @@ export function Pill() {
           exerciseOpen: island.exerciseOpen,
         },
         {
-          captureScreen: () => void sendIslandCommand({ kind: "captureScreen" }),
+          captureScreen: () => {
+            if (!island.offersAnywhere) return void sendIslandCommand({ kind: "captureScreen" });
+            // «Turn on Alt-click in any app»: the student asked for it, so a switch left off goes back on.
+            void setAnywhereEnabled(true);
+            setIsland((current) => ({ ...current, offersAnywhere: false }));
+          },
           captureArea: () => void sendIslandCommand({ kind: "captureArea" }),
           explainSelection: () => void sendIslandCommand({ kind: "explainSelection" }),
           openWindow: () => void showMain(null),

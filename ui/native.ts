@@ -299,3 +299,30 @@ export async function closeOverlay(): Promise<void> {
 export async function setOverlayInteractive(interactive: boolean): Promise<void> {
   if (isTauri) await invoke<void>("anywhere_interactive", { interactive });
 }
+
+/** The Settings switch «Alt-click in any app», kept for the next launch. On by default, as on the Mac. */
+export const anywherePreferenceKey = "anywhereEnabled";
+
+export function anywhereEnabled(): boolean {
+  try {
+    return localStorage.getItem(anywherePreferenceKey) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export async function setAnywhereEnabled(enabled: boolean): Promise<void> {
+  try {
+    localStorage.setItem(anywherePreferenceKey, enabled ? "1" : "0");
+  } catch {
+    // Kept for this launch only.
+  }
+  if (isTauri) await invoke<void>("anywhere_set_enabled", { enabled });
+}
+
+/** Windows took the click hook away and it could not be put back: the pill offers to turn Alt-click on again. */
+export async function onAnywhereHookRemoved(handler: () => void): Promise<() => void> {
+  if (!isTauri) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen("anywhere-hook-removed", () => handler());
+}
