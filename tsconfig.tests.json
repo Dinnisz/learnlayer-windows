@@ -1,0 +1,9 @@
+{
+  // The tests of core/: the same rules, plus Node for reading fixtures from disk.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "WebWorker"],
+    "types": ["node"]
+  },
+  "include": ["core/**/*.ts", "scripts/**/*.test.ts"]
+}
