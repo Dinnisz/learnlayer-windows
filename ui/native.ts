@@ -326,3 +326,10 @@ export async function onAnywhereHookRemoved(handler: () => void): Promise<() => 
   const { listen } = await import("@tauri-apps/api/event");
   return listen("anywhere-hook-removed", () => handler());
 }
+
+/** The talk key (Ctrl + Win by default) held (true) or let go (false), whichever app is in front. */
+export async function onTalkKey(handler: (held: boolean) => void): Promise<() => void> {
+  if (!isTauri) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<boolean>("talk", (event) => handler(event.payload));
+}

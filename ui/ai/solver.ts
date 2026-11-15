@@ -15,7 +15,7 @@ import {
   prefersLocalKey,
   speechPath,
 } from "@core/ai/aiGateway";
-import { ModelClient, type ModelEnvironment } from "@core/ai/modelClient";
+import { ModelClient, type ModelEnvironment, type ModelOptions } from "@core/ai/modelClient";
 import { AISettings, ModelRouting } from "@core/ai/modelRouting";
 import { MascotLessonProvider } from "@core/lesson/mascotLessonProvider";
 import type { MascotLesson } from "@core/lesson/mascotLesson";
@@ -202,4 +202,9 @@ export function lessonProvider(): MascotLessonProvider {
     ...(usesMock() ? { mock: (request) => lessonFromWork(request.work) } : {}),
   });
   return lessons;
+}
+
+/** A model client for `options`, through the gateway (the API with the session, or the local key in debug). */
+export function modelClient(options: ModelOptions): ModelClient {
+  return new ModelClient(environment, options);
 }

@@ -2,7 +2,17 @@
 // EvidenceAnswerView.swift @ ref 2026-11-04 (the reader's stage). The page behind dims and blurs, the question is
 // lifted off it, and a menu asks what the student wants: 1–4 choose, Enter opens the solution, Esc closes.
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
 import { linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
@@ -29,6 +39,7 @@ import {
   useLessonToggle,
 } from "../lesson/LessonUI";
 import type { LessonShow } from "@core/lesson/mascotLesson";
+import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
@@ -122,6 +133,8 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   useSession(session);
   const lesson = useLessonControl(session);
   const stopLesson = lesson.stop;
+  const voice = useVoiceTutor(session);
+  const stopVoice = voice.stop;
 
   useEffect(() => {
     let cancelled = false;
@@ -159,6 +172,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
           return;
         }
         stopLesson();
+        stopVoice();
         session?.cancel();
         close();
         return;
@@ -178,7 +192,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [session, choose, close, stopLesson]);
+  }, [session, choose, close, stopLesson, stopVoice]);
 
   const mode = session?.mode ?? null;
   const showsLesson = mode === "solution" && session?.part != null && session.state.kind === "ready";
@@ -186,37 +200,42 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
 
   return (
     <LessonContext.Provider value={{ state: lesson.state, player: lesson.player, toggle: lesson.toggle }}>
-      <div
-        className="stage"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("What do you want to do?")}
-        onMouseDown={(event) => event.target === event.currentTarget && close()}
-      >
-        <div className={`stage-column${compact ? " stage-compact" : ""}`}>
-          {source.kind === "pdf" ? (
-            <QuestionCrop
-              document={source.document}
-              opened={source.opened}
-              page={prepared?.page ?? null}
-              session={session}
-              compact={compact}
-            />
-          ) : (
-            <ScreenQuestionView source={source} session={session} compact={compact} />
-          )}
-          {session === null || mode === null ? (
-            <Menu
-              explains={session?.explains ?? false}
-              onChoose={choose}
-              onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
-            />
-          ) : (
-            <ModeView session={session} />
-          )}
-        </div>
-        {showsLesson ? <LessonOverlay player={lesson.player} state={lesson.state} onTap={lesson.toggle} /> : null}
-      </div>
+      <VoiceContext.Provider value={voice.state}>
+        <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
+          <div
+            className="stage"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("What do you want to do?")}
+            onMouseDown={(event) => event.target === event.currentTarget && close()}
+          >
+            <div className={`stage-column${compact ? " stage-compact" : ""}`}>
+              {source.kind === "pdf" ? (
+                <QuestionCrop
+                  document={source.document}
+                  opened={source.opened}
+                  page={prepared?.page ?? null}
+                  session={session}
+                  compact={compact}
+                />
+              ) : (
+                <ScreenQuestionView source={source} session={session} compact={compact} />
+              )}
+              {session === null || mode === null ? (
+                <Menu
+                  explains={session?.explains ?? false}
+                  onChoose={choose}
+                  onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
+                />
+              ) : (
+                <ModeView session={session} />
+              )}
+            </div>
+            {showsLesson ? <LessonOverlay player={lesson.player} state={lesson.state} onTap={lesson.toggle} /> : null}
+            <VoiceCaption state={voice.state} />
+          </div>
+        </TalkContext.Provider>
+      </VoiceContext.Provider>
     </LessonContext.Provider>
   );
 }
@@ -333,10 +352,22 @@ function CropPiece({
   }, [document, pageIndex, region, scale, ready]);
   const version = session?.version;
   const lessonShows = useLessonShows();
+  const voiceLit = useVoiceState().lit;
+  const shows = useMemo(
+    () => [
+      ...lessonShows,
+      ...voiceLit.flatMap((command): LessonShow[] =>
+        command.kind.op === "highlight" || command.kind.op === "circle"
+          ? [{ op: command.kind.op === "circle" ? "circle" : "underline", quote: command.kind.term }]
+          : [],
+      ),
+    ],
+    [lessonShows, voiceLit],
+  );
   const marks = useMemo(
-    () => (page && session ? cropMarks(page, region, session, lessonShows) : { underlines: [], circles: [] }),
+    () => (page && session ? cropMarks(page, region, session, shows) : { underlines: [], circles: [] }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, region, session, version, lessonShows],
+    [page, region, session, version, shows],
   );
   const toCrop = (rect: Rect) => ({
     left: (rect.x - region.x) * scale,
@@ -988,6 +1019,7 @@ function Actions({ session }: { session: QuestionSession }) {
           placeholder={t("Ask about this exercise…")}
           aria-label={t("Ask about this exercise")}
         />
+        <TalkButton />
       </form>
       <div className="stage-action-row">
         {actions
@@ -1148,6 +1180,56 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
           </p>
         );
       })}
+    </div>
+  );
+}
+
+/** Begins and ends a spoken turn; given by the stage that owns the voice. */
+const TalkContext = createContext<{ begin(): void; end(): void }>({ begin: () => {}, end: () => {} });
+
+/** Hold to talk to the tutor (the talk key does the same, from any app). */
+function TalkButton() {
+  const t = useT();
+  const talk = useContext(TalkContext);
+  const state = useVoiceState();
+  return (
+    <button
+      type="button"
+      className={`stage-talk${state.phase === "listening" ? " listening" : ""}`}
+      aria-label={t("Talk to the Tutor")}
+      title={t("Talk to the Tutor")}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        talk.begin();
+      }}
+      onPointerUp={() => talk.end()}
+      onPointerLeave={() => state.phase === "listening" && talk.end()}
+    >
+      <Icon symbol="mic.fill" size={16} />
+    </button>
+  );
+}
+
+/** What the voice is doing, and the formula of the answer while it is said. */
+function VoiceCaption({ state }: { state: VoiceState }) {
+  const t = useT();
+  const formula = state.lit.find((command) => command.kind.op === "formula");
+  const phase =
+    state.phase === "listening"
+      ? t("Listening…")
+      : state.phase === "thinking"
+        ? t("Thinking…")
+        : state.phase === "speaking"
+          ? t("Speaking…")
+          : null;
+  if (!phase && !state.notice && !formula && !state.shown) return null;
+  return (
+    <div className="voice-caption" role="status" aria-live="polite">
+      {phase ? <span className="voice-phase">{phase}</span> : null}
+      {state.heard && state.phase !== "listening" ? <span className="voice-heard">«{state.heard}»</span> : null}
+      {formula && formula.kind.op === "formula" ? <MathView latex={formula.kind.latex} display /> : null}
+      {state.shown ? <p className="voice-shown">{state.shown}</p> : null}
+      {state.notice ? <span className="voice-notice">{t(state.notice)}</span> : null}
     </div>
   );
 }
