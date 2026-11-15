@@ -813,3 +813,40 @@
     animation: none;
   }
 }
+
+/* A timing diagram's answer, drawn on the printed diagram like a pen. */
+.stage-timing {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.stage-timing-row {
+  fill: none;
+  stroke: var(--accent, #0a84ff);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 3px rgb(10 132 255 / 40%));
+  animation: stage-timing-draw 1s ease-in-out both;
+}
+
+@keyframes stage-timing-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-timing-row {
+    animation: stage-timing-fade 0.3s ease-in both;
+  }
+
+  @keyframes stage-timing-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}

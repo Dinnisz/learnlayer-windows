@@ -46,6 +46,7 @@ import { CompiledIllustration, gatedBySteps, type Illustration } from "../illust
 import { continuityIllustration, decodeTemplate } from "../illustrations/illustrationTemplate";
 import { subjectAllowsDrawing } from "./problemSolution";
 import type { SignTable } from "./signTable";
+import { decodeTimingAnswer, simulateTiming, TimingDiagrams, type TimingDiagram } from "../timing/timing";
 
 export type SessionState =
   | { kind: "loading" }
@@ -106,6 +107,8 @@ export interface SessionInit {
   passageLines?: readonly PassageLine[];
   /** The text printed before the question (the poem a question about "o texto" reads). */
   supportText?: string | null;
+  /** A printed timing diagram this question asks to fill in, if any. */
+  timing?: TimingDiagram | null;
 }
 
 const foldDiacritics = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
@@ -294,6 +297,11 @@ export class QuestionSession {
   readonly images: readonly Uint8Array[];
   readonly passageLines: readonly PassageLine[];
   readonly supportText: string | null;
+  /** A printed timing diagram this question asks to fill in, if any. */
+  readonly timing: TimingDiagram | null;
+  /** The levels drawn on the diagram: the circuit's simulation, else the model's own. */
+  timingLevels: Record<string, number[]> | null = null;
+  showsTiming = false;
   private readonly isPicture: boolean;
   private readonly services: SessionServices;
   private readonly subjectHint: string | null;
@@ -391,6 +399,7 @@ export class QuestionSession {
     this.images = init.images ?? [];
     this.isPicture = init.isPicture ?? false;
     this.supportText = init.supportText ?? null;
+    this.timing = init.timing ?? null;
     this.passageLines =
       init.passageLines && init.passageLines.length > 0
         ? init.passageLines
@@ -427,7 +436,8 @@ export class QuestionSession {
 
   /** The question relies on a figure: a picture, or a circuit, diagram or graph named in its text. */
   get dependsOnFigure(): boolean {
-    return this.isPicture || QuestionSessionRules.mentionsPrintedFigure(this.question.groupText);
+    if (this.timing || this.isPicture) return true;
+    return QuestionSessionRules.mentionsPrintedFigure(this.question.groupText);
   }
 
   /** The labels the model answers. A stem ("4") whose parts (4.1, 4.2) are in the group is only their statement. */
@@ -457,6 +467,7 @@ export class QuestionSession {
     let text = this.question.groupText;
     const support = QuestionSessionRules.supportPassage(this.supportText, this.question.groupText);
     if (support) text += "\n\nTexto de apoio (printed before the question):\n" + support;
+    if (this.timing) text += `\n\nFor ${this.question.label}: ` + TimingDiagrams.description(this.timing);
     if (this.transcript) text += "\n\nTranscript of the recording, as given by the student:\n" + this.transcript;
     if (RouteDecision.comparesTwoTexts(this.question.groupText) && this.passageLines.length > 0) {
       const passage = this.passageLines
@@ -872,6 +883,20 @@ export class QuestionSession {
         .join("\n");
       if (FigureConsistency.disagreement(solution.figure, answers) !== null) this.isConfirmed = false;
     }
+    // A timing diagram is confirmed when the circuit, simulated, gives the model's own levels.
+    this.timingLevels = null;
+    const answer = this.timing ? decodeTimingAnswer(solution.timing) : null;
+    if (this.timing && answer) {
+      const simulated = simulateTiming(this.timing, answer);
+      const expected: Record<string, number[]> = {};
+      for (const signal of answer.signals) if (!(signal.name in expected)) expected[signal.name] = signal.levels;
+      this.timingLevels = simulated ?? expected;
+      this.isConfirmed =
+        simulated !== null &&
+        TimingDiagrams.rowsToFill(this.timing).every(
+          (row) => JSON.stringify(simulated[row.name]) === JSON.stringify(expected[row.name]),
+        );
+    }
     this.parameterValue = this.solutionGraph ? (Graphs.draggableParameter(this.solutionGraph)?.value ?? 0) : 0;
     this.figureCache.clear();
     // A drawing of the old answer is drawn again for the new one.
@@ -1073,6 +1098,7 @@ export class QuestionSession {
     if (mode === "solution") {
       this.sawSolution = true;
       this.selectedStep = null;
+      if (this.canDrawTiming) this.showsTiming = true;
       // The figure beside the steps, when a template or the solver asked for one. A sign table, the continuity
       // graph, or a complex figure that checked out already shows the point; a returned curve covers a function.
       const part = this.part;
@@ -1257,6 +1283,16 @@ export class QuestionSession {
   /** The step the graph is drawn at: marks from a later step stay hidden. */
   get graphStep(): number {
     return this.figureStep;
+  }
+
+  /** The answer to a timing diagram is drawn on the diagram itself. */
+  get canDrawTiming(): boolean {
+    return this.timing !== null && this.timingLevels !== null;
+  }
+
+  toggleTiming(): void {
+    this.showsTiming = !this.showsTiming;
+    this.changed();
   }
 
   toggleGraph(): void {

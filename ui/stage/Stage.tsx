@@ -25,6 +25,7 @@ import { QuestionPages } from "@core/problems/questionPages";
 import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
 import { QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
 import { CurveGraph } from "../figures/CurveGraph";
+import { detectTimingDiagram, timingPath, TimingDiagrams, type GreyBitmap } from "@core/timing/timing";
 import { IllustrationView } from "../figures/IllustrationView";
 import { SignTableView } from "../figures/SignTableView";
 import { StatementQuotes } from "@core/problems/statementQuotes";
@@ -115,17 +116,44 @@ async function prepare(
       )
         .filter((jpeg): jpeg is string => jpeg !== null)
         .map(base64Bytes);
+  // A printed timing diagram to fill in: found only where a clock's label stands near the question.
+  const timing = await detectTimingDiagram(page, question.bounds, (region, scale) =>
+    greyRegion(document, opened.pageIndex, region, scale),
+  ).catch(() => null);
   const session = new QuestionSession(
     {
       question,
       images,
       passageLines: passageLinesOfPages(pages),
       sendsMaterial: QuestionPages.sendsMaterial(pages, question),
+      timing,
     },
     sessionServices(),
   );
   void session.openQuietly();
   return { session, page };
+}
+
+/** A page region in grey, one byte per pixel, row 0 at the top: what the timing diagram is measured on. */
+async function greyRegion(
+  document: ReaderDocument,
+  index: number,
+  region: Rect,
+  scale: number,
+): Promise<GreyBitmap | null> {
+  const canvas = window.document.createElement("canvas");
+  await document.renderRegion(index, canvas, region, scale, 1);
+  const context = canvas.getContext("2d");
+  if (!context || canvas.width === 0 || canvas.height === 0) return null;
+  const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = new Uint8Array(canvas.width * canvas.height);
+  for (let at = 0; at < pixels.length; at++) {
+    const alpha = data[at * 4 + 3]! / 255;
+    // Transparent is the white of the paper.
+    const grey = 0.299 * data[at * 4]! + 0.587 * data[at * 4 + 1]! + 0.114 * data[at * 4 + 2]!;
+    pixels[at] = Math.round(grey * alpha + 255 * (1 - alpha));
+  }
+  return { width: canvas.width, height: canvas.height, pixels };
 }
 
 function useSession(session: QuestionSession | null): number {
@@ -410,6 +438,27 @@ function CropPiece({
         const box = toCrop(Rects.inset(rect, -4, -3));
         return <span key={`c${index}`} className="stage-circle" style={box} />;
       })}
+      {session?.showsTiming && session.timing && session.timingLevels && (
+        // The filled-in rows, in blue exactly on the printed diagram, one row after another like a pen.
+        <svg className="stage-timing" width={region.width * scale} height={region.height * scale} aria-hidden="true">
+          {TimingDiagrams.rowsToFill(session.timing).map((row, index) => {
+            const levels = session.timingLevels?.[row.name];
+            if (!levels) return null;
+            const points = timingPath(session.timing!, row, levels).map(
+              (point) => `${(point.x - region.x) * scale},${(region.y + region.height - point.y) * scale}`,
+            );
+            return (
+              <polyline
+                key={row.name}
+                points={points.join(" ")}
+                pathLength={1}
+                className="stage-timing-row"
+                style={{ animationDelay: `${index * 0.7}s` }}
+              />
+            );
+          })}
+        </svg>
+      )}
     </div>
   );
 }
@@ -1069,6 +1118,11 @@ function Actions({ session }: { session: QuestionSession }) {
       session.showsIllustration ? t("Hide Drawing") : t("Draw It"),
       () => session.toggleIllustration(),
       session.canDraw && session.part !== null,
+    ],
+    [
+      session.showsTiming ? t("Hide Waveforms") : t("Draw Waveforms"),
+      () => session.toggleTiming(),
+      session.canDrawTiming,
     ],
     [
       session.showsGraph ? t("Hide Graph") : t("Show the graph"),
