@@ -1,0 +1,551 @@
+/*
+  The stage (CLAUDE.md rules 8 and 9, section 7): the page behind dims and blurs, white text, one blue. Without
+  transparency effects the ground is opaque black at about 85 %; with Reduce Motion only fades.
+*/
+
+.stage {
+  --stage-accent: #0a84ff;
+  --stage-text: rgb(255 255 255 / 95%);
+  --stage-muted: rgb(255 255 255 / 60%);
+  --stage-faint: rgb(255 255 255 / 35%);
+  --stage-line: rgb(255 255 255 / 14%);
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 40px 24px 32px;
+  background: rgb(20 20 22 / 62%);
+  backdrop-filter: blur(10px) saturate(110%);
+  color: var(--stage-text);
+  font-family: var(--font-text);
+  animation: stage-in 180ms var(--ease-out);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .stage {
+    background: rgb(0 0 0 / 85%);
+    backdrop-filter: none;
+  }
+}
+
+@keyframes stage-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.stage-column {
+  width: min(880px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* The question lifted off the page: drawn black on clear, turned white. */
+.stage-question {
+  width: 100%;
+  animation: stage-lift 420ms var(--spring);
+}
+
+@keyframes stage-lift {
+  from {
+    transform: translateY(14px) scale(0.98);
+    opacity: 0;
+  }
+}
+
+.stage-crop {
+  position: relative;
+  max-width: 100%;
+  transition:
+    width 300ms var(--spring),
+    height 300ms var(--spring);
+}
+
+.stage-crop canvas {
+  display: block;
+  filter: invert(1) drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
+}
+
+.stage-underline {
+  position: absolute;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--stage-accent);
+  animation: stage-draw 260ms var(--ease-out);
+  transform-origin: left;
+}
+
+.stage-circle {
+  position: absolute;
+  border: 2px solid var(--stage-accent);
+  border-radius: 50%;
+  animation: stage-draw 360ms var(--ease-out);
+}
+
+@keyframes stage-draw {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+}
+
+/* The menu. */
+.stage-menu-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--stage-muted);
+}
+
+.stage-menu ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stage-menu button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--stage-text);
+  font: 600 15px var(--font-text);
+  text-shadow: 0 1px 4px rgb(0 0 0 / 50%);
+}
+
+.stage-menu button:hover,
+.stage-menu button:focus-visible {
+  background: rgb(255 255 255 / 10%);
+  outline: none;
+}
+
+.stage-menu-number {
+  min-width: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--stage-muted);
+}
+
+/* A mode's panel. */
+.stage-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.stage-asks {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stage-hint {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.stage-hint-icon {
+  color: var(--stage-accent);
+  margin-top: 4px;
+}
+
+.stage-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--stage-muted);
+  font-size: 14px;
+}
+
+.stage-progress-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--stage-accent);
+  animation: stage-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes stage-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.stage-caution {
+  margin: 0;
+  font-size: 13px;
+  color: var(--stage-muted);
+}
+
+/* The answer: larger than the question, at the top. */
+.stage-answer {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 260px;
+  max-width: 100%;
+  padding: 14px 22px 16px;
+  border: 1px solid rgb(10 132 255 / 55%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 6%);
+  animation: stage-lift 300ms var(--spring);
+}
+
+.stage-answer-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--stage-accent);
+}
+
+.stage-answer-value {
+  font-size: 22px;
+  overflow-x: auto;
+}
+
+.stage-answer-value .katex-display {
+  margin: 0;
+  text-align: left;
+}
+
+.stage-solution-body {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.stage-steps {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stage-step {
+  display: flex;
+  gap: 14px;
+  padding: 4px 8px 4px 0;
+  border-radius: 10px;
+  animation: stage-arrive 320ms var(--spring);
+}
+
+.stage-step:hover,
+.stage-step.selected {
+  background: rgb(255 255 255 / 5%);
+}
+
+@keyframes stage-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.stage-step-number {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: rgb(10 132 255 / 30%);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stage-step.selected .stage-step-number,
+.stage-step.arriving .stage-step-number {
+  background: var(--stage-accent);
+}
+
+.stage-step-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.stage-step-body h4 {
+  margin: 2px 0 2px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stage-step-latex {
+  display: block;
+  font-size: 17px;
+  overflow-x: auto;
+}
+
+.stage-step-latex .katex-display {
+  margin: 4px 0;
+  text-align: left;
+}
+
+.stage-step-note {
+  margin: 0;
+  font-size: 14px;
+  color: rgb(255 255 255 / 82%);
+}
+
+.stage-branches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 14px;
+}
+
+.stage-branches > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stage-formulas {
+  flex: none;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 18px;
+  border-left: 1px solid var(--stage-line);
+}
+
+.stage-formulas h3,
+.stage-evidence h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--stage-muted);
+}
+
+.stage-formula {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--stage-muted);
+}
+
+.stage-formula .katex {
+  color: var(--stage-text);
+  font-size: 1.05em;
+}
+
+.stage-figure-reading summary {
+  cursor: pointer;
+  color: var(--stage-muted);
+  font-size: 14px;
+}
+
+/* Text answers. */
+.stage-passage {
+  margin: 0;
+  font-size: 14px;
+  color: rgb(255 255 255 / 75%);
+  white-space: pre-wrap;
+}
+
+.stage-passage mark {
+  background: none;
+  color: var(--stage-text);
+  text-decoration: underline 2px var(--stage-accent);
+  text-underline-offset: 3px;
+}
+
+.stage-points {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 14px;
+}
+
+.stage-paragraph {
+  margin: 0;
+}
+
+/* Let me try. */
+.stage-try input,
+.stage-ask input,
+.stage-transcript {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--stage-line);
+  background: transparent;
+  color: var(--stage-text);
+  font: 17px var(--font-text);
+  padding: 6px 0;
+  outline: none;
+}
+
+.stage-transcript {
+  border: 1px solid var(--stage-line);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.stage-try input:focus,
+.stage-ask input:focus {
+  border-bottom-color: var(--stage-accent);
+}
+
+.stage-result {
+  margin: 0;
+  font-weight: 600;
+}
+
+.stage-result-matches {
+  color: var(--stage-accent);
+}
+
+.stage-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stage-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.stage-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--stage-faint);
+}
+
+.stage-dots span.on {
+  background: var(--stage-accent);
+}
+
+/* Buttons and the field at the foot. */
+.stage-button {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--stage-accent);
+  color: #fff;
+  font: 600 14px var(--font-text);
+}
+
+.stage-button:disabled {
+  opacity: 0.4;
+}
+
+.stage-link {
+  border: 0;
+  background: transparent;
+  color: var(--stage-accent);
+  font: 15px var(--font-text);
+  padding: 2px 0;
+  text-align: left;
+}
+
+.stage-link.quiet {
+  color: var(--stage-muted);
+}
+
+.stage-link:hover {
+  color: var(--stage-text);
+}
+
+.stage-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stage-notice p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.stage-suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stage-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.stage-ask {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--stage-accent);
+}
+
+.stage-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+}
+
+.stage button:focus-visible,
+.stage summary:focus-visible {
+  outline: 2px solid var(--stage-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage *,
+  .stage {
+    animation-name: stage-in !important;
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .stage {
+    background: Canvas;
+    color: CanvasText;
+    backdrop-filter: none;
+  }
+
+  .stage-crop canvas {
+    filter: none;
+    background: Canvas;
+  }
+
+  .stage-underline,
+  .stage-circle {
+    background: Highlight;
+    border-color: Highlight;
+  }
+}
+
+@media (max-width: 760px) {
+  .stage-solution-body {
+    flex-direction: column;
+  }
+
+  .stage-formulas {
+    width: 100%;
+    padding-left: 0;
+    border-left: 0;
+  }
+}

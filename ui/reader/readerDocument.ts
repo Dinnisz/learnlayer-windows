@@ -115,6 +115,37 @@ export class ReaderDocument {
     return page.render({ canvas, viewport, intent: hiddenIntent() });
   }
 
+  /**
+   * Draws `region` (PDF points) of a page into `canvas`, `scale` CSS pixels per point, on a transparent ground: the
+   * question lifted off the page onto the stage.
+   */
+  async renderRegion(
+    index: number,
+    canvas: HTMLCanvasElement,
+    region: Rect,
+    scale: number,
+    pixelRatio: number,
+  ): Promise<void> {
+    const page = await this.page(index);
+    const media = this.sizes[index]!.mediaBox;
+    const pixels = scale * pixelRatio;
+    const viewport = page.getViewport({ scale: pixels });
+    canvas.width = Math.max(1, Math.ceil(region.width * pixels));
+    canvas.height = Math.max(1, Math.ceil(region.height * pixels));
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const offsetX = (region.x - media.x) * pixels;
+    const offsetY = (media.y + media.height - (region.y + region.height)) * pixels;
+    await page.render({
+      canvas,
+      canvasContext: context,
+      viewport,
+      intent: "print",
+      background: "rgba(0,0,0,0)",
+      transform: [1, 0, 0, 1, -offsetX, -offsetY],
+    }).promise;
+  }
+
   /** A JPEG (base64, no prefix) of part of a page, as `PageImage.jpeg` makes it: page-wide, at most `maxPixels` on a side. */
   async jpeg(index: number, rect: Rect, maxPixels = 1600): Promise<string | null> {
     const crop = PageImage.crop(rect, this.sizes[index]!.mediaBox, maxPixels);
