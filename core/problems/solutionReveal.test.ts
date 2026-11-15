@@ -191,8 +191,8 @@ describe("SolveProgress", () => {
   });
 
   it("has short phrases in English and Portuguese for every kind", () => {
-    const english = en as Record<string, string>;
-    const portuguese = pt as Record<string, string>;
+    const english = en as unknown as Record<string, unknown>;
+    const portuguese = pt as unknown as Record<string, string | undefined>;
     const kinds: Kind[] = ["generic", "circuit", "induction", "graph", "calculus", "text", "chemistry"];
     for (const kind of kinds) {
       for (const stage of solveStages) {
