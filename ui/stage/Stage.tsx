@@ -11,7 +11,8 @@ import { formulasFor, type Card, type Part } from "@core/problems/problemSolutio
 import { QuestionPages } from "@core/problems/questionPages";
 import { QuestionSession, type Mode } from "@core/problems/questionSession";
 import { StatementQuotes } from "@core/problems/statementQuotes";
-import { solutionProvider } from "../ai/solver";
+import { describePart, TextHelpContext } from "@core/problems/textHelp";
+import { solutionProvider, textHelpProvider } from "../ai/solver";
 import { Icon } from "../components/Icon";
 import { MathText, MathView } from "../components/Math";
 import { useT } from "../i18n";
@@ -46,7 +47,11 @@ async function prepare(
       passageLines: passageLinesOfPages(pages),
       sendsMaterial: QuestionPages.sendsMaterial(pages, question),
     },
-    { provider: solutionProvider(), config: () => solutionProvider().services.config() },
+    {
+      provider: solutionProvider(),
+      config: () => solutionProvider().services.config(),
+      help: async ({ passage, context, image }) => (await textHelpProvider().help(passage, context, image)).explanation,
+    },
   );
   void session.openQuietly();
   return { session, page };
@@ -206,9 +211,12 @@ function QuestionCrop({
   // between stay on the page).
   const regions = useMemo(() => {
     const statement = question.statementBounds;
-    if (!statement || question.statementPageIndex !== null || Rects.intersection(statement, question.bounds)?.height)
-      return [question.bounds];
-    return [statement, question.bounds];
+    if (!statement || question.statementPageIndex !== null) return [question.bounds];
+    // The two crops' padding may touch: the statement ends where the part's crop begins.
+    const top = Rects.maxY(question.bounds);
+    const bottom = Math.max(statement.y, top);
+    const clipped = { ...statement, y: bottom, height: Rects.maxY(statement) - bottom };
+    return clipped.height > 4 ? [clipped, question.bounds] : [question.bounds];
   }, [question]);
 
   useLayoutEffect(() => {
@@ -693,16 +701,17 @@ function FollowUpView({ session }: { session: QuestionSession }) {
   );
 }
 
-/** What goes with a question about the exercise, until the TextHelp prompt is ported. */
+/** The context a question about the exercise goes with: this exercise, its open part and its written solution. */
 function followUpContext(session: QuestionSession, asked: string): string {
   const part = session.part;
-  return [
-    `Student question: ${asked}`,
-    `Exercise:\n${session.question.groupText}`,
-    part ? `Part ${part.label}: ${part.asks}\nAnswer: ${part.answer.text}` : "",
-  ]
-    .filter((piece) => piece !== "")
-    .join("\n\n");
+  return TextHelpContext.followUp({
+    studentQuestion: asked,
+    exercise: session.question.groupText,
+    partLabel: part?.label ?? "",
+    partAsks: part?.asks ?? "",
+    partAnswer: part?.answer.text ?? "",
+    solution: part ? describePart(part).join("\n") : "",
+  });
 }
 
 function TranscriptRequest({ session }: { session: QuestionSession }) {

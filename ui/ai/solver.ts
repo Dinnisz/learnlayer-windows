@@ -3,13 +3,15 @@
 // MockSolution.json, so the stage can be worked on without spending anything (CLAUDE.md: mocks first).
 
 import mockSolution from "@core/mocks/MockSolution.json";
+import mockTextHelp from "@core/mocks/MockTextHelp.json";
 import { DiskCache } from "@core/ai/diskCache";
 import { chatPath, endpoint, speechPath } from "@core/ai/aiGateway";
 import { ModelClient, type ModelEnvironment } from "@core/ai/modelClient";
-import { ModelRouting } from "@core/ai/modelRouting";
+import { AISettings, ModelRouting } from "@core/ai/modelRouting";
 import { decodeProblemSolution, type ProblemSolution } from "@core/problems/problemSolution";
 import { SolutionProvider } from "@core/problems/solutionProvider";
 import { TutorLanguage } from "@core/problems/solutionRequest";
+import { decodeTextHelp, TextHelpProvider, type TextHelp } from "@core/problems/textHelp";
 import { appConfig, dataFiles, isTauri, session, streamingFetch } from "../native";
 
 /** True when solves answer from the mock file: `?mock=1`, or a browser during development unless `?live=1`. */
@@ -64,4 +66,20 @@ export function solutionProvider(): SolutionProvider {
     mockSolution: mock ? () => decodeProblemSolution(mockSolution) : undefined,
   });
   return provider;
+}
+
+let textHelp: TextHelpProvider | null = null;
+
+/** Answers questions about an exercise (and selected passages), saved in `passages.json`. */
+export function textHelpProvider(): TextHelpProvider {
+  if (textHelp) return textHelp;
+  const mock = usesMock();
+  textHelp = new TextHelpProvider({
+    passages: new DiskCache<TextHelp>("passages.json", 200, dataFiles),
+    client: () => new ModelClient(environment, { model: AISettings.defaultModel }),
+    language: () =>
+      TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages)),
+    mock: mock ? () => decodeTextHelp(mockTextHelp) : undefined,
+  });
+  return textHelp;
 }
