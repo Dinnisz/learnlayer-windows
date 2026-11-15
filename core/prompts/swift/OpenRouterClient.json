@@ -1,0 +1,779 @@
+{
+  "endpoint#0": [
+    {
+      "text": "https://openrouter.ai/api/v1/chat/completions"
+    }
+  ],
+  "jsonOnlyRule#0": [
+    {
+      "text": "Reply with one JSON object only. No Markdown fence, no prose before or after it, and no tool call. Never write <invoke>, <parameter>, <function_calls>, or <function_call>. The first character of the reply is {."
+    }
+  ],
+  "cutOff#0": [],
+  "message#0": [
+    {
+      "text": "OpenRouter answered with error "
+    },
+    {
+      "expr": "status"
+    },
+    {
+      "text": ": "
+    },
+    {
+      "expr": "message"
+    }
+  ],
+  "message#1": [
+    {
+      "text": "OpenRouter sent an empty answer."
+    }
+  ],
+  "message#2": [
+    {
+      "text": "The explanation came back in a form LearnLayer can’t read."
+    }
+  ],
+  "message#3": [
+    {
+      "text": "The explanation was too long and got cut off. Try again."
+    }
+  ],
+  "message#4": [
+    {
+      "text": "The explanation came back in a form LearnLayer can’t read."
+    }
+  ],
+  "message#5": [
+    {
+      "text": "The cost cap would be passed by the next call."
+    }
+  ],
+  "code#0": [
+    {
+      "text": "quota_daily"
+    }
+  ],
+  "code#1": [
+    {
+      "text": "You’ve reached today’s limit. It resets at midnight UTC."
+    }
+  ],
+  "code#2": [
+    {
+      "text": "quota_monthly"
+    }
+  ],
+  "code#3": [
+    {
+      "text": "quota_cost"
+    }
+  ],
+  "code#4": [
+    {
+      "text": "You’ve used this month’s allowance. Upgrade to keep going."
+    }
+  ],
+  "code#5": [
+    {
+      "text": "spend_kill"
+    }
+  ],
+  "code#6": [
+    {
+      "text": "LearnLayer is paused right now. Try again later."
+    }
+  ],
+  "code#7": [
+    {
+      "text": "rate_limited"
+    }
+  ],
+  "code#8": [
+    {
+      "text": "Too many attempts. Wait a minute and try again."
+    }
+  ],
+  "code#9": [
+    {
+      "text": "LearnLayer couldn’t complete that request."
+    }
+  ],
+  "code#10": [
+    {
+      "text": "Sign in to LearnLayer in Settings to get explanations."
+    }
+  ],
+  "partial#0": [
+    {
+      "text": "finish_reason=length: cut off at "
+    },
+    {
+      "expr": "tokens"
+    },
+    {
+      "text": " tokens, "
+    }
+  ],
+  "partial#1": [
+    {
+      "text": "content empty"
+    }
+  ],
+  "partial#2": [
+    {
+      "text": "content: "
+    },
+    {
+      "expr": "partial"
+    }
+  ],
+  "reason#0": [
+    {
+      "text": "stream: "
+    },
+    {
+      "expr": "reason"
+    }
+  ],
+  "reason#1": [
+    {
+      "text": "cost cap"
+    }
+  ],
+  "message#6": [
+    {
+      "text": "gateway "
+    },
+    {
+      "expr": "status"
+    },
+    {
+      "text": " "
+    },
+    {
+      "expr": "code"
+    },
+    {
+      "text": ": "
+    },
+    {
+      "expr": "message"
+    }
+  ],
+  "message#7": [
+    {
+      "text": "signed out"
+    }
+  ],
+  "code#11": [
+    {
+      "text": "quota_daily"
+    }
+  ],
+  "code#12": [
+    {
+      "text": "quota_monthly"
+    }
+  ],
+  "code#13": [
+    {
+      "text": "quota_cost"
+    }
+  ],
+  "code#14": [
+    {
+      "text": "spend_kill"
+    }
+  ],
+  "code#15": [
+    {
+      "text": "rate_limited"
+    }
+  ],
+  "code#16": [],
+  "code#17": [
+    {
+      "text": "unauthorized"
+    }
+  ],
+  "message#8": [],
+  "environment#0": [
+    {
+      "text": "XCTestConfigurationFilePath"
+    }
+  ],
+  "environment#1": [
+    {
+      "text": "XCTestBundlePath"
+    }
+  ],
+  "environment#2": [
+    {
+      "text": "XCTestSessionIdentifier"
+    }
+  ],
+  "environment#3": [
+    {
+      "text": ".xctest"
+    }
+  ],
+  "looseSchemas#0": [
+    {
+      "text": "solution"
+    }
+  ],
+  "looseSchemas#1": [
+    {
+      "text": "illustration"
+    }
+  ],
+  "explanationWithUsage#0": [
+    {
+      "text": "explanation"
+    }
+  ],
+  "solution#0": [
+    {
+      "text": "solution"
+    }
+  ],
+  "streamedSolution#0": [
+    {
+      "text": "solution"
+    }
+  ],
+  "streamedSolution#1": [
+    {
+      "text": "ended unreadable"
+    }
+  ],
+  "ask#0": [
+    {
+      "text": "Transcribe the question in the picture."
+    }
+  ],
+  "fastQuestionSchema#0": [
+    {
+      "text": "fastQuestion"
+    }
+  ],
+  "tuneForLatency#0": [
+    {
+      "text": "provider"
+    }
+  ],
+  "tuneForLatency#1": [
+    {
+      "text": "sort"
+    }
+  ],
+  "tuneForLatency#2": [
+    {
+      "text": "latency"
+    }
+  ],
+  "tuneForLatency#3": [
+    {
+      "text": "allow_fallbacks"
+    }
+  ],
+  "reasoning#0": [
+    {
+      "text": "reasoning"
+    }
+  ],
+  "reasoning#1": [
+    {
+      "text": "enabled"
+    }
+  ],
+  "reasoning#2": [
+    {
+      "text": "exclude"
+    }
+  ],
+  "reasoning#3": [
+    {
+      "text": "reasoning"
+    }
+  ],
+  "transcribeFigure#0": [
+    {
+      "text": "Questions:\n"
+    }
+  ],
+  "transcribeFigure#1": [
+    {
+      "text": "figure"
+    }
+  ],
+  "variant#0": [
+    {
+      "text": "variant"
+    }
+  ],
+  "illustration#0": [
+    {
+      "text": "\n\n"
+    }
+  ],
+  "illustration#1": [],
+  "illustration#2": [
+    {
+      "text": "illustration"
+    }
+  ],
+  "request#0": [
+    {
+      "text": "english"
+    }
+  ],
+  "onContent#0": [
+    {
+      "text": "voiceTutor"
+    }
+  ],
+  "onContent#1": [
+    {
+      "text": "voiceTutor"
+    }
+  ],
+  "lastContent#0": [],
+  "partial#3": [],
+  "content#0": [
+    {
+      "text": "\n\n"
+    }
+  ],
+  "tokens#0": [
+    {
+      "text": "finish_reason=stop: content empty"
+    }
+  ],
+  "user#0": [
+    {
+      "text": "\n\n"
+    }
+  ],
+  "visualAid#0": [
+    {
+      "text": "visual"
+    }
+  ],
+  "textHelp#0": [
+    {
+      "text": "passage"
+    }
+  ],
+  "message#9": [
+    {
+      "text": "reasoning is mandatory"
+    }
+  ],
+  "message#10": [
+    {
+      "text": "reasoning is mandatory"
+    }
+  ],
+  "message#11": [
+    {
+      "text": "grammar is too large"
+    }
+  ],
+  "message#12": [
+    {
+      "text": "schema"
+    }
+  ],
+  "message#13": [
+    {
+      "text": "too"
+    }
+  ],
+  "budget#0": [
+    {
+      "text": "max_tokens"
+    }
+  ],
+  "budget#1": [
+    {
+      "text": "max_tokens"
+    }
+  ],
+  "budget#2": [
+    {
+      "text": "enabled"
+    }
+  ],
+  "request#1": [
+    {
+      "text": "POST"
+    }
+  ],
+  "request#2": [
+    {
+      "text": "application/json"
+    }
+  ],
+  "request#3": [
+    {
+      "text": "Content-Type"
+    }
+  ],
+  "request#4": [
+    {
+      "text": "LearnLayer"
+    }
+  ],
+  "request#5": [
+    {
+      "text": "X-Title"
+    }
+  ],
+  "body#0": [
+    {
+      "text": "model"
+    }
+  ],
+  "body#1": [
+    {
+      "text": "temperature"
+    }
+  ],
+  "body#2": [
+    {
+      "text": "usage"
+    }
+  ],
+  "body#3": [
+    {
+      "text": "include"
+    }
+  ],
+  "body#4": [
+    {
+      "text": "max_tokens"
+    }
+  ],
+  "described#0": [],
+  "described#1": [
+    {
+      "text": "response_format"
+    }
+  ],
+  "described#2": [
+    {
+      "text": "type"
+    }
+  ],
+  "described#3": [
+    {
+      "text": "json_object"
+    }
+  ],
+  "described#4": [
+    {
+      "text": "messages"
+    }
+  ],
+  "described#5": [
+    {
+      "text": "role"
+    }
+  ],
+  "described#6": [
+    {
+      "text": "system"
+    }
+  ],
+  "described#7": [
+    {
+      "text": "content"
+    }
+  ],
+  "described#8": [
+    {
+      "text": "\n\nMatch this JSON schema:\n"
+    }
+  ],
+  "described#9": [
+    {
+      "text": "role"
+    }
+  ],
+  "described#10": [
+    {
+      "text": "user"
+    }
+  ],
+  "described#11": [
+    {
+      "text": "content"
+    }
+  ],
+  "described#12": [
+    {
+      "text": "response_format"
+    }
+  ],
+  "described#13": [
+    {
+      "text": "type"
+    }
+  ],
+  "described#14": [
+    {
+      "text": "json_schema"
+    }
+  ],
+  "described#15": [
+    {
+      "text": "json_schema"
+    }
+  ],
+  "described#16": [
+    {
+      "text": "name"
+    }
+  ],
+  "described#17": [
+    {
+      "text": "strict"
+    }
+  ],
+  "described#18": [
+    {
+      "text": "schema"
+    }
+  ],
+  "described#19": [
+    {
+      "text": "messages"
+    }
+  ],
+  "described#20": [
+    {
+      "text": "role"
+    }
+  ],
+  "described#21": [
+    {
+      "text": "system"
+    }
+  ],
+  "described#22": [
+    {
+      "text": "content"
+    }
+  ],
+  "described#23": [
+    {
+      "text": "role"
+    }
+  ],
+  "described#24": [
+    {
+      "text": "user"
+    }
+  ],
+  "described#25": [
+    {
+      "text": "content"
+    }
+  ],
+  "described#26": [
+    {
+      "text": "reasoning"
+    }
+  ],
+  "estimate#0": [
+    {
+      "text": "voiceTutor"
+    }
+  ],
+  "transport#0": [
+    {
+      "text": " stream"
+    }
+  ],
+  "transport#1": [],
+  "transport#2": [
+    {
+      "text": "Bearer "
+    },
+    {
+      "expr": "transport.bearer"
+    }
+  ],
+  "transport#3": [
+    {
+      "text": "Authorization"
+    }
+  ],
+  "routeArea#0": [
+    {
+      "text": "X-LearnLayer-Area"
+    }
+  ],
+  "routeName#0": [
+    {
+      "text": "X-LearnLayer-Route"
+    }
+  ],
+  "routeHasFigure#0": [
+    {
+      "text": "1"
+    }
+  ],
+  "routeHasFigure#1": [
+    {
+      "text": "0"
+    }
+  ],
+  "routeHasFigure#2": [
+    {
+      "text": "X-LearnLayer-Figure"
+    }
+  ],
+  "routeHasFigure#3": [
+    {
+      "text": "chat"
+    }
+  ],
+  "routeHasFigure#4": [
+    {
+      "text": "X-LearnLayer-Purpose"
+    }
+  ],
+  "onContent#2": [
+    {
+      "text": "stream"
+    }
+  ],
+  "usage#0": [
+    {
+      "text": "length"
+    }
+  ],
+  "usage#1": [],
+  "token#0": [
+    {
+      "text": "Bearer "
+    },
+    {
+      "expr": "token"
+    }
+  ],
+  "token#1": [
+    {
+      "text": "Authorization"
+    }
+  ],
+  "token#2": [
+    {
+      "text": "Bearer "
+    },
+    {
+      "expr": "token"
+    }
+  ],
+  "token#3": [
+    {
+      "text": "Authorization"
+    }
+  ],
+  "content#1": [],
+  "toolCallSettled#0": [
+    {
+      "text": "data:"
+    }
+  ],
+  "payload#0": [
+    {
+      "text": "[DONE]"
+    }
+  ],
+  "error#0": [
+    {
+      "text": "error mid-stream: "
+    },
+    {
+      "expr": "error.message"
+    }
+  ],
+  "provider#0": [
+    {
+      "text": " / "
+    }
+  ],
+  "json#0": [
+    {
+      "text": "tool-call markup instead of JSON"
+    }
+  ],
+  "failure#0": [
+    {
+      "text": "broke off: "
+    },
+    {
+      "expr": "error.localizedDescription"
+    }
+  ],
+  "json#1": [
+    {
+      "text": "length"
+    }
+  ],
+  "json#2": [
+    {
+      "text": "tool-call markup instead of JSON"
+    }
+  ],
+  "json#3": [
+    {
+      "text": "length"
+    }
+  ],
+  "json#4": [
+    {
+      "text": "ended before the reply was finished"
+    }
+  ],
+  "json#5": [
+    {
+      "text": "empty"
+    }
+  ],
+  "content#2": [],
+  "start#0": [
+    {
+      "text": "{"
+    }
+  ],
+  "end#0": [
+    {
+      "text": "}"
+    }
+  ],
+  "end#1": [
+    {
+      "text": "no JSON object"
+    }
+  ],
+  "logUnreadable#0": [
+    {
+      "text": "Unreadable solution JSON ("
+    },
+    {
+      "expr": "reason"
+    },
+    {
+      "text": "):\n"
+    },
+    {
+      "expr": "content"
+    }
+  ],
+  "body#5": []
+}

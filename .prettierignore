@@ -10,3 +10,4 @@ package-lock.json
 *.md
 COMO-COMECAR.txt
 core/mocks/
+core/prompts/swift/

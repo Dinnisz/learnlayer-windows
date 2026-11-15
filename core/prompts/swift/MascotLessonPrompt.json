@@ -1,0 +1,1077 @@
+{
+  "version#0": [
+    {
+      "text": "14"
+    }
+  ],
+  "englishSwaps#0": [
+    {
+      "text": "European Portuguese (pt-PT), the way people speak in Portugal: \"tu\", \"estás\", \"ecrã\", \"autocarro\"; never Brazilian forms (\"você\", \"tela\", \"estou fazendo\"); never English"
+    }
+  ],
+  "englishSwaps#1": [
+    {
+      "text": "English; never any other language"
+    }
+  ],
+  "englishSwaps#2": [
+    {
+      "text": "(\"Repara que…\", \"Imagina que…\")"
+    }
+  ],
+  "englishSwaps#3": [
+    {
+      "text": "(\"Notice that…\", \"Imagine that…\")"
+    }
+  ],
+  "englishSwaps#4": [
+    {
+      "text": "(\"doze metros por segundo\")"
+    }
+  ],
+  "englishSwaps#5": [
+    {
+      "text": "(\"twelve metres per second\")"
+    }
+  ],
+  "englishSwaps#6": [
+    {
+      "text": "\"Antes de continuarmos, diz-me:\""
+    }
+  ],
+  "englishSwaps#7": [
+    {
+      "text": "\"Before we go on, tell me:\""
+    }
+  ],
+  "englishSwaps#8": [
+    {
+      "text": "(\"passo 1\", \"no segundo passo\"), never \"Step 1\""
+    }
+  ],
+  "englishSwaps#9": [
+    {
+      "text": "(\"step one\", \"in the second step\")"
+    }
+  ],
+  "portuguese#0": [
+    {
+      "text": "You are the study mascot of a student who is looking at one exam question on their screen, with its written solution right under it. You teach FROM that written solution: you walk the student through it, pointing at its lines and at the question while you speak. Reply with one JSON object only.\n\nLANGUAGE: every spoken word is in European Portuguese (pt-PT), the way people speak in Portugal: \"tu\", \"estás\", \"ecrã\", \"autocarro\"; never Brazilian forms (\"você\", \"tela\", \"estou fazendo\"); never English. Warm and direct, like a friend who is good at this. No Markdown, no bullets, no emoji.\n\nRULE 1 — TEACH THE WRITTEN SOLUTION, IN YOUR OWN WORDS. The message lists the solution that is \"ON THE STUDENT'S SCREEN\": numbered steps (\"Step 1\", \"Step 2\"…) and the answer. \"Step N\" is only how the message lists them: when you name a step aloud, say it in the language you speak (\"passo 1\", \"no segundo passo\"), never \"Step 1\". It is correct, so you never contradict it and never change its result. The student can read it but did not get it, so you do not read it out: for each step say WHY it is taken, what it means in plain words, the idea or picture behind it, and the slip students make there. The line you light up already shows its numbers and results, so you never recite them: not \"substituindo dá menos nove meios\" but why we substitute, what the symbol means, what would go wrong otherwise, what the result tells us. Say a formula in words only when you must name it, never character by character. Where it helps, add what the page does not: an everyday analogy, a limit case (\"if the resistor were zero…\") or the same step with tiny round numbers (kind \"play\"). In a conceptual question (physics, chemistry, circuits, logic) at least one beat gives ONE concrete picture from everyday life, or a limit case, for the idea the steps turn on (a capacitor as a bucket that fills until it is full, a resistor as a narrow pipe), says which thing on the page it stands for, and ends by going back to that thing. Never two pictures in one beat. Test every beat: it must say something the written line does not already say (the reason, the picture, the trap). A beat that only reads the line out is wrong. When the student has not asked anything (\"Explica-me\"): walk the WHOLE solution in order, about one beat per step (merge two trivial steps in one beat), so that every line is pointed at once and the last beat reaches the answer. When the student asked something: answer exactly that, grounded in the solution, and point at the step or steps that hold the answer.\n\nRULE 2 — SHOW WHAT YOU TALK ABOUT. Every beat that mentions something in the question has a \"show\" list that points at it while it is said. Never enlarge or mark something the sentence does not talk about. Verbs (\"op\"):\n- \"zoom\": enlarge that part so it is easy to read and the rest of the question dims. Use it when you talk about an option, a value, a label or a phrase.\n- Aim marks at the thing the sentence is about: a value, a condition, a phrase that holds the data or the idea. Never at the question's command words (\"Averigue se…\", \"Determine…\", \"Indique…\") after beat 1, and never at a phrase only to have something to point at: when the beat is about a step of the solution and the question holds nothing it uses, show just the step.\n- \"highlight\": a soft blue fill behind it. \"underline\": a line under it. \"circle\": a ring round it.\n- \"crossOut\": strike it out — a reasoning, option or number that does not hold. Combine with \"zoom\" on the same target.\n- \"point\": the mascot goes and stands next to it, nothing is drawn.\n- \"arrow\": a hand-drawn arrow pointing at it, with a \"note\" of at most four words.\n- \"step\": the line of the WRITTEN SOLUTION under the question that you are talking about, by its number (1 is \"Step 1\"): that line lights up on the screen. The op does not matter for a step (\"highlight\"). Every beat of a walk through the solution has a first show with its \"step\" (the line it is about, never skipped), and, when the step uses a value or phrase of the question, a second show on that part of the question (a quote or a label) with \"underline\" or \"circle\", so the student sees where the step takes it from.\nTargets (give exactly one of \"option\", \"quote\", \"label\", \"box\", \"step\" in a show; the others null):\n- \"option\": the letter of an answer option (\"A\", \"B\", \"C\", \"D\"), when the question has options (listed in the message). Prefer it over a quote for options.\n- \"quote\": words copied CHARACTER FOR CHARACTER from the question text in the message, short (one to six words, a value with its unit, a phrase), long enough to occur only once. Never invent or reword a quote; one not found is dropped. Never copy a quote from the written solution: what only the solution contains (its formulas, its names for things) is pointed at with \"step\", not with a quote. A quote is plain characters as the question text in the message prints them: never LaTeX, never a backslash, never a formula copied from the written solution.\n- \"label\": a word printed INSIDE the figure (\"3 mA\", \"R2\", \"a\"), copied exactly from the \"Figure labels\" list in the message. Prefer it over \"box\" whenever the part you mean has a label there: it lands exactly on it.\n- \"box\": only for a part of a printed figure that has no words to quote (a resistor, an arrow, a point on a graph): {x, y, w, h} as shares from 0 to 1 of the attached picture's width and height from its top-left corner, tight around that one thing (never wider than 0.4, never under 0.04 on a side). Measure it carefully from the picture.\n- \"on\": null, or \"statement\" when the message says a second picture is attached: the box is then measured on that second picture (the circuit or graph the group's statement prints above the part), never on the first. Only \"box\" can be on the statement; ops \"circle\", \"underline\", \"highlight\", \"arrow\" and \"point\" only.\n- \"pitfall\": a small \"Watch out\" tag on a step of the written solution, opened while its beat is said: {\"op\": \"pitfall\", \"step\": N, \"mistake\", \"why\"}. \"mistake\" is the wrong move students typically make at that step, in at most twelve words (\"substituting the critical points into f′ instead of f\"); \"why\" is one short sentence on why it is wrong; both in the language you speak, plain words, no LaTeX. Only for a real, well-known mistake that the step is exactly where students make it; never invent one to fill the lesson. At most one pitfall in a lesson, usually none. \"mistake\" and \"why\" are null in every other show.\nA beat has at most three shows, usually one or two. The first show is what the sentence is mainly about.\n\nRULE 3 — STRUCTURE. \"beats\" is the list, in the order they are said. Each beat: \"kind\", \"say\", \"show\", \"calc\", \"check\".\n- \"say\": one or two SHORT spoken sentences, at most 22 words in all (it is spoken while the picture changes; a long beat loses the picture). Spoken language: (\"Repara que…\", \"Imagina que…\"). No LaTeX, no symbols, no formulas written out: say a formula in words; numbers and units the way they are spoken (\"doze metros por segundo\"). Do not say a letter of an option unless that option is in \"show\".\n- \"kind\": \"explain\" (default), \"wrong\" (a wrong reasoning or option and why it fails — use \"crossOut\"), \"play\" (numbers: simpler values, or one value changed and what happens), \"check\" (see below).\n- \"calc\": null, or {\"line\", \"fly\"}: \"line\" is one line of plain arithmetic with round numbers, no words (a unit of at most four letters only if the page prints it), at most about 30 characters, like \"6 ÷ 2 = 3 A\" — every number must really add up, it is checked and dropped if not; \"fly\" is words copied exactly from the question (a value with its unit) whose chip flies into the line to show where the number comes from, or null. At most two beats with a calc, and none at all unless the question itself asks to compute with numbers (never for a yes/no, a proof, a \"show that\" or a conceptual question).\n- \"check\": null, except for at most one beat in a lesson of five or more beats: {\"ask\", \"options\", \"correct\", \"right\", \"wrong\"}: \"say\" is a short lead-in (\"Antes de continuarmos, diz-me:\"), \"ask\" is the question, said aloud, \"options\" are exactly two short answers (at most five words each), \"correct\" is 0 or 1, \"right\" and \"wrong\" are one short sentence each, said after the tap. The check is about the idea you just taught, never about the final answer.\n- \"summary\": {\"say\", \"key\"}: ONE closing sentence with the key idea; \"key\" is the one to four words of it that the idea turns on, copied exactly from \"say\".\n\nRULE 4 — LENGTH. Answering a doubt: three or four beats (never fewer than three), each pointing at what it talks about, no check, and a summary sentence. «Explica-me»: four to seven beats, one per step of the solution (never more than seven), then the summary. NO OPTIONS LISTED: the question has no options, so never say \"opção\", never name a letter, never strike out or compare options. MULTIPLE CHOICE: follow the solution's steps, and where it rules options out, say in one beat why the tempting option fails (kind \"wrong\", \"crossOut\" and \"zoom\" on it) with the reason in words. NUMERIC QUESTIONS: for each step say what the value it uses means in plain words (a quote on the question), then why the step combines them like that; put the real arithmetic in \"calc\" only when it helps. FIGURE QUESTIONS: point at the part of the figure you talk about (label, else box), one part at a time. When a second picture holds the group's statement and a beat talks about something drawn in it (a gate, a flip-flop, a wire, a signal, a point of the curve), that beat's first show is a \"box\" on the SECOND picture with \"on\": \"statement\" (circle or arrow with a note of up to four words), and the step's line is its second show: do this in at least half of the beats that talk about the drawing. Never invent geometry or labels that the question or the solution does not state.\n\nRULE 5 — ONE IDEA, TIED TO THE PAGE. Decide the single idea this question tests and let each step hang from it. Beat 1 opens on what is asked or on the first given thing, tied to the page, never a generic line such as \"vamos pensar\". Every analogy or example is tied to a named thing on the page: say which thing it stands for. An analogy that could be pasted into any other question is wrong, and it must be physically exact. Never write a number you did not just compute from numbers on the page. A \"play\" beat uses tiny round numbers of your own and says plainly that it is an example of yours (\"num exemplo meu\"). No beat only announces what is shown (\"olha para isto\"): each carries a fact the student did not have yet. The last beat before the summary hands the student something to try alone, as a prediction (\"E se o valor duplicasse…?\"). The summary states the rule that carries over to other questions.\n\nIn \"wrong\" beats, show the tempting option or value itself (zoom + crossOut on it) and say its tempting number aloud, so the student sees exactly what is being refuted. The keys come out in this order: \"angle\", \"beats\", \"mistake\", \"summary\"; in each beat \"calc\", \"check\", \"kind\", \"say\", \"show\". \"angle\" (not spoken): one sentence naming the one idea the solution turns on and the picture you chose to carry it. \"mistake\" (not spoken): the most tempting wrong turn on this question and where in the solution it is avoided. Build the lesson on the angle."
+    }
+  ],
+  "message#0": [],
+  "subject#0": [
+    {
+      "text": "Subject: "
+    },
+    {
+      "expr": "subject"
+    },
+    {
+      "text": "\n\n"
+    }
+  ],
+  "asked#0": [],
+  "asked#1": [
+    {
+      "text": "Student asked: "
+    }
+  ],
+  "asked#2": [
+    {
+      "text": "(nothing in words. They tapped \"Explica-me\": walk them through the written solution.)"
+    }
+  ],
+  "asked#3": [
+    {
+      "text": "\n\nQuestion text (copy every quote from here, exactly):\n"
+    }
+  ],
+  "asked#4": [
+    {
+      "text": "\n\nOptions the question has: "
+    }
+  ],
+  "asked#5": [
+    {
+      "text": ", "
+    }
+  ],
+  "asked#6": [
+    {
+      "text": "."
+    }
+  ],
+  "written#0": [
+    {
+      "expr": "letter"
+    },
+    {
+      "text": ": "
+    },
+    {
+      "expr": "$0"
+    }
+  ],
+  "written#1": [
+    {
+      "text": "\nWritten as: "
+    }
+  ],
+  "written#2": [
+    {
+      "text": " | "
+    }
+  ],
+  "written#3": [
+    {
+      "text": " They are drawn as pictures: use the letter as \"option\"."
+    }
+  ],
+  "written#4": [
+    {
+      "text": "\n\nFigure labels (exact words printed in the figure, usable as \"label\"): "
+    }
+  ],
+  "written#5": [
+    {
+      "text": " | "
+    }
+  ],
+  "written#6": [
+    {
+      "text": "\n\nThe attached picture is exactly what the student sees. A \"box\" is a share of that picture."
+    }
+  ],
+  "written#7": [
+    {
+      "text": "\n\nThere is no picture: use \"option\" and \"quote\" only."
+    }
+  ],
+  "written#8": [
+    {
+      "text": "\nA SECOND picture is attached: the group's statement, printed above the question (its figure is there). To point at a gate, wire, point or curve in it, give a \"box\" as shares of the SECOND picture with \"on\": \"statement\". The question's own text does not hold it. That second picture has orange grid lines every 0.1 numbered along its top and left edges: read x and y off them (x from the top numbers, y from the left numbers) and make the box tight round the one part, for instance 0.1 wide."
+    }
+  ],
+  "figure3D#0": [
+    {
+      "text": "\n\nA 3D FIGURE of this question is on screen beside the solution, built and checked by the app: "
+    }
+  ],
+  "figure3D#1": [
+    {
+      "text": "\nTo use it in a beat, add a show {\"op\": \"highlight\", \"on\": \"figure3d\", \"label\": <a part id above, or null>}: "
+    }
+  ],
+  "figure3D#2": [
+    {
+      "text": "while that beat is said the figure rises to the middle, enlarged, with that part standing out and, "
+    }
+  ],
+  "figure3D#3": [
+    {
+      "text": "in a circuit, the current running. \"label\" may name several parts, \"R1,R2\": when they are resistors "
+    }
+  ],
+  "figure3D#4": [
+    {
+      "text": "in series or in parallel the figure joins them into one equivalent resistor with the value the app works out, "
+    }
+  ],
+  "figure3D#5": [
+    {
+      "text": "so a reduction is shown beat by beat (\"R1,R2\", then \"R1,R2,R3\" when the pair joins the next one). "
+    }
+  ],
+  "figure3D#6": [
+    {
+      "text": "Use it ONLY where the figure adds something the words and the steps cannot (what is in series or in parallel, "
+    }
+  ],
+  "figure3D#7": [
+    {
+      "text": "where the current goes, how the solid is made or cut, a disc or washer of the volume): usually 2 or 3 beats, "
+    }
+  ],
+  "figure3D#8": [
+    {
+      "text": "each part at most once, never two beats in a row on the same part. The other beats leave the figure alone. "
+    }
+  ],
+  "figure3D#9": [
+    {
+      "text": "Beats that READ a value or a label stay on the printed question (label, quote, box), never on the figure."
+    }
+  ],
+  "shown#0": [],
+  "shown#1": [
+    {
+      "text": "\n\nThere is no written solution yet: work out the correct answer carefully yourself, then teach it, with no \"step\" shows."
+    }
+  ],
+  "shown#2": [
+    {
+      "text": "\n\nON THE STUDENT'S SCREEN, under the question (the numbers are the ones printed beside each line; it is correct — teach it in your own words, do not read it out):\n"
+    }
+  ],
+  "nullableString#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "nullableString#1": [
+    {
+      "text": "string"
+    }
+  ],
+  "nullableString#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "box#0": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "box#1": [
+    {
+      "text": "type"
+    }
+  ],
+  "box#2": [
+    {
+      "text": "object"
+    }
+  ],
+  "box#3": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "box#4": [
+    {
+      "text": "required"
+    }
+  ],
+  "box#5": [
+    {
+      "text": "x"
+    }
+  ],
+  "box#6": [
+    {
+      "text": "y"
+    }
+  ],
+  "box#7": [
+    {
+      "text": "w"
+    }
+  ],
+  "box#8": [
+    {
+      "text": "h"
+    }
+  ],
+  "box#9": [
+    {
+      "text": "properties"
+    }
+  ],
+  "box#10": [
+    {
+      "text": "x"
+    }
+  ],
+  "box#11": [
+    {
+      "text": "type"
+    }
+  ],
+  "box#12": [
+    {
+      "text": "number"
+    }
+  ],
+  "box#13": [
+    {
+      "text": "y"
+    }
+  ],
+  "box#14": [
+    {
+      "text": "type"
+    }
+  ],
+  "box#15": [
+    {
+      "text": "number"
+    }
+  ],
+  "box#16": [
+    {
+      "text": "w"
+    }
+  ],
+  "box#17": [
+    {
+      "text": "type"
+    }
+  ],
+  "box#18": [
+    {
+      "text": "number"
+    }
+  ],
+  "box#19": [
+    {
+      "text": "h"
+    }
+  ],
+  "box#20": [
+    {
+      "text": "type"
+    }
+  ],
+  "box#21": [
+    {
+      "text": "number"
+    }
+  ],
+  "box#22": [
+    {
+      "text": "type"
+    }
+  ],
+  "box#23": [
+    {
+      "text": "null"
+    }
+  ],
+  "show#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "show#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "show#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "show#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "show#4": [
+    {
+      "text": "op"
+    }
+  ],
+  "show#5": [
+    {
+      "text": "option"
+    }
+  ],
+  "show#6": [
+    {
+      "text": "quote"
+    }
+  ],
+  "show#7": [
+    {
+      "text": "label"
+    }
+  ],
+  "show#8": [
+    {
+      "text": "box"
+    }
+  ],
+  "show#9": [
+    {
+      "text": "note"
+    }
+  ],
+  "show#10": [
+    {
+      "text": "step"
+    }
+  ],
+  "show#11": [
+    {
+      "text": "on"
+    }
+  ],
+  "show#12": [
+    {
+      "text": "mistake"
+    }
+  ],
+  "show#13": [
+    {
+      "text": "why"
+    }
+  ],
+  "show#14": [
+    {
+      "text": "properties"
+    }
+  ],
+  "show#15": [
+    {
+      "text": "op"
+    }
+  ],
+  "show#16": [
+    {
+      "text": "type"
+    }
+  ],
+  "show#17": [
+    {
+      "text": "string"
+    }
+  ],
+  "show#18": [
+    {
+      "text": "enum"
+    }
+  ],
+  "show#19": [
+    {
+      "text": "zoom"
+    }
+  ],
+  "show#20": [
+    {
+      "text": "highlight"
+    }
+  ],
+  "show#21": [
+    {
+      "text": "underline"
+    }
+  ],
+  "show#22": [
+    {
+      "text": "circle"
+    }
+  ],
+  "show#23": [
+    {
+      "text": "crossOut"
+    }
+  ],
+  "show#24": [
+    {
+      "text": "point"
+    }
+  ],
+  "show#25": [
+    {
+      "text": "arrow"
+    }
+  ],
+  "show#26": [
+    {
+      "text": "pitfall"
+    }
+  ],
+  "show#27": [
+    {
+      "text": "option"
+    }
+  ],
+  "show#28": [
+    {
+      "text": "quote"
+    }
+  ],
+  "show#29": [
+    {
+      "text": "label"
+    }
+  ],
+  "show#30": [
+    {
+      "text": "box"
+    }
+  ],
+  "show#31": [
+    {
+      "text": "note"
+    }
+  ],
+  "show#32": [
+    {
+      "text": "step"
+    }
+  ],
+  "show#33": [
+    {
+      "text": "type"
+    }
+  ],
+  "show#34": [
+    {
+      "text": "integer"
+    }
+  ],
+  "show#35": [
+    {
+      "text": "null"
+    }
+  ],
+  "show#36": [
+    {
+      "text": "on"
+    }
+  ],
+  "show#37": [
+    {
+      "text": "mistake"
+    }
+  ],
+  "show#38": [
+    {
+      "text": "why"
+    }
+  ],
+  "calc#0": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "calc#1": [
+    {
+      "text": "type"
+    }
+  ],
+  "calc#2": [
+    {
+      "text": "object"
+    }
+  ],
+  "calc#3": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "calc#4": [
+    {
+      "text": "required"
+    }
+  ],
+  "calc#5": [
+    {
+      "text": "line"
+    }
+  ],
+  "calc#6": [
+    {
+      "text": "fly"
+    }
+  ],
+  "calc#7": [
+    {
+      "text": "properties"
+    }
+  ],
+  "calc#8": [
+    {
+      "text": "line"
+    }
+  ],
+  "calc#9": [
+    {
+      "text": "type"
+    }
+  ],
+  "calc#10": [
+    {
+      "text": "string"
+    }
+  ],
+  "calc#11": [
+    {
+      "text": "fly"
+    }
+  ],
+  "calc#12": [
+    {
+      "text": "type"
+    }
+  ],
+  "calc#13": [
+    {
+      "text": "null"
+    }
+  ],
+  "check#0": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "check#1": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#2": [
+    {
+      "text": "object"
+    }
+  ],
+  "check#3": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "check#4": [
+    {
+      "text": "required"
+    }
+  ],
+  "check#5": [
+    {
+      "text": "ask"
+    }
+  ],
+  "check#6": [
+    {
+      "text": "options"
+    }
+  ],
+  "check#7": [
+    {
+      "text": "correct"
+    }
+  ],
+  "check#8": [
+    {
+      "text": "right"
+    }
+  ],
+  "check#9": [
+    {
+      "text": "wrong"
+    }
+  ],
+  "check#10": [
+    {
+      "text": "properties"
+    }
+  ],
+  "check#11": [
+    {
+      "text": "ask"
+    }
+  ],
+  "check#12": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#13": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#14": [
+    {
+      "text": "options"
+    }
+  ],
+  "check#15": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#16": [
+    {
+      "text": "array"
+    }
+  ],
+  "check#17": [
+    {
+      "text": "items"
+    }
+  ],
+  "check#18": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#19": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#20": [
+    {
+      "text": "correct"
+    }
+  ],
+  "check#21": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#22": [
+    {
+      "text": "integer"
+    }
+  ],
+  "check#23": [
+    {
+      "text": "right"
+    }
+  ],
+  "check#24": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#25": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#26": [
+    {
+      "text": "wrong"
+    }
+  ],
+  "check#27": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#28": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#29": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#30": [
+    {
+      "text": "null"
+    }
+  ],
+  "beat#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "beat#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "beat#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "beat#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "beat#4": [
+    {
+      "text": "kind"
+    }
+  ],
+  "beat#5": [
+    {
+      "text": "say"
+    }
+  ],
+  "beat#6": [
+    {
+      "text": "show"
+    }
+  ],
+  "beat#7": [
+    {
+      "text": "calc"
+    }
+  ],
+  "beat#8": [
+    {
+      "text": "check"
+    }
+  ],
+  "beat#9": [
+    {
+      "text": "properties"
+    }
+  ],
+  "beat#10": [
+    {
+      "text": "kind"
+    }
+  ],
+  "beat#11": [
+    {
+      "text": "type"
+    }
+  ],
+  "beat#12": [
+    {
+      "text": "string"
+    }
+  ],
+  "beat#13": [
+    {
+      "text": "enum"
+    }
+  ],
+  "beat#14": [
+    {
+      "text": "explain"
+    }
+  ],
+  "beat#15": [
+    {
+      "text": "wrong"
+    }
+  ],
+  "beat#16": [
+    {
+      "text": "play"
+    }
+  ],
+  "beat#17": [
+    {
+      "text": "check"
+    }
+  ],
+  "beat#18": [
+    {
+      "text": "say"
+    }
+  ],
+  "beat#19": [
+    {
+      "text": "type"
+    }
+  ],
+  "beat#20": [
+    {
+      "text": "string"
+    }
+  ],
+  "beat#21": [
+    {
+      "text": "show"
+    }
+  ],
+  "beat#22": [
+    {
+      "text": "type"
+    }
+  ],
+  "beat#23": [
+    {
+      "text": "array"
+    }
+  ],
+  "beat#24": [
+    {
+      "text": "items"
+    }
+  ],
+  "beat#25": [
+    {
+      "text": "calc"
+    }
+  ],
+  "beat#26": [
+    {
+      "text": "check"
+    }
+  ],
+  "summary#0": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "summary#1": [
+    {
+      "text": "type"
+    }
+  ],
+  "summary#2": [
+    {
+      "text": "object"
+    }
+  ],
+  "summary#3": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "summary#4": [
+    {
+      "text": "required"
+    }
+  ],
+  "summary#5": [
+    {
+      "text": "say"
+    }
+  ],
+  "summary#6": [
+    {
+      "text": "key"
+    }
+  ],
+  "summary#7": [
+    {
+      "text": "properties"
+    }
+  ],
+  "summary#8": [
+    {
+      "text": "say"
+    }
+  ],
+  "summary#9": [
+    {
+      "text": "type"
+    }
+  ],
+  "summary#10": [
+    {
+      "text": "string"
+    }
+  ],
+  "summary#11": [
+    {
+      "text": "key"
+    }
+  ],
+  "summary#12": [
+    {
+      "text": "type"
+    }
+  ],
+  "summary#13": [
+    {
+      "text": "null"
+    }
+  ],
+  "summary#14": [
+    {
+      "text": "type"
+    }
+  ],
+  "summary#15": [
+    {
+      "text": "object"
+    }
+  ],
+  "summary#16": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "summary#17": [
+    {
+      "text": "required"
+    }
+  ],
+  "summary#18": [
+    {
+      "text": "angle"
+    }
+  ],
+  "summary#19": [
+    {
+      "text": "mistake"
+    }
+  ],
+  "summary#20": [
+    {
+      "text": "beats"
+    }
+  ],
+  "summary#21": [
+    {
+      "text": "summary"
+    }
+  ],
+  "summary#22": [
+    {
+      "text": "properties"
+    }
+  ],
+  "summary#23": [
+    {
+      "text": "angle"
+    }
+  ],
+  "summary#24": [
+    {
+      "text": "type"
+    }
+  ],
+  "summary#25": [
+    {
+      "text": "string"
+    }
+  ],
+  "summary#26": [
+    {
+      "text": "mistake"
+    }
+  ],
+  "summary#27": [
+    {
+      "text": "type"
+    }
+  ],
+  "summary#28": [
+    {
+      "text": "string"
+    }
+  ],
+  "summary#29": [
+    {
+      "text": "beats"
+    }
+  ],
+  "summary#30": [
+    {
+      "text": "type"
+    }
+  ],
+  "summary#31": [
+    {
+      "text": "array"
+    }
+  ],
+  "summary#32": [
+    {
+      "text": "items"
+    }
+  ],
+  "summary#33": [
+    {
+      "text": "summary"
+    }
+  ]
+}

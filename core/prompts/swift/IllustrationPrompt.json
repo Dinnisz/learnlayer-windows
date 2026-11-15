@@ -1,0 +1,1729 @@
+{
+  "version#0": [
+    {
+      "text": "22"
+    }
+  ],
+  "system#0": [
+    {
+      "text": "You draw one illustration that helps a university student see an exam question: the physical situation, the circuit, the forces, the motion, the field, the state machine. Not the algebra. The app draws it from your JSON in white on a dark page, with one blue accent. Rules:\n- \"premade\" OR \"template\": for common figures you may reply with \"premade\" {\"type\", \"params\"} only — functionGraph, inclinedPlane, simpleCircuit, box (a cube or prism), triangle, motionGraph (v–t or s–t), vectors, sineCosine, integralArea, parabola, circle, unitCircle, projectile, wave, lens, orbitalDiagram, ruffini, equationSteps, statsChart; 3D, for volumes and solids of revolution: solid_cone, solid_cylinder, solid_sphere, solid_paraboloid, solid_torus, solid_sphere_plane_cut, solid3d (any solid from its equations: params kind \"revolution\" {f, g?, axis \"x\"|\"y\", k?, a, b}, \"surface\" {z(x,y), x:[x0,x1], y:[y0,y1]}, \"parametric\" {x,y,z in u,v; u, v ranges}, \"bounded\" {top, bottom?, x range, y range or ylow(x)/yhigh(x)}, \"sections\" {f, g?, a, b, section \"square\"|\"semicircle\"|\"triangle\"}; optional planes [{\"x\"|\"y\"|\"z\": c}]; ASCII formulas, always for a region turned about an axis, the app checks its volume against the answer); 3D, for electric circuits: circuit_series_rc, circuit_parallel_resistors, circuit_series_lamp_switch, or circuit {netlist: {components: [{id, kind battery|resistor|capacitor|inductor|lamp|switch|wire|current_source, from, to, value in SI units (V, Ω not kΩ, F, H, A)}], terminals?: [\"a\",\"b\"]}}: copy the topology of the figure exactly, node by node; give \"terminals\" (named as in the figure, e.g. \"a\", \"b\") when the question looks in from two terminals; a current source runs from → to in the direction of its arrow (equivalent resistance, Thévenin, Norton); the app solves it and refuses a circuit that disagrees with the answer — and \"elements\": [], \"template\": null. For a volume or solid of revolution, any solid's volume (bounded by surfaces or planes, cross-sections), a surface z = f(x, y), or an electric circuit, the 3D premade wins: never functionGraph, integralArea, revolutionVolume or simpleCircuit there. Unknown types are ignored; use \"template\" or free-form instead. Set \"needsFigure\": true only when you must draw free-form elements and no premade or template fits.\n- Animated premade figures: also \"premade\" {\"type\", \"params\"}, \"elements\": [], \"template\": null. The app computes the maths and animates it; give only numbers and short texts, never coordinates. Expressions are ASCII in x (and y), \"^\" for powers. Wrong or missing params make the app ignore the figure, so follow these exactly. Calculus 1: limitApproach {f, a, side \"both\"|\"left\"|\"right\"}, tangentLine {f, a, h the first secant's distance}, taylorPolynomials {function \"exp\"|\"sin\"|\"cos\"|\"ln1p\"|\"geometric\"|\"atan\" (Maclaurin), degrees [1, 3, 5]}, riemannSums {f, a, b, n 1…24, rule \"left\"|\"right\"|\"midpoint\"}, revolutionVolume {f ≥ 0, a, b} (about the x axis), signTable {factors [{name \"x − 1\", root, sign 1 or −1 to the right of the root, denominator true for a divisor}]}, variationTable {f, xMin, xMax, points [critical points inside]}, piecewiseFunction {pieces [{f, from, to, fromClosed, toClosed, text}]}, rationalAsymptotes {numerator, denominator, xMin, xMax}, expLog {base, or \"e\"}. Calculus 2: seriesPartialSums {kind \"geometric\" (ratio) | \"harmonic\" | \"alternatingHarmonic\" | \"basel\" | \"pSeries\" (p), or terms in n, count}, slopeField {f in x and y for y′, xMin, xMax, yMin, yMax, solutions [{x, y}]}, polarCurve {r in theta, or kind \"cardioid\"|\"rose\"|\"spiral\" with a, k; thetaMin, thetaMax}, parametricCurve {x, y in t, tMin, tMax}. Calculus 3: levelCurves {f in x, y, levels, xMin…yMax}, doubleIntegralRegion {lower, upper in x, a, b, integrand in x and y or none}, cylindricalSpherical {system \"cylindrical\" (rho, phi°, z) | \"spherical\" (r, theta° from +z, phi° round z)}, vectorField2D {P, Q in x, y, seeds [{x, y}]}, characteristicsPDE {a, b for a·uₓ + b·u_y = 0, phi the initial profile in x}. Algorithms: arrayBars {values positive numbers (3…9), algorithm \"bubble\"|\"insertion\"|\"merge\"|\"quick\"}, binarySearch {values ascending, target}, linkedList {values, operation \"traverse\"|\"insert\"|\"delete\", index, value}, stackQueue {kind \"stack\"|\"queue\", operations [\"push 5\", \"pop\"] or [\"enqueue 5\", \"dequeue\"]}, binaryTree {values inserted in order, traversal \"none\"|\"inorder\"|\"preorder\"|\"postorder\"}, heap {values, kind \"min\"|\"max\", extract true to remove the root}, hashTable {size, keys integers, chaining}, graph {nodes [\"A\", \"B\"], edges [{from, to, weight}], algorithm \"bfs\"|\"dfs\"|\"dijkstra\", source, directed}, complexityChart {} (default growth curves). Physics scenes (animated, pt-PT labels; the mascot sphere glides in and becomes the object): motionScene {x0, v0, a, tMax optional} — a car drives along a road with x(t), v(t), a(t) graphs drawn in sync with a time cursor; verticalThrow {v0, g optional} — a ball thrown upward with velocity and g arrows and y(t), v(t) graphs; inclinedBlock {angle in degrees, mu friction} — a block on the slope and a free-body diagram with weight P, normal N and friction Fa, then the slide with a = g(sinθ − μcosθ) or rest if a ≤ 0. Electromagnetism: electricFieldLines {kind \"positive\"|\"negative\"|\"dipole\"|\"like\"|\"likeNegative\", q, q2 the sizes of the two charges}, equipotentials {kind, q, q2}, parallelPlates {voltage in V, distance in m, charge \"positive\"|\"negative\", positivePlate \"top\"|\"bottom\"}, magneticField {kind \"wire\" (current \"out\"|\"in\") | \"loop\" | \"solenoid\" (turns 4…14), axis \"right\"|\"left\"}, lorentzForce {charge \"positive\"|\"negative\", field \"into\"|\"out\"}, faradayLenz {pole \"N\"|\"S\" facing the coil, motion \"approach\"|\"recede\"}, rcCircuitCurve {mode \"charge\"|\"discharge\"|\"both\", tau in s, V0 in V}, acSignal {peak in V, frequency in Hz or period in s}. Optics: lensRays {kind \"converging\"|\"diverging\", focal, objectDistance, objectHeight, unit}, mirrorRays {kind \"plane\"|\"concave\"|\"convex\", focal, objectDistance, objectHeight, unit}, refraction {n1, n2, angle of incidence in degrees}, prismDispersion {incidence in degrees, 56…75}, doubleSlit {wavelength in nm, separation in mm, screenDistance in m}, emSpectrum {}. "
+    },
+    {
+      "expr": "PremadeFigure.batch3PromptText"
+    },
+    {
+      "text": " Logic: truthTable {expression in p, q, r (max 3 variables) with ¬ ∧ ∨ → ↔ ⊕, or law \"deMorgan1\"|\"deMorgan2\"|\"contrapositive\"|\"implication\"|\"excludedMiddle\"|\"contradiction\"|\"modusPonens\"|\"converse\", or connective \"and\"|\"or\"|\"implies\"|\"iff\"|\"xor\"|\"nand\"|\"nor\"} — built row by row, then called tautology, contradiction or contingency; logicGates {expression with ¬ ∧ ∨ ⊕ ⊼ ⊽ only (no → or ↔), or gate \"and\"|\"or\"|\"xor\"|\"not\"|\"nand\"|\"nor\", inputs the binary number of the input row} — IEC symbols, the signal level by level. Programming: flowchart {program \"sum\"|\"factorial\"|\"gcd\"|\"parity\", n (or a and b for gcd)} — step-by-step execution with a variable table; arrayLoop {task \"sum\"|\"max\"|\"count\"|\"search\", values 2…8 integers, k for count, target for search, length optional} — a loop over an array with its trace table; recursionTree {function \"fibonacci\" (n 2…5)|\"factorial\" (n 1…6)} — the calls and their returns. Philosophy: argumentMap {form \"modusPonens\"|\"modusTollens\"|\"hypotheticalSyllogism\"|\"disjunctiveSyllogism\"|\"affirmingConsequent\"|\"denyingAntecedent\"|\"validButUnsound\", or premises [1…2 formulas in p, q, r], conclusion, premiseTexts, conclusionText, premisesTrue [booleans]} — the app tests validity with a truth table and shows a counterexample; syllogismVenn {mood \"AAA-1\" (three letters from A, E, I, O, then the figure 1…4), S, M, P singular terms of at most 10 characters, no article} — Venn diagram and verdict; fallacies {fallacy \"adHominem\"|\"strawMan\"|\"appealToAuthority\"|\"appealToPopularity\"|\"falseDilemma\"|\"slipperySlope\"|\"hastyGeneralization\"|\"circularReasoning\"|\"falseCause\"|\"affirmingConsequent\"|\"denyingAntecedent\"}; squareOfOpposition {S, P singular terms of at most 8 characters, given \"A\"|\"E\"|\"I\"|\"O\", value true|false, existentialImport true|false} — what follows from one proposition being true or false. Use the figure that matches the question; otherwise a template or free-form as before.\n- The heating of ice, water and steam — energy per stage, melting and boiling plateaus — is the premade \"heatingCurve\", not a template or free-form.\n- \"template\" FIRST: whenever the question is about one of these, you MUST use its template and reply with \"elements\": [] — the app lays the picture out itself, so you give only the facts, taken from the verified solution, never coordinates or sizes. Every field of the template is present; the ones its kind doesn't use are null. A graph or the behaviour of a function (monotony, extrema, zeros, a tangent, an equation solved graphically) → \"function\"; measured values, a table of data, a regression or calibration line, measured temperatures against time → \"series\"; complex numbers → \"complexPlane\"; angles and trigonometric values → \"unitCircle\"; forces on a body on a slope → \"inclinedPlane\"; events to order → \"timeline\"; points, segments, circles and polygons in a referential → \"geometry\". If the question gives a table of measurements, or asks for a quantity from a graph or a fitted line (g from distances and heights, a constant from a table), you MUST use \"series\" with the table's points and \"fit\", never a picture of the apparatus. Marks' and points' \"text\" are words (\"mínimo\", \"fusão\") or exact values; the app writes the coordinates it computes. Free-form \"elements\" are accepted only for circuits, charges and field lines, and state machines (and a bar chart of data); anything else drawn free-form is thrown away.\n  • \"function\" (a graph of f, its zeros, extrema, intersections, a tangent): \"f\" in ASCII in x (\"x^2*exp(-x)\"), \"g\" a second function or null, \"xMin\"/ \"xMax\" the interval the question is about or null (for a function defined by branches, the branch the question is about, on its own interval), \"marks\" [{\"x\" an exact expression (\"ln(2)\", \"pi/3\"), \"text\" short (\"min (0; 4−e³)\")}] for the points the answer is about, \"tangent\" true when a tangent line matters.\n  • \"series\" (measured data, a calibration line, measured temperatures): \"points\" [{\"x\", \"y\" numbers, \"text\" null, \"answer\" false}], \"xName\"/\"yName\" short symbols (\"t\", \"d\"), \"xUnit\"/\"yUnit\" (\"s\", \"m\"), \"connect\" true for a curve through the data in order, \"fit\" \"linear\", \"throughOrigin\" or \"none\".\n  • \"unitCircle\" (trigonometry): \"angles\" [{\"value\" radians as an expression (\"pi/6\", or \"x\" for a generic angle the student drags), \"text\" (\"α\")}], \"showSinCos\".\n  • \"complexPlane\": \"points\" [{\"x\" real part, \"y\" imaginary part, \"text\" (its name: \"z\", \"z²\", \"z̄\", \"1/z\"), \"answer\" true for the point that IS the answer}], \"radius\" of a circle that matters or null. When the question asks for the affix of a number derived from z (z², z̄, 1/z), include z and that number as two points, the derived one with \"answer\" true; the app writes each point's coordinates and draws dashed guides to the axes.\n  • \"inclinedPlane\" (a body on a slope): \"angle\" in degrees, \"forces\" [{\"kind\" weight, normal, friction, applied or tension; \"text\" (\"P\", \"N\", \"Fa\"); \"direction\" up-the-plane, down-the-plane, perpendicular, vertical or angle (only for an applied force at a given angle); \"degrees\" from the horizontal for \"angle\"; \"asked\" true when that force's direction is what the question asks}], \"motion\" up, down or none, \"components\" true when the weight's components along and across the slope matter (the app draws them).\n  • \"geometry\" (analytic geometry): \"figurePoints\" [{\"name\" (\"A\", \"O\"), \"x\", \"y\" expressions in the problem's own coordinates, maybe using the parameter (\"cos(alpha)\", \"a/2\"), \"answer\" true for a point the answer depends on}], \"parameter\" {\"name\" ASCII (\"alpha\", \"a\"), \"label\" in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ", \"value\", \"min\", \"max\"} or null, \"segments\" [{\"from\", \"to\"} by name], \"polygons\" [{\"vertices\" names in order, \"asked\" true for the one whose area or perimeter is asked}], \"circles\" [{\"centre\" a name, \"radius\" an expression or null, \"through\" a name or null}], \"angleMarks\" [{\"vertex\", \"from\", \"to\" names, \"text\" (\"α\")}], \"curves\" [{\"f\" in x, \"xMin\", \"xMax\"}] for a parabola or another graph in the figure, \"axes\" true to draw the referential.\n  • \"timeline\" (only to put events in order): \"events\" [{\"year\", \"text\" two to four words}].\nCircuits, charges and field lines, state machines, motion and anything else: \"template\" null and free-form \"elements\" as below.\n- World coordinates: x to the right, y up, from (0, 0) to (\"width\", \"height\"), about 10 × 6. Keep everything inside with a margin.\n- Every coordinate, radius, current and charge is an ASCII expression (\"3\", \"2 + 1.5*cos(t)\", \"v0*cos(theta)*t\") using numbers, the time t (seconds, when \"duration\" > 0, looping), the names in \"parameters\", and + - * / ^ sin cos tan exp ln sqrt abs sign floor pi. No other names.\n- \"duration\": seconds before the motion repeats; null for a still picture. Animate only when motion is the point (a projectile, a pendulum, a wave, current flowing, a state machine stepping).\n- \"parameters\": up to 2 values worth dragging (an angle, a charge, a resistance), with \"label\" in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ", \"value\", \"min\", \"max\". [] if none.\n- \"elements\", at most 40, each with \"kind\" and only the fields it needs (others null):\n  • \"point\" x, y (a body, a particle); \"line\" x, y, x2, y2; \"arrow\" x, y, x2, y2 (a force, velocity or field vector; \"text\" its name, e.g. \"F\", \"v\"); \"circle\" x, y, r; \"rect\" x, y (bottom-left), w, h; \"label\" x, y, text; \"spring\" x, y, x2, y2; \"curve\" curveX and curveY in s, from, to (a path, a trajectory, a wave; may use t too).\n  • Electrostatics: \"charge\" x, y, q (signed, e.g. \"1\", \"-2\"), and one \"fieldLines\" element: the app traces the real field lines of all charges.\n  • Circuits: \"component\" from (x, y) to (x2, y2), \"component\" one of resistor, capacitor, inductor, source (+ at the (x2, y2) end), battery, switch, lamp; \"line\" for wires. Lay it out on a grid of horizontal and vertical pieces joined end to end. Give each wire and component its \"current\" (amperes, the solution's values; sign along (x, y) → (x2, y2)) so dots flow; \"text\" the name and value (\"R₃ 50 kΩ\").\n  • State machines: \"state\" x, y, r (0.6–0.9), text (the state, e.g. \"0110\"), \"active\": an expression > 0 while it is the current state, stepping once per second (\"1 - abs(sign(floor(t) - 2))\" for the third state with \"duration\" = number of states); \"transition\" from one state's centre (x, y) to the next (x2, y2), same r, \"text\" the input/condition. Place states on a circle.\n- Draw the situation, not the algebra: at most 4 \"label\" elements, and never a step of the solution as text. Each component, charge, arrow or state carries its own short \"text\"; don't repeat it in a label.\n- A sequential digital circuit: draw its state machine (states and transitions), not boxes. Pure algebra with no physical picture (an ODE, an integral): the \"function\" template with the answer as f. Never draw blocks without their connections.\n- Data (percentages, a table of values, a comparison): a bar chart. One \"line\" (muted) as the baseline at y = 1 across the chart; each bar a \"rect\" standing on it (y = 1, h in proportion to its value, the largest about 4), evenly spaced and a little narrower than the gap; its value as a \"label\" just above the bar and its name as a \"label\" just below the baseline. No other lines, no text inside the bars, nothing above the tallest label.\n- Keep every label clear of lines and shapes, and inside the picture.\n- If no picture would help, reply with \"elements\": [].\n- \"color\": \"accent\" for the one thing to look at, \"second\" for a second quantity, \"muted\" for the background (ground, guides); else null (white). \"dashed\" for paths and guides.\n- Use the solution's numbers, so the picture agrees with the answer.\n- \"title\": a few words, in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ". Every \"text\" short, in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ", with Unicode symbols (θ, v₀, R₃, Ω), never LaTeX.\nReply with JSON only."
+    }
+  ],
+  "text#0": [
+    {
+      "text": "The exam's text:\n"
+    },
+    {
+      "expr": "groupText"
+    },
+    {
+      "text": "\n\nThe part: "
+    },
+    {
+      "expr": "part.label"
+    },
+    {
+      "text": ", which asks: "
+    },
+    {
+      "expr": "part.asks"
+    },
+    {
+      "text": "\nIts solution: "
+    },
+    {
+      "expr": "part.steps.joined(separator: \" → \")"
+    },
+    {
+      "text": "\nAnswer: "
+    },
+    {
+      "expr": "part.answer.text"
+    }
+  ],
+  "figure#0": [
+    {
+      "text": "\n\nThe figure, as transcribed:\n"
+    }
+  ],
+  "expression#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "expression#1": [
+    {
+      "text": "string"
+    }
+  ],
+  "expression#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "object#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "object#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "object#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "object#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "object#4": [
+    {
+      "text": "properties"
+    }
+  ],
+  "list#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "list#1": [
+    {
+      "text": "array"
+    }
+  ],
+  "list#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "list#3": [
+    {
+      "text": "items"
+    }
+  ],
+  "string#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "string#1": [
+    {
+      "text": "string"
+    }
+  ],
+  "string#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "number#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "number#1": [
+    {
+      "text": "number"
+    }
+  ],
+  "number#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "flag#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#1": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "flag#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "flag#3": [
+    {
+      "text": "kind"
+    }
+  ],
+  "flag#4": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#5": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#6": [
+    {
+      "text": "enum"
+    }
+  ],
+  "flag#7": [
+    {
+      "text": "function"
+    }
+  ],
+  "flag#8": [
+    {
+      "text": "series"
+    }
+  ],
+  "flag#9": [
+    {
+      "text": "unitCircle"
+    }
+  ],
+  "flag#10": [
+    {
+      "text": "complexPlane"
+    }
+  ],
+  "flag#11": [
+    {
+      "text": "inclinedPlane"
+    }
+  ],
+  "flag#12": [
+    {
+      "text": "timeline"
+    }
+  ],
+  "flag#13": [
+    {
+      "text": "geometry"
+    }
+  ],
+  "flag#14": [
+    {
+      "text": "f"
+    }
+  ],
+  "flag#15": [
+    {
+      "text": "g"
+    }
+  ],
+  "flag#16": [
+    {
+      "text": "xMin"
+    }
+  ],
+  "flag#17": [
+    {
+      "text": "xMax"
+    }
+  ],
+  "flag#18": [
+    {
+      "text": "marks"
+    }
+  ],
+  "flag#19": [
+    {
+      "text": "x"
+    }
+  ],
+  "flag#20": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#21": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#22": [
+    {
+      "text": "text"
+    }
+  ],
+  "flag#23": [
+    {
+      "text": "tangent"
+    }
+  ],
+  "flag#24": [
+    {
+      "text": "points"
+    }
+  ],
+  "flag#25": [
+    {
+      "text": "x"
+    }
+  ],
+  "flag#26": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#27": [
+    {
+      "text": "number"
+    }
+  ],
+  "flag#28": [
+    {
+      "text": "y"
+    }
+  ],
+  "flag#29": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#30": [
+    {
+      "text": "number"
+    }
+  ],
+  "flag#31": [
+    {
+      "text": "text"
+    }
+  ],
+  "flag#32": [
+    {
+      "text": "answer"
+    }
+  ],
+  "flag#33": [
+    {
+      "text": "xName"
+    }
+  ],
+  "flag#34": [
+    {
+      "text": "xUnit"
+    }
+  ],
+  "flag#35": [
+    {
+      "text": "yName"
+    }
+  ],
+  "flag#36": [
+    {
+      "text": "yUnit"
+    }
+  ],
+  "flag#37": [
+    {
+      "text": "connect"
+    }
+  ],
+  "flag#38": [
+    {
+      "text": "fit"
+    }
+  ],
+  "flag#39": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#40": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#41": [
+    {
+      "text": "null"
+    }
+  ],
+  "flag#42": [
+    {
+      "text": "enum"
+    }
+  ],
+  "flag#43": [
+    {
+      "text": "none"
+    }
+  ],
+  "flag#44": [
+    {
+      "text": "linear"
+    }
+  ],
+  "flag#45": [
+    {
+      "text": "throughOrigin"
+    }
+  ],
+  "flag#46": [
+    {
+      "text": "angles"
+    }
+  ],
+  "flag#47": [
+    {
+      "text": "value"
+    }
+  ],
+  "flag#48": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#49": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#50": [
+    {
+      "text": "text"
+    }
+  ],
+  "flag#51": [
+    {
+      "text": "showSinCos"
+    }
+  ],
+  "flag#52": [
+    {
+      "text": "radius"
+    }
+  ],
+  "flag#53": [
+    {
+      "text": "angle"
+    }
+  ],
+  "flag#54": [
+    {
+      "text": "forces"
+    }
+  ],
+  "flag#55": [
+    {
+      "text": "kind"
+    }
+  ],
+  "flag#56": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#57": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#58": [
+    {
+      "text": "enum"
+    }
+  ],
+  "flag#59": [
+    {
+      "text": "weight"
+    }
+  ],
+  "flag#60": [
+    {
+      "text": "normal"
+    }
+  ],
+  "flag#61": [
+    {
+      "text": "friction"
+    }
+  ],
+  "flag#62": [
+    {
+      "text": "applied"
+    }
+  ],
+  "flag#63": [
+    {
+      "text": "tension"
+    }
+  ],
+  "flag#64": [
+    {
+      "text": "text"
+    }
+  ],
+  "flag#65": [
+    {
+      "text": "direction"
+    }
+  ],
+  "flag#66": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#67": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#68": [
+    {
+      "text": "null"
+    }
+  ],
+  "flag#69": [
+    {
+      "text": "enum"
+    }
+  ],
+  "flag#70": [
+    {
+      "text": "up-the-plane"
+    }
+  ],
+  "flag#71": [
+    {
+      "text": "down-the-plane"
+    }
+  ],
+  "flag#72": [
+    {
+      "text": "perpendicular"
+    }
+  ],
+  "flag#73": [
+    {
+      "text": "vertical"
+    }
+  ],
+  "flag#74": [
+    {
+      "text": "angle"
+    }
+  ],
+  "flag#75": [
+    {
+      "text": "degrees"
+    }
+  ],
+  "flag#76": [
+    {
+      "text": "asked"
+    }
+  ],
+  "flag#77": [
+    {
+      "text": "motion"
+    }
+  ],
+  "flag#78": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#79": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#80": [
+    {
+      "text": "null"
+    }
+  ],
+  "flag#81": [
+    {
+      "text": "enum"
+    }
+  ],
+  "flag#82": [
+    {
+      "text": "up"
+    }
+  ],
+  "flag#83": [
+    {
+      "text": "down"
+    }
+  ],
+  "flag#84": [
+    {
+      "text": "none"
+    }
+  ],
+  "flag#85": [
+    {
+      "text": "events"
+    }
+  ],
+  "flag#86": [
+    {
+      "text": "year"
+    }
+  ],
+  "flag#87": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#88": [
+    {
+      "text": "number"
+    }
+  ],
+  "flag#89": [
+    {
+      "text": "text"
+    }
+  ],
+  "flag#90": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#91": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#92": [
+    {
+      "text": "components"
+    }
+  ],
+  "flag#93": [
+    {
+      "text": "figurePoints"
+    }
+  ],
+  "flag#94": [
+    {
+      "text": "name"
+    }
+  ],
+  "flag#95": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#96": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#97": [
+    {
+      "text": "x"
+    }
+  ],
+  "flag#98": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#99": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#100": [
+    {
+      "text": "y"
+    }
+  ],
+  "flag#101": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#102": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#103": [
+    {
+      "text": "answer"
+    }
+  ],
+  "flag#104": [
+    {
+      "text": "parameter"
+    }
+  ],
+  "flag#105": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "flag#106": [
+    {
+      "text": "name"
+    }
+  ],
+  "flag#107": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#108": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#109": [
+    {
+      "text": "label"
+    }
+  ],
+  "flag#110": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#111": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#112": [
+    {
+      "text": "value"
+    }
+  ],
+  "flag#113": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#114": [
+    {
+      "text": "number"
+    }
+  ],
+  "flag#115": [
+    {
+      "text": "min"
+    }
+  ],
+  "flag#116": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#117": [
+    {
+      "text": "number"
+    }
+  ],
+  "flag#118": [
+    {
+      "text": "max"
+    }
+  ],
+  "flag#119": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#120": [
+    {
+      "text": "number"
+    }
+  ],
+  "flag#121": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#122": [
+    {
+      "text": "null"
+    }
+  ],
+  "flag#123": [
+    {
+      "text": "segments"
+    }
+  ],
+  "flag#124": [
+    {
+      "text": "from"
+    }
+  ],
+  "flag#125": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#126": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#127": [
+    {
+      "text": "to"
+    }
+  ],
+  "flag#128": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#129": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#130": [
+    {
+      "text": "polygons"
+    }
+  ],
+  "flag#131": [
+    {
+      "text": "vertices"
+    }
+  ],
+  "flag#132": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#133": [
+    {
+      "text": "array"
+    }
+  ],
+  "flag#134": [
+    {
+      "text": "items"
+    }
+  ],
+  "flag#135": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#136": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#137": [
+    {
+      "text": "asked"
+    }
+  ],
+  "flag#138": [
+    {
+      "text": "circles"
+    }
+  ],
+  "flag#139": [
+    {
+      "text": "centre"
+    }
+  ],
+  "flag#140": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#141": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#142": [
+    {
+      "text": "radius"
+    }
+  ],
+  "flag#143": [
+    {
+      "text": "through"
+    }
+  ],
+  "flag#144": [
+    {
+      "text": "angleMarks"
+    }
+  ],
+  "flag#145": [
+    {
+      "text": "vertex"
+    }
+  ],
+  "flag#146": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#147": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#148": [
+    {
+      "text": "from"
+    }
+  ],
+  "flag#149": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#150": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#151": [
+    {
+      "text": "to"
+    }
+  ],
+  "flag#152": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#153": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#154": [
+    {
+      "text": "text"
+    }
+  ],
+  "flag#155": [
+    {
+      "text": "curves"
+    }
+  ],
+  "flag#156": [
+    {
+      "text": "f"
+    }
+  ],
+  "flag#157": [
+    {
+      "text": "type"
+    }
+  ],
+  "flag#158": [
+    {
+      "text": "string"
+    }
+  ],
+  "flag#159": [
+    {
+      "text": "xMin"
+    }
+  ],
+  "flag#160": [
+    {
+      "text": "xMax"
+    }
+  ],
+  "flag#161": [
+    {
+      "text": "axes"
+    }
+  ],
+  "premade#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "premade#1": [
+    {
+      "text": "type"
+    }
+  ],
+  "premade#2": [
+    {
+      "text": "string"
+    }
+  ],
+  "premade#3": [
+    {
+      "text": "params"
+    }
+  ],
+  "premade#4": [
+    {
+      "text": "type"
+    }
+  ],
+  "premade#5": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#4": [
+    {
+      "text": "title"
+    }
+  ],
+  "schema#5": [
+    {
+      "text": "width"
+    }
+  ],
+  "schema#6": [
+    {
+      "text": "height"
+    }
+  ],
+  "schema#7": [
+    {
+      "text": "duration"
+    }
+  ],
+  "schema#8": [
+    {
+      "text": "parameters"
+    }
+  ],
+  "schema#9": [
+    {
+      "text": "elements"
+    }
+  ],
+  "schema#10": [
+    {
+      "text": "template"
+    }
+  ],
+  "schema#11": [
+    {
+      "text": "needsFigure"
+    }
+  ],
+  "schema#12": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#13": [
+    {
+      "text": "template"
+    }
+  ],
+  "schema#14": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "schema#15": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#16": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#17": [
+    {
+      "text": "premade"
+    }
+  ],
+  "schema#18": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "schema#19": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#20": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#21": [
+    {
+      "text": "needsFigure"
+    }
+  ],
+  "schema#22": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#23": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "schema#24": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#25": [
+    {
+      "text": "title"
+    }
+  ],
+  "schema#26": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#27": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#28": [
+    {
+      "text": "width"
+    }
+  ],
+  "schema#29": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#30": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#31": [
+    {
+      "text": "height"
+    }
+  ],
+  "schema#32": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#33": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#34": [
+    {
+      "text": "duration"
+    }
+  ],
+  "schema#35": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#36": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#37": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#38": [
+    {
+      "text": "parameters"
+    }
+  ],
+  "schema#39": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#40": [
+    {
+      "text": "array"
+    }
+  ],
+  "schema#41": [
+    {
+      "text": "items"
+    }
+  ],
+  "schema#42": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#43": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#44": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#45": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#46": [
+    {
+      "text": "name"
+    }
+  ],
+  "schema#47": [
+    {
+      "text": "label"
+    }
+  ],
+  "schema#48": [
+    {
+      "text": "value"
+    }
+  ],
+  "schema#49": [
+    {
+      "text": "min"
+    }
+  ],
+  "schema#50": [
+    {
+      "text": "max"
+    }
+  ],
+  "schema#51": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#52": [
+    {
+      "text": "name"
+    }
+  ],
+  "schema#53": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#54": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#55": [
+    {
+      "text": "label"
+    }
+  ],
+  "schema#56": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#57": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#58": [
+    {
+      "text": "value"
+    }
+  ],
+  "schema#59": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#60": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#61": [
+    {
+      "text": "min"
+    }
+  ],
+  "schema#62": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#63": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#64": [
+    {
+      "text": "max"
+    }
+  ],
+  "schema#65": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#66": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#67": [
+    {
+      "text": "elements"
+    }
+  ],
+  "schema#68": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#69": [
+    {
+      "text": "array"
+    }
+  ],
+  "schema#70": [
+    {
+      "text": "items"
+    }
+  ],
+  "schema#71": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#72": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#73": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#74": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#75": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#76": [
+    {
+      "text": "x"
+    }
+  ],
+  "schema#77": [
+    {
+      "text": "y"
+    }
+  ],
+  "schema#78": [
+    {
+      "text": "x2"
+    }
+  ],
+  "schema#79": [
+    {
+      "text": "y2"
+    }
+  ],
+  "schema#80": [
+    {
+      "text": "r"
+    }
+  ],
+  "schema#81": [
+    {
+      "text": "w"
+    }
+  ],
+  "schema#82": [
+    {
+      "text": "h"
+    }
+  ],
+  "schema#83": [
+    {
+      "text": "text"
+    }
+  ],
+  "schema#84": [
+    {
+      "text": "color"
+    }
+  ],
+  "schema#85": [
+    {
+      "text": "dashed"
+    }
+  ],
+  "schema#86": [
+    {
+      "text": "curveX"
+    }
+  ],
+  "schema#87": [
+    {
+      "text": "curveY"
+    }
+  ],
+  "schema#88": [
+    {
+      "text": "from"
+    }
+  ],
+  "schema#89": [
+    {
+      "text": "to"
+    }
+  ],
+  "schema#90": [
+    {
+      "text": "q"
+    }
+  ],
+  "schema#91": [
+    {
+      "text": "component"
+    }
+  ],
+  "schema#92": [
+    {
+      "text": "current"
+    }
+  ],
+  "schema#93": [
+    {
+      "text": "active"
+    }
+  ],
+  "schema#94": [
+    {
+      "text": "visible"
+    }
+  ],
+  "schema#95": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#96": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#97": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#98": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#99": [
+    {
+      "text": "enum"
+    }
+  ],
+  "schema#100": [
+    {
+      "text": "point"
+    }
+  ],
+  "schema#101": [
+    {
+      "text": "line"
+    }
+  ],
+  "schema#102": [
+    {
+      "text": "arrow"
+    }
+  ],
+  "schema#103": [
+    {
+      "text": "circle"
+    }
+  ],
+  "schema#104": [
+    {
+      "text": "rect"
+    }
+  ],
+  "schema#105": [
+    {
+      "text": "label"
+    }
+  ],
+  "schema#106": [
+    {
+      "text": "curve"
+    }
+  ],
+  "schema#107": [
+    {
+      "text": "spring"
+    }
+  ],
+  "schema#108": [
+    {
+      "text": "charge"
+    }
+  ],
+  "schema#109": [
+    {
+      "text": "fieldLines"
+    }
+  ],
+  "schema#110": [
+    {
+      "text": "component"
+    }
+  ],
+  "schema#111": [
+    {
+      "text": "state"
+    }
+  ],
+  "schema#112": [
+    {
+      "text": "transition"
+    }
+  ],
+  "schema#113": [
+    {
+      "text": "x"
+    }
+  ],
+  "schema#114": [
+    {
+      "text": "y"
+    }
+  ],
+  "schema#115": [
+    {
+      "text": "x2"
+    }
+  ],
+  "schema#116": [
+    {
+      "text": "y2"
+    }
+  ],
+  "schema#117": [
+    {
+      "text": "r"
+    }
+  ],
+  "schema#118": [
+    {
+      "text": "w"
+    }
+  ],
+  "schema#119": [
+    {
+      "text": "h"
+    }
+  ],
+  "schema#120": [
+    {
+      "text": "text"
+    }
+  ],
+  "schema#121": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#122": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#123": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#124": [
+    {
+      "text": "color"
+    }
+  ],
+  "schema#125": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#126": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#127": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#128": [
+    {
+      "text": "dashed"
+    }
+  ],
+  "schema#129": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#130": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "schema#131": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#132": [
+    {
+      "text": "curveX"
+    }
+  ],
+  "schema#133": [
+    {
+      "text": "curveY"
+    }
+  ],
+  "schema#134": [
+    {
+      "text": "from"
+    }
+  ],
+  "schema#135": [
+    {
+      "text": "to"
+    }
+  ],
+  "schema#136": [
+    {
+      "text": "q"
+    }
+  ],
+  "schema#137": [
+    {
+      "text": "component"
+    }
+  ],
+  "schema#138": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#139": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#140": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#141": [
+    {
+      "text": "current"
+    }
+  ],
+  "schema#142": [
+    {
+      "text": "active"
+    }
+  ],
+  "schema#143": [
+    {
+      "text": "visible"
+    }
+  ]
+}

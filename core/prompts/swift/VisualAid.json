@@ -1,0 +1,426 @@
+{
+  "variable#0": [
+    {
+      "text": "x"
+    }
+  ],
+  "version#0": [
+    {
+      "text": "1"
+    }
+  ],
+  "system#0": [
+    {
+      "text": "You decide whether a picture would make a worked solution clearer. You do not solve the question and you do not repeat its answer.\n\nReply with JSON only. \"kind\":\n- \"graph\" when a single curve y = f(x) would help: a function and its variation, a derivative's sign, a trajectory, a rate. \"expression\" is that curve in ASCII the app can plot (+ - * / ^, sqrt, abs, ln, exp, sin, cos, pi), with every constant already substituted, so the only name is \"variable\" (\"x\" or \"t\"). \"xMin\" and \"xMax\" are the interval the question is about. \"xLabel\" and \"yLabel\" are short axis names, in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ".\n- \"diagram\" when a sketch that is not one curve would help (forces on a body, a geometric figure, a timeline) and the exam does not already print it.\n- \"none\" when words are enough, the exam already shows the figure, or the subject is a language, literature or philosophy. Never invent a graph for a text answer.\nFor \"none\" and \"diagram\", the other fields are null."
+    }
+  ],
+  "message#0": [
+    {
+      "text": "Subject: "
+    },
+    {
+      "expr": "subject"
+    },
+    {
+      "text": "\n\nQuestion:\n"
+    }
+  ],
+  "message#1": [
+    {
+      "text": "\n\nPart "
+    },
+    {
+      "expr": "part.label"
+    },
+    {
+      "text": ": "
+    },
+    {
+      "expr": "part.asks"
+    }
+  ],
+  "steps#0": [
+    {
+      "text": "\n"
+    }
+  ],
+  "steps#1": [
+    {
+      "text": "\n\nSteps so far:\n"
+    }
+  ],
+  "steps#2": [
+    {
+      "text": "\n\nAnswer: "
+    }
+  ],
+  "schema#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#4": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#5": [
+    {
+      "text": "expression"
+    }
+  ],
+  "schema#6": [
+    {
+      "text": "variable"
+    }
+  ],
+  "schema#7": [
+    {
+      "text": "xMin"
+    }
+  ],
+  "schema#8": [
+    {
+      "text": "xMax"
+    }
+  ],
+  "schema#9": [
+    {
+      "text": "xLabel"
+    }
+  ],
+  "schema#10": [
+    {
+      "text": "yLabel"
+    }
+  ],
+  "schema#11": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#12": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#13": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#14": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#15": [
+    {
+      "text": "enum"
+    }
+  ],
+  "schema#16": [
+    {
+      "text": "none"
+    }
+  ],
+  "schema#17": [
+    {
+      "text": "graph"
+    }
+  ],
+  "schema#18": [
+    {
+      "text": "diagram"
+    }
+  ],
+  "schema#19": [
+    {
+      "text": "expression"
+    }
+  ],
+  "schema#20": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#21": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#22": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#23": [
+    {
+      "text": "variable"
+    }
+  ],
+  "schema#24": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#25": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#26": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#27": [
+    {
+      "text": "xMin"
+    }
+  ],
+  "schema#28": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#29": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#30": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#31": [
+    {
+      "text": "xMax"
+    }
+  ],
+  "schema#32": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#33": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#34": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#35": [
+    {
+      "text": "xLabel"
+    }
+  ],
+  "schema#36": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#37": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#38": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#39": [
+    {
+      "text": "yLabel"
+    }
+  ],
+  "schema#40": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#41": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#42": [
+    {
+      "text": "null"
+    }
+  ],
+  "visualAids#0": [
+    {
+      "text": "visual-aids.json"
+    }
+  ],
+  "key#0": [
+    {
+      "text": "mock-"
+    }
+  ],
+  "key#1": [],
+  "spec#0": [
+    {
+      "expr": "spec.name"
+    },
+    {
+      "text": "("
+    },
+    {
+      "expr": "spec.variable"
+    },
+    {
+      "text": ")"
+    }
+  ],
+  "graph#0": [
+    {
+      "text": "y"
+    }
+  ],
+  "result#0": [],
+  "result#1": [
+    {
+      "text": "²"
+    }
+  ],
+  "result#2": [
+    {
+      "text": "^2"
+    }
+  ],
+  "result#3": [
+    {
+      "text": "³"
+    }
+  ],
+  "result#4": [
+    {
+      "text": "^3"
+    }
+  ],
+  "result#5": [
+    {
+      "text": "⁴"
+    }
+  ],
+  "result#6": [
+    {
+      "text": "^4"
+    }
+  ],
+  "result#7": [
+    {
+      "text": "−"
+    }
+  ],
+  "result#8": [
+    {
+      "text": "–"
+    }
+  ],
+  "result#9": [
+    {
+      "text": "—"
+    }
+  ],
+  "result#10": [
+    {
+      "text": "-"
+    }
+  ],
+  "result#11": [
+    {
+      "text": "×"
+    }
+  ],
+  "result#12": [
+    {
+      "text": "·"
+    }
+  ],
+  "result#13": [
+    {
+      "text": "⋅"
+    }
+  ],
+  "result#14": [
+    {
+      "text": "*"
+    }
+  ],
+  "result#15": [
+    {
+      "text": " "
+    }
+  ],
+  "isDerivative#0": [
+    {
+      "text": "'"
+    }
+  ],
+  "isDerivative#1": [
+    {
+      "text": "′"
+    }
+  ],
+  "parsed#0": [
+    {
+      "text": " "
+    }
+  ],
+  "parsed#1": [],
+  "expression#0": [],
+  "regex#0": [
+    {
+      "text": "[\\[\\]]\\s*(-?\\d+(?:[.,]\\d+)?)\\s*[,;]\\s*(-?\\d+(?:[.,]\\d+)?)\\s*[\\[\\]]"
+    }
+  ],
+  "low#0": [
+    {
+      "text": ","
+    }
+  ],
+  "low#1": [
+    {
+      "text": "."
+    }
+  ],
+  "high#0": [
+    {
+      "text": ","
+    }
+  ],
+  "high#1": [
+    {
+      "text": "."
+    }
+  ]
+}

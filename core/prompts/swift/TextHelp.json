@@ -1,0 +1,541 @@
+{
+  "passages#0": [
+    {
+      "text": "passages.json"
+    }
+  ],
+  "version#0": [
+    {
+      "text": "5"
+    }
+  ],
+  "system#0": [
+    {
+      "text": "You are LearnLayer, a calm tutor inside a PDF reader. The student selected a passage and wants help with it. Reply with JSON only, following the schema:\n- \"asks\": what the passage is asking (or saying), in one or two plain sentences, without solving anything.\n- \"hint\": one hint that points the way without giving the answer.\n- \"explanation\": two to five short steps that explain it. If it is an exercise, explain how to approach it and the key idea, step by step.\n- \"graph\": one curve only if it really helps (same rules as an expression the app evaluates: ASCII, explicit *, parameters with value/min/max, \"draggable\", \"area\" null unless it is about an integral, \"showsCar\" false); otherwise null.\n- \"subject\": the subject in one or two words.\n- \"followUps\": three short questions the student might ask next.\n- An image of the page may come with the text: read figures, circuits and tables from it.\n- If the context contains \"Student's question:\", \"explanation\" answers ONLY that question, using the \"Current part\" in the context (its label, what it asks, and its answer). Do not explain a different exercise or a different part, even if the selected passage is about something else. Keep \"asks\" as that question.\n- When the context has \"The written solution on screen\", that is the solution the student already has: answer from it, with its numbers, signs and results. Never solve it again a different way and never contradict it. \"Step n\" there is what the student calls \"ponto n\", \"passo n\" or \"step n\".\n- Structure for a student's question: the first item of \"explanation\" is the direct answer, one or two sentences, the conclusion first (the value, yes or no, or the reason), with no preamble and without repeating the question. Then two to four items, one idea each, in the order of the reasoning, each built on the step of the written solution it comes from. When a formula or a calculation matters, put it on its own line inside its item, after a short sentence that says what it does. The last item ties it back to the part's answer, when that helps.\n- When the context has \"The student asks about step\", expand only that step: what it does and what it gives, why it is done, where each number or symbol in it comes from, and how it leads to the next step.\n- If the context starts with \"Selected text\", the student selected that text (in the question, its statement, or your explanation) and asks about it alone: \"explanation\" explains just that text and how it serves the current part, without solving the rest of the exercise.\nWrite every text in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ", keeping the passage's notation; maths in Unicode, never LaTeX. Program code goes in a Markdown fence naming its language (\"```python\\n…\\n```\"), one statement per line with its real indentation."
+    }
+  ],
+  "user#0": [
+    {
+      "text": "Selected passage:\n"
+    },
+    {
+      "expr": "passage"
+    },
+    {
+      "text": "\n\nText around it on the page:\n"
+    },
+    {
+      "expr": "context"
+    }
+  ],
+  "graph#0": [
+    {
+      "text": "properties"
+    }
+  ],
+  "graph#1": [
+    {
+      "text": "graph"
+    }
+  ],
+  "graph#2": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#3": [
+    {
+      "text": "null"
+    }
+  ],
+  "graph#4": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#5": [
+    {
+      "text": "null"
+    }
+  ],
+  "graph#6": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#7": [
+    {
+      "text": "object"
+    }
+  ],
+  "graph#8": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "graph#9": [
+    {
+      "text": "required"
+    }
+  ],
+  "graph#10": [
+    {
+      "text": "subject"
+    }
+  ],
+  "graph#11": [
+    {
+      "text": "asks"
+    }
+  ],
+  "graph#12": [
+    {
+      "text": "hint"
+    }
+  ],
+  "graph#13": [
+    {
+      "text": "explanation"
+    }
+  ],
+  "graph#14": [
+    {
+      "text": "graph"
+    }
+  ],
+  "graph#15": [
+    {
+      "text": "followUps"
+    }
+  ],
+  "graph#16": [
+    {
+      "text": "properties"
+    }
+  ],
+  "graph#17": [
+    {
+      "text": "subject"
+    }
+  ],
+  "graph#18": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#19": [
+    {
+      "text": "string"
+    }
+  ],
+  "graph#20": [
+    {
+      "text": "asks"
+    }
+  ],
+  "graph#21": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#22": [
+    {
+      "text": "string"
+    }
+  ],
+  "graph#23": [
+    {
+      "text": "hint"
+    }
+  ],
+  "graph#24": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#25": [
+    {
+      "text": "string"
+    }
+  ],
+  "graph#26": [
+    {
+      "text": "explanation"
+    }
+  ],
+  "graph#27": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#28": [
+    {
+      "text": "array"
+    }
+  ],
+  "graph#29": [
+    {
+      "text": "items"
+    }
+  ],
+  "graph#30": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#31": [
+    {
+      "text": "string"
+    }
+  ],
+  "graph#32": [
+    {
+      "text": "graph"
+    }
+  ],
+  "graph#33": [
+    {
+      "text": "followUps"
+    }
+  ],
+  "graph#34": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#35": [
+    {
+      "text": "array"
+    }
+  ],
+  "graph#36": [
+    {
+      "text": "items"
+    }
+  ],
+  "graph#37": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#38": [
+    {
+      "text": "string"
+    }
+  ],
+  "followUp#0": [],
+  "context#0": [
+    {
+      "text": "Student's question: "
+    },
+    {
+      "expr": "studentQuestion"
+    },
+    {
+      "text": "\n\nThe whole exercise:\n"
+    },
+    {
+      "expr": "exercise"
+    },
+    {
+      "text": "\n\nCurrent part "
+    },
+    {
+      "expr": "partLabel"
+    },
+    {
+      "text": ": "
+    },
+    {
+      "expr": "partAsks"
+    },
+    {
+      "text": "\nIts answer: "
+    },
+    {
+      "expr": "partAnswer"
+    }
+  ],
+  "solution#0": [
+    {
+      "text": "\n\nThe written solution on screen (answer from it; do not contradict it):\n"
+    }
+  ],
+  "step#0": [
+    {
+      "text": "\n\nThe student asks about step "
+    },
+    {
+      "expr": "step.number"
+    },
+    {
+      "text": " of "
+    },
+    {
+      "expr": "step.total"
+    },
+    {
+      "text": " only: "
+    },
+    {
+      "expr": "step.text"
+    }
+  ],
+  "range#0": [
+    {
+      "text": "Student's question:"
+    }
+  ],
+  "line#0": [],
+  "question#0": [
+    {
+      "text": "Stay with this question: "
+    },
+    {
+      "expr": "question"
+    }
+  ],
+  "focus#0": [
+    {
+      "text": ", "
+    }
+  ],
+  "focus#1": [
+    {
+      "text": "The question to answer is: "
+    },
+    {
+      "expr": "question"
+    }
+  ],
+  "focus#2": [
+    {
+      "text": "Stay with this question; do not switch to another exercise."
+    }
+  ],
+  "focus#3": [
+    {
+      "text": "What matters here is "
+    },
+    {
+      "expr": "focus"
+    },
+    {
+      "text": ", from this part of the exercise."
+    }
+  ],
+  "focus#4": [
+    {
+      "text": "Nothing else on the page answers it."
+    }
+  ],
+  "stop#0": [
+    {
+      "text": "why"
+    }
+  ],
+  "stop#1": [
+    {
+      "text": "does"
+    }
+  ],
+  "stop#2": [
+    {
+      "text": "only"
+    }
+  ],
+  "stop#3": [
+    {
+      "text": "the"
+    }
+  ],
+  "stop#4": [
+    {
+      "text": "on"
+    }
+  ],
+  "stop#5": [
+    {
+      "text": "a"
+    }
+  ],
+  "stop#6": [
+    {
+      "text": "an"
+    }
+  ],
+  "stop#7": [
+    {
+      "text": "of"
+    }
+  ],
+  "stop#8": [
+    {
+      "text": "to"
+    }
+  ],
+  "stop#9": [
+    {
+      "text": "and"
+    }
+  ],
+  "stop#10": [
+    {
+      "text": "what"
+    }
+  ],
+  "stop#11": [
+    {
+      "text": "how"
+    }
+  ],
+  "stop#12": [
+    {
+      "text": "is"
+    }
+  ],
+  "stop#13": [
+    {
+      "text": "in"
+    }
+  ],
+  "stop#14": [
+    {
+      "text": "for"
+    }
+  ],
+  "stop#15": [
+    {
+      "text": "this"
+    }
+  ],
+  "stop#16": [
+    {
+      "text": "that"
+    }
+  ],
+  "stop#17": [
+    {
+      "text": "with"
+    }
+  ],
+  "stop#18": [
+    {
+      "text": "from"
+    }
+  ],
+  "stop#19": [
+    {
+      "text": "do"
+    }
+  ],
+  "stop#20": [
+    {
+      "text": "where"
+    }
+  ],
+  "stop#21": [
+    {
+      "text": "when"
+    }
+  ],
+  "stop#22": [
+    {
+      "text": "which"
+    }
+  ],
+  "stop#23": [
+    {
+      "text": "survive"
+    }
+  ],
+  "stop#24": [
+    {
+      "text": "por"
+    }
+  ],
+  "stop#25": [
+    {
+      "text": "que"
+    }
+  ],
+  "stop#26": [
+    {
+      "text": "como"
+    }
+  ],
+  "stop#27": [
+    {
+      "text": "para"
+    }
+  ],
+  "stop#28": [
+    {
+      "text": "uma"
+    }
+  ],
+  "stop#29": [
+    {
+      "text": "uns"
+    }
+  ],
+  "stop#30": [
+    {
+      "text": "das"
+    }
+  ],
+  "stop#31": [
+    {
+      "text": "dos"
+    }
+  ],
+  "stop#32": [
+    {
+      "text": "com"
+    }
+  ],
+  "stop#33": [
+    {
+      "text": "não"
+    }
+  ],
+  "stop#34": [
+    {
+      "text": "nao"
+    }
+  ],
+  "token#0": [],
+  "key#0": [],
+  "key#1": [
+    {
+      "text": "_"
+    }
+  ],
+  "body#0": [
+    {
+      "text": " "
+    }
+  ],
+  "cacheKey#0": [
+    {
+      "text": "mock-"
+    }
+  ],
+  "cacheKey#1": [],
+  "url#0": [
+    {
+      "text": "MockTextHelp"
+    }
+  ],
+  "url#1": [
+    {
+      "text": "json"
+    }
+  ]
+}

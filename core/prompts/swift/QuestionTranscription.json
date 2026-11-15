@@ -1,0 +1,308 @@
+{
+  "container#0": [
+    {
+      "text": "text"
+    }
+  ],
+  "isFigure#0": [
+    {
+      "text": "figure"
+    }
+  ],
+  "isUsable#0": [],
+  "text#0": [
+    {
+      "text": "$"
+    }
+  ],
+  "text#1": [],
+  "text#2": [
+    {
+      "text": "\n"
+    }
+  ],
+  "shown#0": [
+    {
+      "text": " "
+    }
+  ],
+  "pattern#0": [
+    {
+      "text": "(?m)^\\s*(?:\\d+\\s*\\.?\\s*)?\\(?([ivx]+|[a-z])\\)(?=\\s|$)"
+    }
+  ],
+  "rejection#0": [
+    {
+      "text": "isUsable"
+    }
+  ],
+  "rejection#1": [
+    {
+      "text": "isOf(part: "
+    },
+    {
+      "expr": "part ?? \"-\""
+    },
+    {
+      "text": "), labels ["
+    },
+    {
+      "expr": "partLabels.sorted().joined(separator: \", \")"
+    },
+    {
+      "text": "]"
+    }
+  ],
+  "shown#1": [
+    {
+      "text": " "
+    }
+  ],
+  "missing#0": [
+    {
+      "text": "agrees(withReading:), missing "
+    },
+    {
+      "expr": "missing.joined(separator: \" \")"
+    },
+    {
+      "text": " of "
+    },
+    {
+      "expr": "Self.numbers(in: reading).joined(separator: \" \")"
+    }
+  ],
+  "token#0": [
+    {
+      "text": "(). "
+    }
+  ],
+  "token#1": [
+    {
+      "text": "^([ivx]+|[a-z])$"
+    }
+  ],
+  "at#0": [],
+  "pattern#1": [
+    {
+      "text": "\\d+(?:[.,]\\d+)?"
+    }
+  ],
+  "ns#0": [
+    {
+      "text": ","
+    }
+  ],
+  "ns#1": [
+    {
+      "text": "."
+    }
+  ],
+  "plain#0": [
+    {
+      "text": ".,;:!?()'\"-–—%/°+=<>[]{}ºª€$"
+    }
+  ],
+  "shortLines#0": [
+    {
+      "text": "\n"
+    }
+  ],
+  "lines#0": [
+    {
+      "text": "\n"
+    }
+  ],
+  "blocks#0": [
+    {
+      "text": "text"
+    }
+  ],
+  "blocks#1": [
+    {
+      "text": "$"
+    }
+  ],
+  "blocks#2": [],
+  "digest#0": [
+    {
+      "text": "%02x"
+    }
+  ],
+  "digest#1": [
+    {
+      "text": "|"
+    }
+  ],
+  "structureRule#0": [
+    {
+      "text": "Keep the layout of every formula as printed, as LaTeX: a sum or product WITH its limits ($\\sum_{k=1}^{n} k^2 = \\frac{n(n+1)}{2}$), fractions ($\\frac{a}{b}$), roots, powers and indices on brackets or functions, limits, integrals with their bounds, a piecewise definition with its brace ($\\begin{cases} … & x>0 \\\\ … & x\\le 0 \\end{cases}$), inverse trigonometric functions ($\\operatorname{arcsen}\\frac{x}{\\sqrt{1+x^2}}$). Write every fraction with explicit braces, so its grouping is never in doubt: $\\frac{\\operatorname{arcsen} x}{1+x^2}$ (the function over the denominator) is not $\\operatorname{arcsen}\\frac{x}{1+x^2}$ (the function of the fraction). Never flatten a formula into loose tokens (\"n k=1 k 2 = n(n + 1) 4\", \"1 (cosh x) x\"): if text read by the Mac disagrees with the picture, the picture is right."
+    }
+  ],
+  "instruction#0": [
+    {
+      "text": "\n\nThe picture is the question as the student sees it, and the student sees it ONLY through your \"question\" field, so transcribe it faithfully, in the language it is printed in, and write \"question\" FIRST, before \"subject\": an array of blocks in reading order, each {\"type\", \"text\", \"box\", \"caption\"}:\n- \"text\": a paragraph, an option (\"A) …\") or a heading, as printed, with its label. Plain numbers, units and simple symbols (12 m/s, 30°, v₀, x²) are plain Unicode; use $…$ only for what needs typesetting (fractions, roots, integrals, limits, sums, matrices, long expressions), as LaTeX SwiftMath can draw. Never invent or fix anything, and copy every number exactly. A highlight or quote later can only be words outside $…$. "
+    },
+    {
+      "expr": "structureRule"
+    },
+    {
+      "text": "\n- \"formula\": a display formula on its own line, as LaTeX (no $).\n- \"figure\": a drawing, circuit, graph, table image or diagram, with NO text (set \"text\" null); \"caption\" its printed label or null. An option drawn as a picture is a \"figure\" with \"caption\" its letter.\n\"box\" is where the block is in the picture: [x, y, width, height] as shares from 0 to 1 of the picture's width and height from its top-left, tight around it (always set, for figures too). Words printed inside a figure (labels, values) belong to the figure, not to a text block. \"question\" is never null here. Then solve as usual: the \"quotes\" and \"highlight\" of a step are copied from your own transcription's text, character for character."
+    }
+  ],
+  "blockSchema#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "blockSchema#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "blockSchema#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "blockSchema#4": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#5": [
+    {
+      "text": "text"
+    }
+  ],
+  "blockSchema#6": [
+    {
+      "text": "box"
+    }
+  ],
+  "blockSchema#7": [
+    {
+      "text": "caption"
+    }
+  ],
+  "blockSchema#8": [
+    {
+      "text": "properties"
+    }
+  ],
+  "blockSchema#9": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#10": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#11": [
+    {
+      "text": "string"
+    }
+  ],
+  "blockSchema#12": [
+    {
+      "text": "enum"
+    }
+  ],
+  "blockSchema#13": [
+    {
+      "text": "text"
+    }
+  ],
+  "blockSchema#14": [
+    {
+      "text": "formula"
+    }
+  ],
+  "blockSchema#15": [
+    {
+      "text": "figure"
+    }
+  ],
+  "blockSchema#16": [
+    {
+      "text": "text"
+    }
+  ],
+  "blockSchema#17": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#18": [
+    {
+      "text": "string"
+    }
+  ],
+  "blockSchema#19": [
+    {
+      "text": "null"
+    }
+  ],
+  "blockSchema#20": [
+    {
+      "text": "box"
+    }
+  ],
+  "blockSchema#21": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#22": [
+    {
+      "text": "array"
+    }
+  ],
+  "blockSchema#23": [
+    {
+      "text": "null"
+    }
+  ],
+  "blockSchema#24": [
+    {
+      "text": "items"
+    }
+  ],
+  "blockSchema#25": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#26": [
+    {
+      "text": "number"
+    }
+  ],
+  "blockSchema#27": [
+    {
+      "text": "caption"
+    }
+  ],
+  "blockSchema#28": [
+    {
+      "text": "type"
+    }
+  ],
+  "blockSchema#29": [
+    {
+      "text": "string"
+    }
+  ],
+  "blockSchema#30": [
+    {
+      "text": "null"
+    }
+  ]
+}

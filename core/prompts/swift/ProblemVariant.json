@@ -1,0 +1,725 @@
+{
+  "constants#0": [
+    {
+      "text": "eps0"
+    }
+  ],
+  "constants#1": [
+    {
+      "text": "mu0"
+    }
+  ],
+  "constants#2": [
+    {
+      "text": "g"
+    }
+  ],
+  "constants#3": [
+    {
+      "text": "k"
+    }
+  ],
+  "constants#4": [
+    {
+      "text": "c"
+    }
+  ],
+  "constants#5": [
+    {
+      "text": "h"
+    }
+  ],
+  "constants#6": [
+    {
+      "text": "G"
+    }
+  ],
+  "constants#7": [
+    {
+      "text": "e"
+    }
+  ],
+  "shown#0": [],
+  "shown#1": [
+    {
+      "text": " "
+    }
+  ],
+  "shown#2": [],
+  "shown#3": [
+    {
+      "text": "{"
+    },
+    {
+      "expr": "value.name"
+    },
+    {
+      "text": "}"
+    }
+  ],
+  "needed#0": [
+    {
+      "text": "{"
+    },
+    {
+      "expr": "name"
+    },
+    {
+      "text": "}"
+    }
+  ],
+  "right#0": [
+    {
+      "text": "{equation}"
+    }
+  ],
+  "right#1": [
+    {
+      "text": "{equation}"
+    }
+  ],
+  "right#2": [
+    {
+      "text": " = "
+    }
+  ],
+  "right#3": [
+    {
+      "text": "eps0"
+    }
+  ],
+  "right#4": [
+    {
+      "text": "ε₀"
+    }
+  ],
+  "right#5": [
+    {
+      "text": "mu0"
+    }
+  ],
+  "right#6": [
+    {
+      "text": "μ₀"
+    }
+  ],
+  "right#7": [
+    {
+      "text": "sigma"
+    }
+  ],
+  "right#8": [
+    {
+      "text": "σ"
+    }
+  ],
+  "right#9": [
+    {
+      "text": "lambda"
+    }
+  ],
+  "right#10": [
+    {
+      "text": "λ"
+    }
+  ],
+  "right#11": [
+    {
+      "text": "rho"
+    }
+  ],
+  "right#12": [
+    {
+      "text": "ρ"
+    }
+  ],
+  "right#13": [
+    {
+      "text": "omega"
+    }
+  ],
+  "right#14": [
+    {
+      "text": "ω"
+    }
+  ],
+  "right#15": [
+    {
+      "text": "theta"
+    }
+  ],
+  "right#16": [
+    {
+      "text": "θ"
+    }
+  ],
+  "right#17": [
+    {
+      "text": "\\b"
+    },
+    {
+      "expr": "ascii"
+    },
+    {
+      "text": "\\b"
+    }
+  ],
+  "right#18": [
+    {
+      "text": "{"
+    }
+  ],
+  "text#0": [
+    {
+      "text": "y4"
+    }
+  ],
+  "text#1": [
+    {
+      "text": "y⁗"
+    }
+  ],
+  "text#2": [
+    {
+      "text": "y3"
+    }
+  ],
+  "text#3": [
+    {
+      "text": "y‴"
+    }
+  ],
+  "text#4": [
+    {
+      "text": "y2"
+    }
+  ],
+  "text#5": [
+    {
+      "text": "y″"
+    }
+  ],
+  "text#6": [
+    {
+      "text": "y1"
+    }
+  ],
+  "text#7": [
+    {
+      "text": "y′"
+    }
+  ],
+  "text#8": [
+    {
+      "text": "\\b"
+    },
+    {
+      "expr": "name"
+    },
+    {
+      "text": "\\b"
+    }
+  ],
+  "text#9": [
+    {
+      "text": "exp("
+    }
+  ],
+  "text#10": [
+    {
+      "text": "e^("
+    }
+  ],
+  "text#11": [
+    {
+      "text": "(\\d)\\s*\\*\\s*(?=[A-Za-z(])"
+    }
+  ],
+  "text#12": [
+    {
+      "text": "$1"
+    }
+  ],
+  "text#13": [
+    {
+      "text": "*"
+    }
+  ],
+  "text#14": [
+    {
+      "text": "·"
+    }
+  ],
+  "text#15": [
+    {
+      "text": "-"
+    }
+  ],
+  "text#16": [
+    {
+      "text": "−"
+    }
+  ],
+  "mantissa#0": [
+    {
+      "text": "%.3g"
+    }
+  ],
+  "raised#0": [
+    {
+      "text": "⁻⁰¹²³⁴⁵⁶⁷⁸⁹"
+    }
+  ],
+  "raised#1": [
+    {
+      "text": "-"
+    }
+  ],
+  "raised#2": [
+    {
+      "text": " × 10"
+    }
+  ],
+  "raised#3": [
+    {
+      "text": "%.4g"
+    }
+  ],
+  "system#0": [
+    {
+      "text": "You write practice variants of exam questions, in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ", keeping the exam's notation. Given a question part and the formula of its answer, write the same question with new, realistic numbers: same maths or physics, same method, different values. Rules:\n- \"kind\": \"number\" when the part asks for one number (a field, a time, an integral's value); \"function\" when it asks for a function that solves a differential equation (a general or particular solution).\n- For \"number\": \"values\" has one entry for every name in the formula, each \"value\" in SI units (metres, not centimetres) with its SI \"unit\" (\"m\", \"C/m²\", \"\" for none), including constants such as eps0 or g with their usual values, names exactly as in the formula. In the statement, write each value only as its placeholder, {name} (\"a disc of radius {R}\"): the app fills in the number and unit. Every name gets a number, positions and distances too (z, r, x): the student must be able to compute one number, never a formula. \"unit\": the SI unit of the answer (\"V/m\", \"J\"), or \"\". \"variable\", \"left\", \"right\", \"nonZero\" and \"example\" are null.\n- For \"function\": change the equation's coefficients or right-hand side so the method stays the same. \"variable\": its variable (\"t\"). \"left\" and \"right\": the new equation's two sides in ASCII, writing y, y1 for y', y2 for y'', y3 for y''' and y4 for y'''' (\"y3 + 4*y2 + 13*y1\", \"t*exp(t) + 2\"). In the statement, write the equation only as the placeholder {equation}: the app writes it from \"left\" and \"right\". \"nonZero\": true when the question excludes y = 0. \"example\": one correct solution in ASCII (\"exp(-2*t)*cos(3*t)\"). \"values\": [], \"unit\": \"\".\n- \"statement\": the full question, self-contained (include what the group's statement set up), in plain text with Unicode maths (σ, ε₀, ², √), never LaTeX. Ask in the exam's own words and notation (ε₀, never eps0), without notes about units.\n- \"hint\": one hint that does not give the answer away.\n- Never give the answer, its formula or any step of the method in the statement: the student must work it out.\nReply with JSON only."
+    }
+  ],
+  "text#17": [
+    {
+      "text": "The exam's text:\n"
+    },
+    {
+      "expr": "groupText"
+    },
+    {
+      "text": "\n\nThe part to vary: "
+    },
+    {
+      "expr": "label"
+    },
+    {
+      "text": ", which asks: "
+    },
+    {
+      "expr": "asks"
+    },
+    {
+      "text": "\nFormula of its answer (ASCII): "
+    },
+    {
+      "expr": "formula"
+    }
+  ],
+  "text#18": [
+    {
+      "text": "\n\nUse different numbers from these earlier variants:\n"
+    }
+  ],
+  "text#19": [
+    {
+      "text": "- "
+    }
+  ],
+  "text#20": [
+    {
+      "text": "\n"
+    }
+  ],
+  "schema#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#4": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#5": [
+    {
+      "text": "statement"
+    }
+  ],
+  "schema#6": [
+    {
+      "text": "values"
+    }
+  ],
+  "schema#7": [
+    {
+      "text": "unit"
+    }
+  ],
+  "schema#8": [
+    {
+      "text": "hint"
+    }
+  ],
+  "schema#9": [
+    {
+      "text": "variable"
+    }
+  ],
+  "schema#10": [
+    {
+      "text": "left"
+    }
+  ],
+  "schema#11": [
+    {
+      "text": "right"
+    }
+  ],
+  "schema#12": [
+    {
+      "text": "nonZero"
+    }
+  ],
+  "schema#13": [
+    {
+      "text": "example"
+    }
+  ],
+  "schema#14": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#15": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#16": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#17": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#18": [
+    {
+      "text": "enum"
+    }
+  ],
+  "schema#19": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#20": [
+    {
+      "text": "function"
+    }
+  ],
+  "schema#21": [
+    {
+      "text": "statement"
+    }
+  ],
+  "schema#22": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#23": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#24": [
+    {
+      "text": "values"
+    }
+  ],
+  "schema#25": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#26": [
+    {
+      "text": "array"
+    }
+  ],
+  "schema#27": [
+    {
+      "text": "items"
+    }
+  ],
+  "schema#28": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#29": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#30": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#31": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#32": [
+    {
+      "text": "name"
+    }
+  ],
+  "schema#33": [
+    {
+      "text": "value"
+    }
+  ],
+  "schema#34": [
+    {
+      "text": "unit"
+    }
+  ],
+  "schema#35": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#36": [
+    {
+      "text": "name"
+    }
+  ],
+  "schema#37": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#38": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#39": [
+    {
+      "text": "value"
+    }
+  ],
+  "schema#40": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#41": [
+    {
+      "text": "number"
+    }
+  ],
+  "schema#42": [
+    {
+      "text": "unit"
+    }
+  ],
+  "schema#43": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#44": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#45": [
+    {
+      "text": "unit"
+    }
+  ],
+  "schema#46": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#47": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#48": [
+    {
+      "text": "hint"
+    }
+  ],
+  "schema#49": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#50": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#51": [
+    {
+      "text": "variable"
+    }
+  ],
+  "schema#52": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#53": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#54": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#55": [
+    {
+      "text": "left"
+    }
+  ],
+  "schema#56": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#57": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#58": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#59": [
+    {
+      "text": "right"
+    }
+  ],
+  "schema#60": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#61": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#62": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#63": [
+    {
+      "text": "nonZero"
+    }
+  ],
+  "schema#64": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#65": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "schema#66": [
+    {
+      "text": "null"
+    }
+  ],
+  "schema#67": [
+    {
+      "text": "example"
+    }
+  ],
+  "schema#68": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#69": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#70": [
+    {
+      "text": "null"
+    }
+  ],
+  "residual#0": [
+    {
+      "text": "("
+    },
+    {
+      "expr": "left"
+    },
+    {
+      "text": ") - ("
+    },
+    {
+      "expr": "right"
+    },
+    {
+      "text": ")"
+    }
+  ],
+  "derivatives#0": [
+    {
+      "text": "y"
+    }
+  ],
+  "derivatives#1": [
+    {
+      "text": "y"
+    },
+    {
+      "expr": "order"
+    }
+  ]
+}

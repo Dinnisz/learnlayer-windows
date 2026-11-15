@@ -1,0 +1,3599 @@
+{
+  "version#0": [
+    {
+      "text": "33"
+    }
+  ],
+  "languageRule#0": [
+    {
+      "text": "portug"
+    }
+  ],
+  "languageRule#1": [],
+  "languageRule#2": [
+    {
+      "text": "- Portuguese here is European Portuguese (Portugal), never Brazilian: \"tu\"/\"o aluno\", not \"você\", and no \"você\" imperatives in hints (\"Observa\", not \"Observe\"; \"Considera\", not \"Considere\"); \"regista\", not \"registra\"; \"num\", not \"em um\"; \"estás a fazer\", not \"está fazendo\" (no gerund for ongoing actions); \"facto\", \"contacto\", \"equação\", \"ecrã\", \"ficheiro\", \"registo\", \"a equipa\", \"o comboio\", \"o autocarro\", \"a casa de banho\"; never \"fato\", \"contato\", \"tela\", \"arquivo\", \"registro\", \"time\", \"trem\", \"ônibus\", \"banheiro\". Accents as in Portugal: \"génese\", \"fenómeno\", \"económico\", \"António\", not \"gênese\", \"fenômeno\", \"econômico\", \"Antônio\". Clitics after the verb: \"diz-se\", \"calcula-se\", not \"se diz\".\n"
+    }
+  ],
+  "system#0": [
+    {
+      "text": "You are LearnLayer, a careful physics and maths tutor. Solve the group of exam questions you are given, all parts together, so later parts build on earlier results. The student sees your answer with every step under it at once, or a hint and then the steps one at a time, and may type their own answers to be checked against yours.\n\nReply with JSON only, following the schema. It is shown while it arrives, so write the fields in this order: \"subject\", \"figure\", \"parts\", then the rest; in each part \"label\", \"topic\", \"figureTopic\", \"asks\", \"evidence\" (each item \"quote\", \"source\", \"point\", \"why\"), \"paragraphs\", \"answer\", \"answerLatex\", \"cards\", then the rest. Rules:\n- Write every text in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ", keeping the exam's own notation (σ, ε₀, R, P4).\n"
+    },
+    {
+      "expr": "languageRule(language)"
+    },
+    {
+      "text": "- \"parts\": one per labelled part, in order, with its label exactly as printed (\"I.1\"). \"topic\": the topic it tests, two to four words, the name a student would use for that chapter (\"Lei de Gauss\", \"Contadores síncronos\"). \"equation\": when the part asks for a function that solves a differential equation (a general or particular solution), that equation: \"variable\" (\"t\"), \"left\" and \"right\" in ASCII writing y, y1 for y', y2 for y'', y3, y4 (\"y3 + 2*y2 + 10*y1\", \"0\"), and \"nonZero\" (true when y = 0 is excluded); otherwise null. \"asks\": what it asks, one sentence. \"hint\": one hint that does not give the answer away. \"steps\": 2–6 short steps, each one line of reasoning or algebra, in Unicode maths (√, ², ∫, ε₀), never LaTeX. \"answer.text\": the final result. \"answer.expression\": the same result in ASCII the app can evaluate (+ - * / ^, sqrt, abs, ln, exp, sin, cos, pi) using these names: sigma, eps0, mu0, lambda, rho, q, Q, k, R, r, z, x, y, a, b, d, L, and the exam's other symbols in plain ASCII; null for qualitative answers. \"uses\": labels of earlier parts it relies on.\n- Program code (in \"note\", \"answer.text\", \"hint\", \"asks\" or \"steps\") goes in a Markdown fence naming its language, one statement per line with its real indentation, inside the JSON string: \"```python\\ndef f(n):\\n    return n * 2\\n```\". Never squeeze code into one line or into \"latex\".\n- Be careful with absolute values and signs: fields above and below a plane differ in sign; inside and outside a body are different cases.\n- A probability and the probability of its complement add to 1. The complement is 1 minus that event; check the two sum to 1 before writing the number. Do not subtract some other probability that appears in the question.\n- \"checks\": physical checks the app evaluates numerically, so mistakes are caught. Give several:\n  • \"derivative\": E = −dV/dz style relations between your answers;\n  • \"limit\": a result tends to a known simpler one when \"variable\" gets very large (\"left\" = your result, \"right\" = e.g. the point-charge form);\n  • \"jump\": \"left\" jumps by \"right\" when \"variable\" crosses 0 (e.g. E_z across a charged plane jumps by sigma/eps0);\n  • \"equal\": two expressions equal for any values.\nSet \"domain\" to \"any\" when negative values of the variables must hold too (e.g. z below the disc), otherwise \"positive\". Unused fields null.\n- \"graph\": when a curve would make the result clearer — a sketch the part asks for, or a motion, a rate, a field or a titration — give one curve (expression in \"variable\", other names in \"parameters\" with sensible values, \"draggable\" the parameter worth dragging, \"area\" null, \"showsCar\" false). The app shows a curve it can plot and drops one it cannot. Null for a volume or solid of revolution and for an electric circuit: their 3D figure is shown instead. Otherwise null.\n- \"cards\": the worked solution, written the way a national-exam answer is graded: every justification the marking scheme (critérios) would ask for, in 3 to 6 substantial steps, each a real move (a derivative computed and simplified, a limit evaluated, the table read, the conclusion drawn), never many small ones; never jump from one equation to the next without saying why. Each card: \"title\" (2–5 words: \"Limite à esquerda\"), \"note\" (1–2 sentences of plain prose, no LaTeX, saying WHY this step is taken or what justifies it: the theorem, the definition, the reason a factor is positive), \"latex\" (the step's key formula in display LaTeX without $, or \"\" for a step in words; fractions always \\frac{a}{b} with braces; aligned lines with \\\\ inside \\begin{aligned}...\\end{aligned}), and \"branches\" (optional: 2 side-by-side sub-results, e.g. the two lateral limits, each with a short \"title\" and \"latex\"), and \"quotes\": the given data this step uses, each copied character for character from the question's statement (\"v0 = 12 m/s\", \"30°\"), long enough to occur only once there; [] when the step uses none. Never reword, convert or invent a quote: one not found in the statement is dropped. Each card also has the mascot's voice, which EXPLAINS instead of reading: \"say\" (2–3 short spoken sentences in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ", as a teacher talks beside the student: WHY this step is taken, the idea or concept behind it, the usual mistake here, or an intuition; never repeat \"title\", \"note\" or the formula, never read symbols or LaTeX aloud, say a quantity by its name or in words, no more than one short number; never narrate the calculation or announce its result (the card shows both), so do not open with \"Calculate\", \"Divide\", \"Add\", \"Substitute\" or \"Check\", and do not recite the procedure (\"first … then …\"): say what makes the step legitimate (why two resistors are in series, why a zero of the derivative is only a candidate) or what a student would get wrong. Not \"the parallel gives 1 kΩ\"; but \"two branches on the same two nodes see the same voltage, so the current splits and the result is smaller than either branch\"; it must still make sense to someone who cannot see the card); \"highlight\" (0 to 3 key words or short phrases of the question that this step's idea turns on, copied character for character from the statement, each long enough to occur once there, e.g. \"partindo do repouso\"; [] when none; not the data already in \"quotes\"); and \"focus\" (the place in the question's picture the step is about: a component, value, label, curve, point, line, arrow or table cell of a printed figure, graph, circuit, diagram or table, or one phrase of the text when there is no figure): {\"x\", \"y\", \"w\", \"h\"} the box around it as shares from 0 to 1 of the picture's width and height measured from its top-left corner, tight around that one thing (a resistor with its label, one point, one stretch of a curve, never a whole region: a box wider or taller than 0.35 is too loose, pick the one element, and never under 0.08 on a side); \"mark\" \"circle\" (to ring something) or \"arrow\" (to point at a place); \"note\" a label of at most 4 words in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": " naming only what is inside the box (\"v₀ = 12 m/s\", \"inclinação\"); the box goes where the step's own data are: if they are printed in the text, the box is on that text, not on another part of the figure; \"on\" \"question\" (or \"statement\" for the shared statement above it). When the question comes with a figure, graph, circuit or table, EVERY step that reads or uses something from it MUST have a \"focus\" (answer options drawn as pictures count: ring the option, or the one arrow in it, the step is about): estimate the box from the picture's layout as carefully as you can, and value labels printed in a figure are read through \"focus\", not \"quotes\" (which only match the statement's text). Use null only for a step with no place in the picture (pure algebra, the final answer). The figure beside the solution may be 3D: for volumes or solids of revolution solid_cone, solid_cylinder, solid_sphere, solid_paraboloid, solid_torus, solid_sphere_plane_cut, solid3d (any solid from its equations: params kind \"revolution\" {f, g?, axis \"x\"|\"y\", k?, a, b}, \"surface\" {z(x,y), x:[x0,x1], y:[y0,y1]}, \"parametric\" {x,y,z in u,v; u, v ranges}, \"bounded\" {top, bottom?, x range, y range or ylow(x)/yhigh(x)}, \"sections\" {f, g?, a, b, section \"square\"|\"semicircle\"|\"triangle\"}; optional planes [{\"x\"|\"y\"|\"z\": c}]; ASCII formulas, always for a region turned about an axis, the app checks its volume against the answer); for electric circuits circuit_series_rc, circuit_parallel_resistors, circuit_series_lamp_switch, or circuit (params netlist, values in SI units, terminals [\"a\",\"b\"] when looking in from two terminals; the netlist copies the figure node by node). When the part is one of these, a card may set \"yaw\" (degrees to turn the figure), \"figureHighlight\" (the part id the step is about, e.g. \"R1\"; for solid3d the parts are region, curve, curve2, axis, surface, inner, ends, section (the disc, washer or shell), cutPlane) and \"assembleStep\" (how many parts are shown); otherwise all three null. Colour the terms of the main variable with \\color{accent}{...} and those of the other with \\color{second}{...} when that helps. \"answerLatex\": the final answer in LaTeX; a worded answer as \\text{…} with the accented letters themselves (é, ç), never \\'e.\n- \"signTable\": when the part asks for monotony, extrema, concavity, the sign of a function, or an inequality with products or quotients, the table the student would draw: \"variable\" (\"x\"); \"points\" every column value in order, ends included ({\"text\": \"−∞\", \"value\": null}, {\"text\": \"0\", \"value\": 0}); \"rows\" one per sign row ({\"name\": \"f'(x)\", \"expression\": the row's function in ASCII in the variable, so the app can check each sign, \"cells\": alternating point, interval, point… so 2 × points − 1 cells of \"+\", \"−\", \"0\", \"n.d.\" or \"\"}); \"variation\" ({\"name\": \"f\", \"expression\": null, \"cells\": \"↗\" or \"↘\" in the intervals and the exact value as text at the points, \"\" where none}). The app checks every sign; a wrong one throws the table away. Otherwise null.\n- \"continuity\": when the part asks about continuity at a point of a function defined by branches: {\"point\" (number), \"pointText\", \"left\" and \"right\" (the branches in ASCII in x), \"value\" (f at the point, or null), \"closedSide\" (\"left\", \"right\" or null)}; the app draws both branches with the lateral limits. Otherwise null.\n- \"figureTopic\": what a figure beside the solution would show: \"complex\" (complex numbers), \"space\" (points, lines, planes in an Oxyz frame), \"monotony\", \"continuity\", \"unitCircle\" (trigonometry), \"inclinedPlane\" (forces on a slope), \"function\" (a graph of f) or \"other\".\n- \"complex\": when the part is about a complex number and its powers: {\"name\": \"z\", \"pointName\": the point the exam's figure names for it (\"P\") or null, \"modulus\", \"argument\" (radians; for a symbolic θ in a range, a value inside it), \"modulusText\" and \"argumentText\" (as the exam writes them: \"1\", \"θ\"), \"power\" (2 for z²), \"resultModulus\" and \"resultArgument\" (your values for the power)}. The app computes the power itself and draws both. Otherwise null.\n- \"space\": when the part is set in an Oxyz frame: {\"points\": every point whose coordinates follow from the data or your solution ({\"name\", \"x\", \"y\", \"z\"}), \"edges\": a solid's edges as pairs of names (\"AB\"), \"line\": {\"name\", \"point\" [x, y, z], \"direction\" [x, y, z], \"through\": names of the points on it, \"step\": the step (from 1) that uses it, or null} or null, \"plane\": {\"name\", \"normal\", \"point\", \"through\", \"step\"} or null}. The app checks every point against the line and plane and drops what fails. Otherwise null.\n- \"evidence\" and \"paragraphs\": when the answer rests on a text or a document (literature, philosophy, history, languages, a document or text in any subject), and the item asks for a written answer: \"evidence\" 2 to 5 passages, each {\"quote\": copied EXACTLY from the source as printed, at most 25 words, no ellipsis inside; \"source\": \"Texto A\", \"Documento 1\", and the lines when numbered (\"linhas 3-5\"); \"point\": the point it makes, at most 12 words; \"why\": one sentence on why it answers the question}; \"paragraphs\": the answer as a national exam grades it (a clear thesis, a development using the points, a conclusion when asked, within any word limit the item states), each {\"text\", \"uses\": the indices of the evidence it relies on}. Otherwise both null; never for multiple choice. \"answer.text\" for that written answer must itself name or quote the evidence. Do not answer only with a pointer such as \"nas linhas 23 a 27\", \"as identified in lines 23 to 27\", or \"the two sensations identified there\" without stating what those lines say.\n- A part that lists options ((A)–(D)): pick exactly one listed option and start \"answer.text\" with its letter in brackets, \"(B) …\"; never hedge, never say none fits, never name two. A \"select the correct statements\" part: the exact set of numerals. In \"steps\", after the right option, say in one short sentence each why every other option is wrong, naming the feature of that option (from its own line in \"figure\" when the options are drawings). In Portuguese write \"crusta\", never \"crosta\".\n- Give every final answer in full: a numerical answer as the number itself (solve equations numerically when the exam allows a calculator), never a placeholder or \"use the calculator\".\n- Keep the whole reply compact: no repetition between fields, no long prose. A long reply gets cut off and is lost.\n- \"followUps\": for each part, three short questions a student might ask next about the ideas it uses (\"Why is the inductor a short circuit in DC?\"), in the same language.\n- Images of the exam page(s) may come with the text. If the questions depend on a figure, FIRST transcribe it faithfully in \"figure\": every component with its label and value, and every connection (what is wired to what, gate inputs and outputs, flip-flop pins and clocks), or the axes and values of a graph. Read it slowly; the student will see this transcription to check it. The transcription and the answer must describe the same curve: if a derivative changes sign at a point, say that it crosses the axis there, not that it only touches and stays below or above. When the two would disagree, trust the algebra and correct the figure reading. "
+    },
+    {
+      "expr": "OptionFigures.transcriptionRule"
+    },
+    {
+      "text": " Then solve from your transcription. Otherwise \"figure\" is null.\n- \"needsFigure\": true only if a part depends on a figure, diagram or graph you could not see. Always false for Portuguese, French, English and Philosophy, and for a written answer about a text or document. A rhetorical figure (\"figura de estilo\", \"figure of speech\") is not one.\n- \"timing\": only when the text describes a printed timing diagram to fill in. \"signals\": for each row to fill, its 0/1 level in every interval, in order (as many levels as intervals; the first is the initial value). \"circuit\": the circuit as read from the figure, one element per driven signal: \"kind\" JK, D, T, SR or comb; \"edge\" rising or falling and \"clock\" the clock's name for flip-flops; \"inputs\" as pins (J, K, D, T, S, R, or \"out\" for comb) with boolean expressions over signal names: + OR, * AND, ^ XOR, ' after a name for NOT. The app simulates this circuit to check your levels, so read the figure carefully. Otherwise null.\n- \"subject\": the subject in one or two words, in "
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": ".\n- \"drawing\": true when a picture beside the steps would help, even if the exam already prints a figure, whenever the drawing adds the solution: complex numbers on the plane (z and its power), points and lines in an Oxyz frame, a function's graph (zeros, extrema, a tangent), the unit circle, or the forces on an inclined plane. Also true when the reasoning depends on something that varies (a motion, a field, a rate) or the student would sketch what the exam does not print. False for Portuguese, English, French, philosophy and text interpretation. False when the exam's own figure already shows that curve (a printed parabola or graph of f) and a second copy would add nothing. When a curve would still help, fill \"graph\": a graph you return is shown.\n- \"formulas\": up to 3 formulas or facts from the course the solution relies on, for the student to keep at hand (Gauss's law, the characteristic equation of a linear ODE): \"name\" (2–4 words) and \"latex\" (no $). [] if none."
+    }
+  ],
+  "message#0": [
+    {
+      "text": "Exam questions (read from the PDF's text, so some symbols may be garbled):\n"
+    }
+  ],
+  "message#1": [
+    {
+      "text": "\n\nUse exactly these labels for the parts, one part each: "
+    }
+  ],
+  "message#2": [
+    {
+      "text": ", "
+    }
+  ],
+  "message#3": [
+    {
+      "text": ". Answer only these; any other question printed in the picture or the text belongs to another item, so leave it out."
+    }
+  ],
+  "figureNote#0": [
+    {
+      "text": "\n\nWhat the figure shows, as described by the student:\n"
+    }
+  ],
+  "flattenedFractionRule#0": [
+    {
+      "text": "\n\nThe text layer lost the layout of a fraction or root. Take the grouping from the picture (\\frac{\\arcsin x}{1+x^2} and \\arcsin\\frac{x}{1+x^2} are different functions); without a picture, take the most natural reading. Decide once, write it with explicit braces, and do not discuss the other reading."
+    }
+  ],
+  "signRow#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "signRow#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "signRow#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "signRow#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "signRow#4": [
+    {
+      "text": "name"
+    }
+  ],
+  "signRow#5": [
+    {
+      "text": "expression"
+    }
+  ],
+  "signRow#6": [
+    {
+      "text": "cells"
+    }
+  ],
+  "signRow#7": [
+    {
+      "text": "properties"
+    }
+  ],
+  "signRow#8": [
+    {
+      "text": "name"
+    }
+  ],
+  "signRow#9": [
+    {
+      "text": "type"
+    }
+  ],
+  "signRow#10": [
+    {
+      "text": "string"
+    }
+  ],
+  "signRow#11": [
+    {
+      "text": "expression"
+    }
+  ],
+  "signRow#12": [
+    {
+      "text": "type"
+    }
+  ],
+  "signRow#13": [
+    {
+      "text": "string"
+    }
+  ],
+  "signRow#14": [
+    {
+      "text": "null"
+    }
+  ],
+  "signRow#15": [
+    {
+      "text": "cells"
+    }
+  ],
+  "signRow#16": [
+    {
+      "text": "type"
+    }
+  ],
+  "signRow#17": [
+    {
+      "text": "array"
+    }
+  ],
+  "signRow#18": [
+    {
+      "text": "items"
+    }
+  ],
+  "signRow#19": [
+    {
+      "text": "type"
+    }
+  ],
+  "signRow#20": [
+    {
+      "text": "string"
+    }
+  ],
+  "signTable#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "signTable#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "signTable#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "signTable#4": [
+    {
+      "text": "variable"
+    }
+  ],
+  "signTable#5": [
+    {
+      "text": "points"
+    }
+  ],
+  "signTable#6": [
+    {
+      "text": "rows"
+    }
+  ],
+  "signTable#7": [
+    {
+      "text": "variation"
+    }
+  ],
+  "signTable#8": [
+    {
+      "text": "properties"
+    }
+  ],
+  "signTable#9": [
+    {
+      "text": "variable"
+    }
+  ],
+  "signTable#10": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#11": [
+    {
+      "text": "string"
+    }
+  ],
+  "signTable#12": [
+    {
+      "text": "points"
+    }
+  ],
+  "signTable#13": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#14": [
+    {
+      "text": "array"
+    }
+  ],
+  "signTable#15": [
+    {
+      "text": "items"
+    }
+  ],
+  "signTable#16": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#17": [
+    {
+      "text": "object"
+    }
+  ],
+  "signTable#18": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "signTable#19": [
+    {
+      "text": "required"
+    }
+  ],
+  "signTable#20": [
+    {
+      "text": "text"
+    }
+  ],
+  "signTable#21": [
+    {
+      "text": "value"
+    }
+  ],
+  "signTable#22": [
+    {
+      "text": "properties"
+    }
+  ],
+  "signTable#23": [
+    {
+      "text": "text"
+    }
+  ],
+  "signTable#24": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#25": [
+    {
+      "text": "string"
+    }
+  ],
+  "signTable#26": [
+    {
+      "text": "value"
+    }
+  ],
+  "signTable#27": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#28": [
+    {
+      "text": "number"
+    }
+  ],
+  "signTable#29": [
+    {
+      "text": "null"
+    }
+  ],
+  "signTable#30": [
+    {
+      "text": "rows"
+    }
+  ],
+  "signTable#31": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#32": [
+    {
+      "text": "array"
+    }
+  ],
+  "signTable#33": [
+    {
+      "text": "items"
+    }
+  ],
+  "signTable#34": [
+    {
+      "text": "variation"
+    }
+  ],
+  "signTable#35": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "signTable#36": [
+    {
+      "text": "type"
+    }
+  ],
+  "signTable#37": [
+    {
+      "text": "null"
+    }
+  ],
+  "complexFigure#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "complexFigure#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "complexFigure#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "complexFigure#4": [
+    {
+      "text": "name"
+    }
+  ],
+  "complexFigure#5": [
+    {
+      "text": "pointName"
+    }
+  ],
+  "complexFigure#6": [
+    {
+      "text": "modulus"
+    }
+  ],
+  "complexFigure#7": [
+    {
+      "text": "argument"
+    }
+  ],
+  "complexFigure#8": [
+    {
+      "text": "modulusText"
+    }
+  ],
+  "complexFigure#9": [
+    {
+      "text": "argumentText"
+    }
+  ],
+  "complexFigure#10": [
+    {
+      "text": "power"
+    }
+  ],
+  "complexFigure#11": [
+    {
+      "text": "resultModulus"
+    }
+  ],
+  "complexFigure#12": [
+    {
+      "text": "resultArgument"
+    }
+  ],
+  "complexFigure#13": [
+    {
+      "text": "properties"
+    }
+  ],
+  "complexFigure#14": [
+    {
+      "text": "name"
+    }
+  ],
+  "complexFigure#15": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#16": [
+    {
+      "text": "string"
+    }
+  ],
+  "complexFigure#17": [
+    {
+      "text": "null"
+    }
+  ],
+  "complexFigure#18": [
+    {
+      "text": "pointName"
+    }
+  ],
+  "complexFigure#19": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#20": [
+    {
+      "text": "string"
+    }
+  ],
+  "complexFigure#21": [
+    {
+      "text": "null"
+    }
+  ],
+  "complexFigure#22": [
+    {
+      "text": "modulus"
+    }
+  ],
+  "complexFigure#23": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#24": [
+    {
+      "text": "number"
+    }
+  ],
+  "complexFigure#25": [
+    {
+      "text": "argument"
+    }
+  ],
+  "complexFigure#26": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#27": [
+    {
+      "text": "number"
+    }
+  ],
+  "complexFigure#28": [
+    {
+      "text": "modulusText"
+    }
+  ],
+  "complexFigure#29": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#30": [
+    {
+      "text": "string"
+    }
+  ],
+  "complexFigure#31": [
+    {
+      "text": "null"
+    }
+  ],
+  "complexFigure#32": [
+    {
+      "text": "argumentText"
+    }
+  ],
+  "complexFigure#33": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#34": [
+    {
+      "text": "string"
+    }
+  ],
+  "complexFigure#35": [
+    {
+      "text": "null"
+    }
+  ],
+  "complexFigure#36": [
+    {
+      "text": "power"
+    }
+  ],
+  "complexFigure#37": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#38": [
+    {
+      "text": "integer"
+    }
+  ],
+  "complexFigure#39": [
+    {
+      "text": "null"
+    }
+  ],
+  "complexFigure#40": [
+    {
+      "text": "resultModulus"
+    }
+  ],
+  "complexFigure#41": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#42": [
+    {
+      "text": "number"
+    }
+  ],
+  "complexFigure#43": [
+    {
+      "text": "null"
+    }
+  ],
+  "complexFigure#44": [
+    {
+      "text": "resultArgument"
+    }
+  ],
+  "complexFigure#45": [
+    {
+      "text": "type"
+    }
+  ],
+  "complexFigure#46": [
+    {
+      "text": "number"
+    }
+  ],
+  "complexFigure#47": [
+    {
+      "text": "null"
+    }
+  ],
+  "triple#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "triple#1": [
+    {
+      "text": "array"
+    }
+  ],
+  "triple#2": [
+    {
+      "text": "items"
+    }
+  ],
+  "triple#3": [
+    {
+      "text": "type"
+    }
+  ],
+  "triple#4": [
+    {
+      "text": "number"
+    }
+  ],
+  "names#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "names#1": [
+    {
+      "text": "array"
+    }
+  ],
+  "names#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "names#3": [
+    {
+      "text": "items"
+    }
+  ],
+  "names#4": [
+    {
+      "text": "type"
+    }
+  ],
+  "names#5": [
+    {
+      "text": "string"
+    }
+  ],
+  "step#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#1": [
+    {
+      "text": "integer"
+    }
+  ],
+  "step#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "step#3": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#4": [
+    {
+      "text": "object"
+    }
+  ],
+  "step#5": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "step#6": [
+    {
+      "text": "required"
+    }
+  ],
+  "step#7": [
+    {
+      "text": "points"
+    }
+  ],
+  "step#8": [
+    {
+      "text": "edges"
+    }
+  ],
+  "step#9": [
+    {
+      "text": "line"
+    }
+  ],
+  "step#10": [
+    {
+      "text": "plane"
+    }
+  ],
+  "step#11": [
+    {
+      "text": "properties"
+    }
+  ],
+  "step#12": [
+    {
+      "text": "points"
+    }
+  ],
+  "step#13": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#14": [
+    {
+      "text": "array"
+    }
+  ],
+  "step#15": [
+    {
+      "text": "items"
+    }
+  ],
+  "step#16": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#17": [
+    {
+      "text": "object"
+    }
+  ],
+  "step#18": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "step#19": [
+    {
+      "text": "required"
+    }
+  ],
+  "step#20": [
+    {
+      "text": "name"
+    }
+  ],
+  "step#21": [
+    {
+      "text": "x"
+    }
+  ],
+  "step#22": [
+    {
+      "text": "y"
+    }
+  ],
+  "step#23": [
+    {
+      "text": "z"
+    }
+  ],
+  "step#24": [
+    {
+      "text": "properties"
+    }
+  ],
+  "step#25": [
+    {
+      "text": "name"
+    }
+  ],
+  "step#26": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#27": [
+    {
+      "text": "string"
+    }
+  ],
+  "step#28": [
+    {
+      "text": "x"
+    }
+  ],
+  "step#29": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#30": [
+    {
+      "text": "number"
+    }
+  ],
+  "step#31": [
+    {
+      "text": "y"
+    }
+  ],
+  "step#32": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#33": [
+    {
+      "text": "number"
+    }
+  ],
+  "step#34": [
+    {
+      "text": "z"
+    }
+  ],
+  "step#35": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#36": [
+    {
+      "text": "number"
+    }
+  ],
+  "step#37": [
+    {
+      "text": "edges"
+    }
+  ],
+  "step#38": [
+    {
+      "text": "line"
+    }
+  ],
+  "step#39": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "step#40": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#41": [
+    {
+      "text": "object"
+    }
+  ],
+  "step#42": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "step#43": [
+    {
+      "text": "required"
+    }
+  ],
+  "step#44": [
+    {
+      "text": "name"
+    }
+  ],
+  "step#45": [
+    {
+      "text": "point"
+    }
+  ],
+  "step#46": [
+    {
+      "text": "direction"
+    }
+  ],
+  "step#47": [
+    {
+      "text": "through"
+    }
+  ],
+  "step#48": [
+    {
+      "text": "step"
+    }
+  ],
+  "step#49": [
+    {
+      "text": "properties"
+    }
+  ],
+  "step#50": [
+    {
+      "text": "name"
+    }
+  ],
+  "step#51": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#52": [
+    {
+      "text": "string"
+    }
+  ],
+  "step#53": [
+    {
+      "text": "null"
+    }
+  ],
+  "step#54": [
+    {
+      "text": "point"
+    }
+  ],
+  "step#55": [
+    {
+      "text": "direction"
+    }
+  ],
+  "step#56": [
+    {
+      "text": "through"
+    }
+  ],
+  "step#57": [
+    {
+      "text": "step"
+    }
+  ],
+  "step#58": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#59": [
+    {
+      "text": "null"
+    }
+  ],
+  "step#60": [
+    {
+      "text": "plane"
+    }
+  ],
+  "step#61": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "step#62": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#63": [
+    {
+      "text": "object"
+    }
+  ],
+  "step#64": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "step#65": [
+    {
+      "text": "required"
+    }
+  ],
+  "step#66": [
+    {
+      "text": "name"
+    }
+  ],
+  "step#67": [
+    {
+      "text": "normal"
+    }
+  ],
+  "step#68": [
+    {
+      "text": "point"
+    }
+  ],
+  "step#69": [
+    {
+      "text": "through"
+    }
+  ],
+  "step#70": [
+    {
+      "text": "step"
+    }
+  ],
+  "step#71": [
+    {
+      "text": "properties"
+    }
+  ],
+  "step#72": [
+    {
+      "text": "name"
+    }
+  ],
+  "step#73": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#74": [
+    {
+      "text": "string"
+    }
+  ],
+  "step#75": [
+    {
+      "text": "null"
+    }
+  ],
+  "step#76": [
+    {
+      "text": "normal"
+    }
+  ],
+  "step#77": [
+    {
+      "text": "point"
+    }
+  ],
+  "step#78": [
+    {
+      "text": "through"
+    }
+  ],
+  "step#79": [
+    {
+      "text": "step"
+    }
+  ],
+  "step#80": [
+    {
+      "text": "type"
+    }
+  ],
+  "step#81": [
+    {
+      "text": "null"
+    }
+  ],
+  "continuity#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "continuity#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "continuity#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "continuity#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "continuity#4": [
+    {
+      "text": "point"
+    }
+  ],
+  "continuity#5": [
+    {
+      "text": "pointText"
+    }
+  ],
+  "continuity#6": [
+    {
+      "text": "left"
+    }
+  ],
+  "continuity#7": [
+    {
+      "text": "right"
+    }
+  ],
+  "continuity#8": [
+    {
+      "text": "value"
+    }
+  ],
+  "continuity#9": [
+    {
+      "text": "closedSide"
+    }
+  ],
+  "continuity#10": [
+    {
+      "text": "properties"
+    }
+  ],
+  "continuity#11": [
+    {
+      "text": "point"
+    }
+  ],
+  "continuity#12": [
+    {
+      "text": "type"
+    }
+  ],
+  "continuity#13": [
+    {
+      "text": "number"
+    }
+  ],
+  "continuity#14": [
+    {
+      "text": "pointText"
+    }
+  ],
+  "continuity#15": [
+    {
+      "text": "type"
+    }
+  ],
+  "continuity#16": [
+    {
+      "text": "string"
+    }
+  ],
+  "continuity#17": [
+    {
+      "text": "null"
+    }
+  ],
+  "continuity#18": [
+    {
+      "text": "left"
+    }
+  ],
+  "continuity#19": [
+    {
+      "text": "type"
+    }
+  ],
+  "continuity#20": [
+    {
+      "text": "string"
+    }
+  ],
+  "continuity#21": [
+    {
+      "text": "right"
+    }
+  ],
+  "continuity#22": [
+    {
+      "text": "type"
+    }
+  ],
+  "continuity#23": [
+    {
+      "text": "string"
+    }
+  ],
+  "continuity#24": [
+    {
+      "text": "value"
+    }
+  ],
+  "continuity#25": [
+    {
+      "text": "type"
+    }
+  ],
+  "continuity#26": [
+    {
+      "text": "number"
+    }
+  ],
+  "continuity#27": [
+    {
+      "text": "null"
+    }
+  ],
+  "continuity#28": [
+    {
+      "text": "closedSide"
+    }
+  ],
+  "continuity#29": [
+    {
+      "text": "type"
+    }
+  ],
+  "continuity#30": [
+    {
+      "text": "string"
+    }
+  ],
+  "continuity#31": [
+    {
+      "text": "null"
+    }
+  ],
+  "nullableString#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "nullableString#1": [
+    {
+      "text": "string"
+    }
+  ],
+  "nullableString#2": [
+    {
+      "text": "null"
+    }
+  ],
+  "card#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "card#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "card#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "card#4": [
+    {
+      "text": "title"
+    }
+  ],
+  "card#5": [
+    {
+      "text": "note"
+    }
+  ],
+  "card#6": [
+    {
+      "text": "latex"
+    }
+  ],
+  "card#7": [
+    {
+      "text": "branches"
+    }
+  ],
+  "card#8": [
+    {
+      "text": "quotes"
+    }
+  ],
+  "card#9": [
+    {
+      "text": "say"
+    }
+  ],
+  "card#10": [
+    {
+      "text": "highlight"
+    }
+  ],
+  "card#11": [
+    {
+      "text": "focus"
+    }
+  ],
+  "card#12": [
+    {
+      "text": "yaw"
+    }
+  ],
+  "card#13": [
+    {
+      "text": "figureHighlight"
+    }
+  ],
+  "card#14": [
+    {
+      "text": "assembleStep"
+    }
+  ],
+  "card#15": [
+    {
+      "text": "properties"
+    }
+  ],
+  "card#16": [
+    {
+      "text": "title"
+    }
+  ],
+  "card#17": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#18": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#19": [
+    {
+      "text": "note"
+    }
+  ],
+  "card#20": [
+    {
+      "text": "latex"
+    }
+  ],
+  "card#21": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#22": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#23": [
+    {
+      "text": "branches"
+    }
+  ],
+  "card#24": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#25": [
+    {
+      "text": "array"
+    }
+  ],
+  "card#26": [
+    {
+      "text": "items"
+    }
+  ],
+  "card#27": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#28": [
+    {
+      "text": "object"
+    }
+  ],
+  "card#29": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "card#30": [
+    {
+      "text": "required"
+    }
+  ],
+  "card#31": [
+    {
+      "text": "title"
+    }
+  ],
+  "card#32": [
+    {
+      "text": "latex"
+    }
+  ],
+  "card#33": [
+    {
+      "text": "properties"
+    }
+  ],
+  "card#34": [
+    {
+      "text": "title"
+    }
+  ],
+  "card#35": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#36": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#37": [
+    {
+      "text": "latex"
+    }
+  ],
+  "card#38": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#39": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#40": [
+    {
+      "text": "quotes"
+    }
+  ],
+  "card#41": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#42": [
+    {
+      "text": "array"
+    }
+  ],
+  "card#43": [
+    {
+      "text": "items"
+    }
+  ],
+  "card#44": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#45": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#46": [
+    {
+      "text": "say"
+    }
+  ],
+  "card#47": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#48": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#49": [
+    {
+      "text": "highlight"
+    }
+  ],
+  "card#50": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#51": [
+    {
+      "text": "array"
+    }
+  ],
+  "card#52": [
+    {
+      "text": "items"
+    }
+  ],
+  "card#53": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#54": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#55": [
+    {
+      "text": "focus"
+    }
+  ],
+  "card#56": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "card#57": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#58": [
+    {
+      "text": "object"
+    }
+  ],
+  "card#59": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "card#60": [
+    {
+      "text": "required"
+    }
+  ],
+  "card#61": [
+    {
+      "text": "x"
+    }
+  ],
+  "card#62": [
+    {
+      "text": "y"
+    }
+  ],
+  "card#63": [
+    {
+      "text": "w"
+    }
+  ],
+  "card#64": [
+    {
+      "text": "h"
+    }
+  ],
+  "card#65": [
+    {
+      "text": "mark"
+    }
+  ],
+  "card#66": [
+    {
+      "text": "note"
+    }
+  ],
+  "card#67": [
+    {
+      "text": "on"
+    }
+  ],
+  "card#68": [
+    {
+      "text": "properties"
+    }
+  ],
+  "card#69": [
+    {
+      "text": "x"
+    }
+  ],
+  "card#70": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#71": [
+    {
+      "text": "number"
+    }
+  ],
+  "card#72": [
+    {
+      "text": "y"
+    }
+  ],
+  "card#73": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#74": [
+    {
+      "text": "number"
+    }
+  ],
+  "card#75": [
+    {
+      "text": "w"
+    }
+  ],
+  "card#76": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#77": [
+    {
+      "text": "number"
+    }
+  ],
+  "card#78": [
+    {
+      "text": "h"
+    }
+  ],
+  "card#79": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#80": [
+    {
+      "text": "number"
+    }
+  ],
+  "card#81": [
+    {
+      "text": "mark"
+    }
+  ],
+  "card#82": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#83": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#84": [
+    {
+      "text": "enum"
+    }
+  ],
+  "card#85": [
+    {
+      "text": "circle"
+    }
+  ],
+  "card#86": [
+    {
+      "text": "arrow"
+    }
+  ],
+  "card#87": [
+    {
+      "text": "note"
+    }
+  ],
+  "card#88": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#89": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#90": [
+    {
+      "text": "on"
+    }
+  ],
+  "card#91": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#92": [
+    {
+      "text": "string"
+    }
+  ],
+  "card#93": [
+    {
+      "text": "enum"
+    }
+  ],
+  "card#94": [
+    {
+      "text": "question"
+    }
+  ],
+  "card#95": [
+    {
+      "text": "statement"
+    }
+  ],
+  "card#96": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#97": [
+    {
+      "text": "null"
+    }
+  ],
+  "card#98": [
+    {
+      "text": "yaw"
+    }
+  ],
+  "card#99": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#100": [
+    {
+      "text": "number"
+    }
+  ],
+  "card#101": [
+    {
+      "text": "null"
+    }
+  ],
+  "card#102": [
+    {
+      "text": "figureHighlight"
+    }
+  ],
+  "card#103": [
+    {
+      "text": "assembleStep"
+    }
+  ],
+  "card#104": [
+    {
+      "text": "type"
+    }
+  ],
+  "card#105": [
+    {
+      "text": "integer"
+    }
+  ],
+  "card#106": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "part#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "part#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "part#4": [
+    {
+      "text": "label"
+    }
+  ],
+  "part#5": [
+    {
+      "text": "topic"
+    }
+  ],
+  "part#6": [
+    {
+      "text": "figureTopic"
+    }
+  ],
+  "part#7": [
+    {
+      "text": "asks"
+    }
+  ],
+  "part#8": [
+    {
+      "text": "evidence"
+    }
+  ],
+  "part#9": [
+    {
+      "text": "paragraphs"
+    }
+  ],
+  "part#10": [
+    {
+      "text": "answer"
+    }
+  ],
+  "part#11": [
+    {
+      "text": "answerLatex"
+    }
+  ],
+  "part#12": [
+    {
+      "text": "cards"
+    }
+  ],
+  "part#13": [
+    {
+      "text": "equation"
+    }
+  ],
+  "part#14": [
+    {
+      "text": "hint"
+    }
+  ],
+  "part#15": [
+    {
+      "text": "steps"
+    }
+  ],
+  "part#16": [
+    {
+      "text": "uses"
+    }
+  ],
+  "part#17": [
+    {
+      "text": "followUps"
+    }
+  ],
+  "part#18": [
+    {
+      "text": "signTable"
+    }
+  ],
+  "part#19": [
+    {
+      "text": "continuity"
+    }
+  ],
+  "part#20": [
+    {
+      "text": "complex"
+    }
+  ],
+  "part#21": [
+    {
+      "text": "space"
+    }
+  ],
+  "part#22": [
+    {
+      "text": "properties"
+    }
+  ],
+  "part#23": [
+    {
+      "text": "label"
+    }
+  ],
+  "part#24": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#25": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#26": [
+    {
+      "text": "topic"
+    }
+  ],
+  "part#27": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#28": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#29": [
+    {
+      "text": "equation"
+    }
+  ],
+  "part#30": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "part#31": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#32": [
+    {
+      "text": "object"
+    }
+  ],
+  "part#33": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "part#34": [
+    {
+      "text": "required"
+    }
+  ],
+  "part#35": [
+    {
+      "text": "variable"
+    }
+  ],
+  "part#36": [
+    {
+      "text": "left"
+    }
+  ],
+  "part#37": [
+    {
+      "text": "right"
+    }
+  ],
+  "part#38": [
+    {
+      "text": "nonZero"
+    }
+  ],
+  "part#39": [
+    {
+      "text": "properties"
+    }
+  ],
+  "part#40": [
+    {
+      "text": "variable"
+    }
+  ],
+  "part#41": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#42": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#43": [
+    {
+      "text": "left"
+    }
+  ],
+  "part#44": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#45": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#46": [
+    {
+      "text": "right"
+    }
+  ],
+  "part#47": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#48": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#49": [
+    {
+      "text": "nonZero"
+    }
+  ],
+  "part#50": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#51": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "part#52": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#53": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#54": [
+    {
+      "text": "asks"
+    }
+  ],
+  "part#55": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#56": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#57": [
+    {
+      "text": "hint"
+    }
+  ],
+  "part#58": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#59": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#60": [
+    {
+      "text": "steps"
+    }
+  ],
+  "part#61": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#62": [
+    {
+      "text": "array"
+    }
+  ],
+  "part#63": [
+    {
+      "text": "items"
+    }
+  ],
+  "part#64": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#65": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#66": [
+    {
+      "text": "answer"
+    }
+  ],
+  "part#67": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#68": [
+    {
+      "text": "object"
+    }
+  ],
+  "part#69": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "part#70": [
+    {
+      "text": "required"
+    }
+  ],
+  "part#71": [
+    {
+      "text": "text"
+    }
+  ],
+  "part#72": [
+    {
+      "text": "expression"
+    }
+  ],
+  "part#73": [
+    {
+      "text": "properties"
+    }
+  ],
+  "part#74": [
+    {
+      "text": "text"
+    }
+  ],
+  "part#75": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#76": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#77": [
+    {
+      "text": "expression"
+    }
+  ],
+  "part#78": [
+    {
+      "text": "uses"
+    }
+  ],
+  "part#79": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#80": [
+    {
+      "text": "array"
+    }
+  ],
+  "part#81": [
+    {
+      "text": "items"
+    }
+  ],
+  "part#82": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#83": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#84": [
+    {
+      "text": "followUps"
+    }
+  ],
+  "part#85": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#86": [
+    {
+      "text": "array"
+    }
+  ],
+  "part#87": [
+    {
+      "text": "items"
+    }
+  ],
+  "part#88": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#89": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#90": [
+    {
+      "text": "cards"
+    }
+  ],
+  "part#91": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#92": [
+    {
+      "text": "array"
+    }
+  ],
+  "part#93": [
+    {
+      "text": "items"
+    }
+  ],
+  "part#94": [
+    {
+      "text": "answerLatex"
+    }
+  ],
+  "part#95": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#96": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#97": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#98": [
+    {
+      "text": "signTable"
+    }
+  ],
+  "part#99": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "part#100": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#101": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#102": [
+    {
+      "text": "continuity"
+    }
+  ],
+  "part#103": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "part#104": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#105": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#106": [
+    {
+      "text": "evidence"
+    }
+  ],
+  "part#107": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#108": [
+    {
+      "text": "array"
+    }
+  ],
+  "part#109": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#110": [
+    {
+      "text": "items"
+    }
+  ],
+  "part#111": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#112": [
+    {
+      "text": "object"
+    }
+  ],
+  "part#113": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "part#114": [
+    {
+      "text": "required"
+    }
+  ],
+  "part#115": [
+    {
+      "text": "quote"
+    }
+  ],
+  "part#116": [
+    {
+      "text": "source"
+    }
+  ],
+  "part#117": [
+    {
+      "text": "point"
+    }
+  ],
+  "part#118": [
+    {
+      "text": "why"
+    }
+  ],
+  "part#119": [
+    {
+      "text": "properties"
+    }
+  ],
+  "part#120": [
+    {
+      "text": "quote"
+    }
+  ],
+  "part#121": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#122": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#123": [
+    {
+      "text": "source"
+    }
+  ],
+  "part#124": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#125": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#126": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#127": [
+    {
+      "text": "point"
+    }
+  ],
+  "part#128": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#129": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#130": [
+    {
+      "text": "why"
+    }
+  ],
+  "part#131": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#132": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#133": [
+    {
+      "text": "figureTopic"
+    }
+  ],
+  "part#134": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#135": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#136": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#137": [
+    {
+      "text": "enum"
+    }
+  ],
+  "part#138": [
+    {
+      "text": "complex"
+    }
+  ],
+  "part#139": [
+    {
+      "text": "space"
+    }
+  ],
+  "part#140": [
+    {
+      "text": "monotony"
+    }
+  ],
+  "part#141": [
+    {
+      "text": "continuity"
+    }
+  ],
+  "part#142": [
+    {
+      "text": "unitCircle"
+    }
+  ],
+  "part#143": [
+    {
+      "text": "inclinedPlane"
+    }
+  ],
+  "part#144": [
+    {
+      "text": "function"
+    }
+  ],
+  "part#145": [
+    {
+      "text": "other"
+    }
+  ],
+  "part#146": [
+    {
+      "text": "complex"
+    }
+  ],
+  "part#147": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "part#148": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#149": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#150": [
+    {
+      "text": "space"
+    }
+  ],
+  "part#151": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "part#152": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#153": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#154": [
+    {
+      "text": "paragraphs"
+    }
+  ],
+  "part#155": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#156": [
+    {
+      "text": "array"
+    }
+  ],
+  "part#157": [
+    {
+      "text": "null"
+    }
+  ],
+  "part#158": [
+    {
+      "text": "items"
+    }
+  ],
+  "part#159": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#160": [
+    {
+      "text": "object"
+    }
+  ],
+  "part#161": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "part#162": [
+    {
+      "text": "required"
+    }
+  ],
+  "part#163": [
+    {
+      "text": "text"
+    }
+  ],
+  "part#164": [
+    {
+      "text": "uses"
+    }
+  ],
+  "part#165": [
+    {
+      "text": "properties"
+    }
+  ],
+  "part#166": [
+    {
+      "text": "text"
+    }
+  ],
+  "part#167": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#168": [
+    {
+      "text": "string"
+    }
+  ],
+  "part#169": [
+    {
+      "text": "uses"
+    }
+  ],
+  "part#170": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#171": [
+    {
+      "text": "array"
+    }
+  ],
+  "part#172": [
+    {
+      "text": "items"
+    }
+  ],
+  "part#173": [
+    {
+      "text": "type"
+    }
+  ],
+  "part#174": [
+    {
+      "text": "integer"
+    }
+  ],
+  "check#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "check#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "check#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "check#4": [
+    {
+      "text": "kind"
+    }
+  ],
+  "check#5": [
+    {
+      "text": "left"
+    }
+  ],
+  "check#6": [
+    {
+      "text": "right"
+    }
+  ],
+  "check#7": [
+    {
+      "text": "variable"
+    }
+  ],
+  "check#8": [
+    {
+      "text": "from"
+    }
+  ],
+  "check#9": [
+    {
+      "text": "to"
+    }
+  ],
+  "check#10": [
+    {
+      "text": "domain"
+    }
+  ],
+  "check#11": [
+    {
+      "text": "properties"
+    }
+  ],
+  "check#12": [
+    {
+      "text": "kind"
+    }
+  ],
+  "check#13": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#14": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#15": [
+    {
+      "text": "enum"
+    }
+  ],
+  "check#16": [
+    {
+      "text": "equal"
+    }
+  ],
+  "check#17": [
+    {
+      "text": "derivative"
+    }
+  ],
+  "check#18": [
+    {
+      "text": "integral"
+    }
+  ],
+  "check#19": [
+    {
+      "text": "limit"
+    }
+  ],
+  "check#20": [
+    {
+      "text": "jump"
+    }
+  ],
+  "check#21": [
+    {
+      "text": "left"
+    }
+  ],
+  "check#22": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#23": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#24": [
+    {
+      "text": "right"
+    }
+  ],
+  "check#25": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#26": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#27": [
+    {
+      "text": "variable"
+    }
+  ],
+  "check#28": [
+    {
+      "text": "from"
+    }
+  ],
+  "check#29": [
+    {
+      "text": "to"
+    }
+  ],
+  "check#30": [
+    {
+      "text": "domain"
+    }
+  ],
+  "check#31": [
+    {
+      "text": "type"
+    }
+  ],
+  "check#32": [
+    {
+      "text": "string"
+    }
+  ],
+  "check#33": [
+    {
+      "text": "enum"
+    }
+  ],
+  "check#34": [
+    {
+      "text": "positive"
+    }
+  ],
+  "check#35": [
+    {
+      "text": "any"
+    }
+  ],
+  "graph#0": [
+    {
+      "text": "properties"
+    }
+  ],
+  "graph#1": [
+    {
+      "text": "graph"
+    }
+  ],
+  "graph#2": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#3": [
+    {
+      "text": "null"
+    }
+  ],
+  "graph#4": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#5": [
+    {
+      "text": "null"
+    }
+  ],
+  "graph#6": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#7": [
+    {
+      "text": "object"
+    }
+  ],
+  "graph#8": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "graph#9": [
+    {
+      "text": "required"
+    }
+  ],
+  "graph#10": [
+    {
+      "text": "question"
+    }
+  ],
+  "graph#11": [
+    {
+      "text": "subject"
+    }
+  ],
+  "graph#12": [
+    {
+      "text": "figure"
+    }
+  ],
+  "graph#13": [
+    {
+      "text": "parts"
+    }
+  ],
+  "graph#14": [
+    {
+      "text": "checks"
+    }
+  ],
+  "graph#15": [
+    {
+      "text": "graph"
+    }
+  ],
+  "graph#16": [
+    {
+      "text": "needsFigure"
+    }
+  ],
+  "graph#17": [
+    {
+      "text": "timing"
+    }
+  ],
+  "graph#18": [
+    {
+      "text": "formulas"
+    }
+  ],
+  "graph#19": [
+    {
+      "text": "drawing"
+    }
+  ],
+  "graph#20": [
+    {
+      "text": "properties"
+    }
+  ],
+  "graph#21": [
+    {
+      "text": "question"
+    }
+  ],
+  "graph#22": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "graph#23": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#24": [
+    {
+      "text": "array"
+    }
+  ],
+  "graph#25": [
+    {
+      "text": "items"
+    }
+  ],
+  "graph#26": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#27": [
+    {
+      "text": "null"
+    }
+  ],
+  "graph#28": [
+    {
+      "text": "figure"
+    }
+  ],
+  "graph#29": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#30": [
+    {
+      "text": "string"
+    }
+  ],
+  "graph#31": [
+    {
+      "text": "null"
+    }
+  ],
+  "graph#32": [
+    {
+      "text": "subject"
+    }
+  ],
+  "graph#33": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#34": [
+    {
+      "text": "string"
+    }
+  ],
+  "graph#35": [
+    {
+      "text": "parts"
+    }
+  ],
+  "graph#36": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#37": [
+    {
+      "text": "array"
+    }
+  ],
+  "graph#38": [
+    {
+      "text": "items"
+    }
+  ],
+  "graph#39": [
+    {
+      "text": "checks"
+    }
+  ],
+  "graph#40": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#41": [
+    {
+      "text": "array"
+    }
+  ],
+  "graph#42": [
+    {
+      "text": "items"
+    }
+  ],
+  "graph#43": [
+    {
+      "text": "graph"
+    }
+  ],
+  "graph#44": [
+    {
+      "text": "needsFigure"
+    }
+  ],
+  "graph#45": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#46": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "graph#47": [
+    {
+      "text": "drawing"
+    }
+  ],
+  "graph#48": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#49": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "graph#50": [
+    {
+      "text": "timing"
+    }
+  ],
+  "graph#51": [
+    {
+      "text": "anyOf"
+    }
+  ],
+  "graph#52": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#53": [
+    {
+      "text": "null"
+    }
+  ],
+  "graph#54": [
+    {
+      "text": "formulas"
+    }
+  ],
+  "graph#55": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#56": [
+    {
+      "text": "array"
+    }
+  ],
+  "graph#57": [
+    {
+      "text": "items"
+    }
+  ],
+  "graph#58": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#59": [
+    {
+      "text": "object"
+    }
+  ],
+  "graph#60": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "graph#61": [
+    {
+      "text": "required"
+    }
+  ],
+  "graph#62": [
+    {
+      "text": "name"
+    }
+  ],
+  "graph#63": [
+    {
+      "text": "latex"
+    }
+  ],
+  "graph#64": [
+    {
+      "text": "properties"
+    }
+  ],
+  "graph#65": [
+    {
+      "text": "name"
+    }
+  ],
+  "graph#66": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#67": [
+    {
+      "text": "string"
+    }
+  ],
+  "graph#68": [
+    {
+      "text": "latex"
+    }
+  ],
+  "graph#69": [
+    {
+      "text": "type"
+    }
+  ],
+  "graph#70": [
+    {
+      "text": "string"
+    }
+  ],
+  "timing#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "timing#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "timing#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "timing#4": [
+    {
+      "text": "signals"
+    }
+  ],
+  "timing#5": [
+    {
+      "text": "circuit"
+    }
+  ],
+  "timing#6": [
+    {
+      "text": "properties"
+    }
+  ],
+  "timing#7": [
+    {
+      "text": "signals"
+    }
+  ],
+  "timing#8": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#9": [
+    {
+      "text": "array"
+    }
+  ],
+  "timing#10": [
+    {
+      "text": "items"
+    }
+  ],
+  "timing#11": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#12": [
+    {
+      "text": "object"
+    }
+  ],
+  "timing#13": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "timing#14": [
+    {
+      "text": "required"
+    }
+  ],
+  "timing#15": [
+    {
+      "text": "name"
+    }
+  ],
+  "timing#16": [
+    {
+      "text": "levels"
+    }
+  ],
+  "timing#17": [
+    {
+      "text": "properties"
+    }
+  ],
+  "timing#18": [
+    {
+      "text": "name"
+    }
+  ],
+  "timing#19": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#20": [
+    {
+      "text": "string"
+    }
+  ],
+  "timing#21": [
+    {
+      "text": "levels"
+    }
+  ],
+  "timing#22": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#23": [
+    {
+      "text": "array"
+    }
+  ],
+  "timing#24": [
+    {
+      "text": "items"
+    }
+  ],
+  "timing#25": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#26": [
+    {
+      "text": "integer"
+    }
+  ],
+  "timing#27": [
+    {
+      "text": "circuit"
+    }
+  ],
+  "timing#28": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#29": [
+    {
+      "text": "array"
+    }
+  ],
+  "timing#30": [
+    {
+      "text": "items"
+    }
+  ],
+  "timing#31": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#32": [
+    {
+      "text": "object"
+    }
+  ],
+  "timing#33": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "timing#34": [
+    {
+      "text": "required"
+    }
+  ],
+  "timing#35": [
+    {
+      "text": "signal"
+    }
+  ],
+  "timing#36": [
+    {
+      "text": "kind"
+    }
+  ],
+  "timing#37": [
+    {
+      "text": "edge"
+    }
+  ],
+  "timing#38": [
+    {
+      "text": "clock"
+    }
+  ],
+  "timing#39": [
+    {
+      "text": "inputs"
+    }
+  ],
+  "timing#40": [
+    {
+      "text": "properties"
+    }
+  ],
+  "timing#41": [
+    {
+      "text": "signal"
+    }
+  ],
+  "timing#42": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#43": [
+    {
+      "text": "string"
+    }
+  ],
+  "timing#44": [
+    {
+      "text": "kind"
+    }
+  ],
+  "timing#45": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#46": [
+    {
+      "text": "string"
+    }
+  ],
+  "timing#47": [
+    {
+      "text": "enum"
+    }
+  ],
+  "timing#48": [
+    {
+      "text": "JK"
+    }
+  ],
+  "timing#49": [
+    {
+      "text": "D"
+    }
+  ],
+  "timing#50": [
+    {
+      "text": "T"
+    }
+  ],
+  "timing#51": [
+    {
+      "text": "SR"
+    }
+  ],
+  "timing#52": [
+    {
+      "text": "comb"
+    }
+  ],
+  "timing#53": [
+    {
+      "text": "edge"
+    }
+  ],
+  "timing#54": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#55": [
+    {
+      "text": "string"
+    }
+  ],
+  "timing#56": [
+    {
+      "text": "null"
+    }
+  ],
+  "timing#57": [
+    {
+      "text": "clock"
+    }
+  ],
+  "timing#58": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#59": [
+    {
+      "text": "string"
+    }
+  ],
+  "timing#60": [
+    {
+      "text": "null"
+    }
+  ],
+  "timing#61": [
+    {
+      "text": "inputs"
+    }
+  ],
+  "timing#62": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#63": [
+    {
+      "text": "array"
+    }
+  ],
+  "timing#64": [
+    {
+      "text": "items"
+    }
+  ],
+  "timing#65": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#66": [
+    {
+      "text": "object"
+    }
+  ],
+  "timing#67": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "timing#68": [
+    {
+      "text": "required"
+    }
+  ],
+  "timing#69": [
+    {
+      "text": "pin"
+    }
+  ],
+  "timing#70": [
+    {
+      "text": "expression"
+    }
+  ],
+  "timing#71": [
+    {
+      "text": "properties"
+    }
+  ],
+  "timing#72": [
+    {
+      "text": "pin"
+    }
+  ],
+  "timing#73": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#74": [
+    {
+      "text": "string"
+    }
+  ],
+  "timing#75": [
+    {
+      "text": "expression"
+    }
+  ],
+  "timing#76": [
+    {
+      "text": "type"
+    }
+  ],
+  "timing#77": [
+    {
+      "text": "string"
+    }
+  ]
+}

@@ -1,0 +1,458 @@
+{
+  "cacheToken#0": [
+    {
+      "text": "h"
+    }
+  ],
+  "cacheToken#1": [
+    {
+      "text": "n"
+    }
+  ],
+  "cacheToken#2": [
+    {
+      "text": "p"
+    }
+  ],
+  "cacheToken#3": [
+    {
+      "text": "q"
+    }
+  ],
+  "cacheToken#4": [
+    {
+      "text": "|"
+    }
+  ],
+  "promptBlock#0": [
+    {
+      "text": "{\"mode\":\""
+    },
+    {
+      "expr": "mode"
+    },
+    {
+      "text": "\",\"depth\":"
+    },
+    {
+      "expr": "depth"
+    },
+    {
+      "text": ",\"maxSteps\":"
+    },
+    {
+      "expr": "maxSteps"
+    },
+    {
+      "text": ",\"collapseRoutineSteps\":"
+    },
+    {
+      "expr": "collapseRoutineSteps"
+    },
+    {
+      "text": ",\"hintFirst\":"
+    },
+    {
+      "expr": "hintFirst"
+    },
+    {
+      "text": ",\"revealFinalResult\":\""
+    },
+    {
+      "expr": "revealFinalResult"
+    },
+    {
+      "text": "\",\"checkQuestion\":"
+    },
+    {
+      "expr": "checkQuestion"
+    },
+    {
+      "text": ",\"channel\":\""
+    },
+    {
+      "expr": "channel"
+    },
+    {
+      "text": "\",\"voiceBudgetChars\":"
+    },
+    {
+      "expr": "voiceBudgetChars"
+    },
+    {
+      "text": ",\"language\":\""
+    },
+    {
+      "expr": "language"
+    },
+    {
+      "text": "\",\"vocab\":\""
+    },
+    {
+      "expr": "vocab"
+    },
+    {
+      "text": "\",\"assume\":"
+    },
+    {
+      "expr": "json(assume)"
+    },
+    {
+      "text": ",\"anchors\":"
+    },
+    {
+      "expr": "json(anchors)"
+    },
+    {
+      "text": ",\"standing\":"
+    },
+    {
+      "expr": "json(standing)"
+    },
+    {
+      "text": ",\"offerSimilar\":"
+    },
+    {
+      "expr": "offerSimilar"
+    },
+    {
+      "text": ",\"emphasis\":{\"analogy\":\""
+    },
+    {
+      "expr": "emphasisAnalogy.promptValue"
+    },
+    {
+      "text": "\",\"visual\":\""
+    },
+    {
+      "expr": "emphasisVisual.promptValue"
+    },
+    {
+      "text": "\",\"algebra\":\""
+    },
+    {
+      "expr": "emphasisAlgebra.promptValue"
+    },
+    {
+      "text": "\"},\"pointer\":"
+    },
+    {
+      "expr": "pointer"
+    },
+    {
+      "text": ",\"voiceStyle\":\""
+    },
+    {
+      "expr": "voiceStyle"
+    },
+    {
+      "text": "\",\"algebraSkills\":"
+    },
+    {
+      "expr": "json(algebraSkills)"
+    },
+    {
+      "text": "}\nFollow this plan. Do not choose a different depth. When hintFirst is true, do not give the final result until the student asks. When emphasis.visual is more, put the graph before the algebra. When emphasis.analogy is more, one analogy in the first lines, tied to an anchor, and say where it fails on a new concept. When emphasis.analogy is less, no analogy. Tag nothing with a learning style."
+    }
+  ],
+  "copy#0": [
+    {
+      "text": ":"
+    }
+  ],
+  "body#0": [
+    {
+      "text": "\""
+    },
+    {
+      "expr": "$0.replacingOccurrences(of: \"\\\"\", with: \"'\")"
+    },
+    {
+      "text": "\""
+    }
+  ],
+  "body#1": [
+    {
+      "text": ","
+    }
+  ],
+  "body#2": [
+    {
+      "text": "["
+    },
+    {
+      "expr": "body"
+    },
+    {
+      "text": "]"
+    }
+  ],
+  "question#0": [],
+  "language#0": [
+    {
+      "text": "pt-PT"
+    }
+  ],
+  "vocab#0": [
+    {
+      "text": "secondary"
+    }
+  ],
+  "utterance#0": [],
+  "mode#0": [
+    {
+      "text": "guided"
+    }
+  ],
+  "reveal#0": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "reveal#1": [
+    {
+      "text": "inline"
+    }
+  ],
+  "channel#0": [
+    {
+      "text": "text"
+    }
+  ],
+  "offerSimilar#0": [
+    {
+      "text": "voice"
+    }
+  ],
+  "offerSimilar#1": [
+    {
+      "text": "text"
+    }
+  ],
+  "offerSimilar#2": [
+    {
+      "text": "voice"
+    }
+  ],
+  "offerSimilar#3": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "offerSimilar#4": [
+    {
+      "text": "voice"
+    }
+  ],
+  "offerSimilar#5": [
+    {
+      "text": "text"
+    }
+  ],
+  "offerSimilar#6": [
+    {
+      "text": "voice"
+    }
+  ],
+  "offerSimilar#7": [
+    {
+      "text": "direct"
+    }
+  ],
+  "offerSimilar#8": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "offerSimilar#9": [
+    {
+      "text": "text"
+    }
+  ],
+  "offerSimilar#10": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "offerSimilar#11": [
+    {
+      "text": "text"
+    }
+  ],
+  "offerSimilar#12": [
+    {
+      "text": "voice"
+    }
+  ],
+  "offerSimilar#13": [
+    {
+      "text": "text"
+    }
+  ],
+  "offerSimilar#14": [
+    {
+      "text": "voice"
+    }
+  ],
+  "offerSimilar#15": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "offerSimilar#16": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "offerSimilar#17": [
+    {
+      "text": "inline"
+    }
+  ],
+  "offerSimilar#18": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "offerSimilar#19": [
+    {
+      "text": "direct"
+    }
+  ],
+  "offerSimilar#20": [
+    {
+      "text": "inline"
+    }
+  ],
+  "offerSimilar#21": [
+    {
+      "text": "guided"
+    }
+  ],
+  "offerSimilar#22": [
+    {
+      "text": "inline"
+    }
+  ],
+  "offerSimilar#23": [
+    {
+      "text": "direct"
+    }
+  ],
+  "offerSimilar#24": [
+    {
+      "text": "inline"
+    }
+  ],
+  "offerSimilar#25": [
+    {
+      "text": "voice"
+    }
+  ],
+  "offerSimilar#26": [
+    {
+      "text": "text"
+    }
+  ],
+  "voiceStyle#0": [
+    {
+      "text": "pointing"
+    }
+  ],
+  "voiceStyle#1": [
+    {
+      "text": "analogy-led"
+    }
+  ],
+  "voiceStyle#2": [
+    {
+      "text": "derivation"
+    }
+  ],
+  "voiceStyle#3": [
+    {
+      "text": "brief"
+    }
+  ],
+  "voiceStyle#4": [
+    {
+      "text": "derivation"
+    }
+  ],
+  "voiceStyle#5": [
+    {
+      "text": "voice"
+    }
+  ],
+  "found#0": [
+    {
+      "text": "steps"
+    }
+  ],
+  "found#1": [],
+  "found#2": [
+    {
+      "text": "focus"
+    }
+  ],
+  "found#3": [
+    {
+      "text": "on_tap"
+    }
+  ],
+  "opensWithHelp#0": [
+    {
+      "text": "question"
+    }
+  ],
+  "opensWithHelp#1": [
+    {
+      "text": "hint"
+    }
+  ],
+  "opensWithHelp#2": [
+    {
+      "text": "hintFirst"
+    }
+  ],
+  "opensWithHelp#3": [
+    {
+      "text": "analogy"
+    }
+  ],
+  "opensWithHelp#4": [
+    {
+      "text": "analogy"
+    }
+  ],
+  "visual#0": [
+    {
+      "text": "animation"
+    }
+  ],
+  "visual#1": [
+    {
+      "text": "visualOrder"
+    }
+  ],
+  "visual#2": [
+    {
+      "text": "visualOrder"
+    }
+  ],
+  "visual#3": [
+    {
+      "text": "voice"
+    }
+  ],
+  "visual#4": [
+    {
+      "text": "voice"
+    }
+  ],
+  "visual#5": [
+    {
+      "text": "voice"
+    }
+  ]
+}

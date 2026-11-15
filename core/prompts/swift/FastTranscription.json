@@ -1,0 +1,164 @@
+{
+  "model#0": [
+    {
+      "text": "qwen/qwen3.8-flash"
+    }
+  ],
+  "promptVersion#0": [
+    {
+      "text": "fq5"
+    }
+  ],
+  "cache#0": [
+    {
+      "text": "fast-questions.json"
+    }
+  ],
+  "found#0": [
+    {
+      "text": "Fast transcription failed: "
+    },
+    {
+      "expr": "error.localizedDescription"
+    }
+  ],
+  "errorDescription#0": [
+    {
+      "text": "The fast reading had no question in it."
+    }
+  ],
+  "key#0": [],
+  "client#0": [],
+  "text#0": [
+    {
+      "text": "]"
+    }
+  ],
+  "text#1": [
+    {
+      "text": "}"
+    }
+  ],
+  "text#2": [
+    {
+      "text": "}"
+    }
+  ],
+  "text#3": [
+    {
+      "text": "```"
+    }
+  ],
+  "text#4": [
+    {
+      "text": "\n"
+    }
+  ],
+  "fence#0": [
+    {
+      "text": "```"
+    }
+  ],
+  "array#0": [
+    {
+      "text": "question"
+    }
+  ],
+  "blocks#0": [
+    {
+      "text": "text"
+    }
+  ],
+  "latex#0": [
+    {
+      "text": "$"
+    }
+  ],
+  "latex#1": [
+    {
+      "text": "\\\\[A-Za-z]+"
+    }
+  ],
+  "latex#2": [
+    {
+      "text": "$"
+    }
+  ],
+  "latex#3": [
+    {
+      "text": "$"
+    }
+  ],
+  "rest#0": [
+    {
+      "text": "\\\\(?:text|textbf|mathrm|operatorname|begin|end)\\{[^{}]*\\}|\\\\[A-Za-z]+"
+    }
+  ],
+  "rest#1": [],
+  "rest#2": [
+    {
+      "text": "\\p{L}{3,}"
+    }
+  ],
+  "system#0": [
+    {
+      "text": "You transcribe an exam question from a picture, faithfully and fast. Reply with one JSON object {\"question\": [...]}: blocks in reading order, each {\"type\", \"text\", \"box\", \"caption\"}.\nTranscribe only what is in the picture(s), all of it and nothing more: never add a part, an option or a line that is not printed there. Transcribe only the question: a section heading (\"Secção II\"), a marks table, instructions or the next question that the picture also shows are not part of it. No Markdown: no **bold**, no # headings, no | tables |; plain text, with $…$ only where the format below allows it. Keep every word exactly as printed, in its language: a Portuguese \"sen\", \"arcsen\", \"tg\" or \"cotg\" stays \"sen\", \"arcsen\", \"tg\", \"cotg\" (in LaTeX \\operatorname{sen}, \\operatorname{arcsen}), never \"sin\", \"arcsin\" or \"arcsec\".\n- \"text\": a paragraph, an option (\"A) …\") or a heading, as printed, in the language it is printed in, with its label. Plain numbers, units and simple symbols (12 m/s, 30°, v₀, x²) are plain Unicode; use $…$ only for what needs typesetting (fractions, roots, integrals, limits, sums, matrices, subscripts, long expressions), as LaTeX, and never write \\text{} in it. Units and Greek letters (kΩ, µF, °, π) are always the Unicode character, never a LaTeX command. Each option (\"A.\", \"B.\" …) is a block of its own. Never invent or fix anything, and copy every number exactly. "
+    },
+    {
+      "expr": "QuestionTranscription.structureRule"
+    },
+    {
+      "text": "\n- \"formula\": a display formula on its own line, as LaTeX (no $).\n- \"figure\": a drawing, circuit, graph, table image or diagram, with NO text (set \"text\" null); \"caption\" its printed label or null. An option drawn as a picture is a \"figure\" with \"caption\" its letter.\n\"box\" is where the block is in the picture: [x1, y1, x2, y2], its top-left and bottom-right corners on a 0 to 1000 scale of the picture's width and height from its top-left, tight around it (always set, for figures too). Words printed inside a figure (labels, values) belong to the figure, not to a text block. Do not solve the question."
+    }
+  ],
+  "schema#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#4": [
+    {
+      "text": "question"
+    }
+  ],
+  "schema#5": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#6": [
+    {
+      "text": "question"
+    }
+  ],
+  "schema#7": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#8": [
+    {
+      "text": "array"
+    }
+  ],
+  "schema#9": [
+    {
+      "text": "items"
+    }
+  ]
+}

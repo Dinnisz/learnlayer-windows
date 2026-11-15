@@ -1,0 +1,133 @@
+{
+  "value#0": [],
+  "value#1": [],
+  "value#2": [],
+  "key#0": [
+    {
+      "text": "\u001f"
+    }
+  ],
+  "apiKey#0": [],
+  "pictures#0": [],
+  "content#0": [
+    {
+      "text": "classify"
+    }
+  ],
+  "content#1": [],
+  "systemPrompt#0": [
+    {
+      "text": "Classify one exam question. Do not solve it. Reply with JSON only.\nkind is exactly one of reading, calculation, figure_data, mixed.\nreading: the student interprets, comments on, or recalls a text. A year, a line number, a coin value, \"n.º\", a picture of a manuscript or painting, or true/false statements (I, II, III, IV, V) about a text are still reading.\ncalculation: an equation, a numeric result to compute, or a unit to use.\nfigure_data: the answer depends on values read from a graph, circuit, diagram, or table.\nmixed: both a calculation and a text.\nneeds_strong is false for reading, including true/false statements about a text. Set needs_strong true only when the student must calculate or read values from a figure, graph, diagram, or table. If you set it true, the reason must contain the word \"calculation\" or \"figure\".\nreason is one short sentence, with no solution."
+    }
+  ],
+  "schema#0": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#1": [
+    {
+      "text": "object"
+    }
+  ],
+  "schema#2": [
+    {
+      "text": "additionalProperties"
+    }
+  ],
+  "schema#3": [
+    {
+      "text": "required"
+    }
+  ],
+  "schema#4": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#5": [
+    {
+      "text": "needs_strong"
+    }
+  ],
+  "schema#6": [
+    {
+      "text": "reason"
+    }
+  ],
+  "schema#7": [
+    {
+      "text": "properties"
+    }
+  ],
+  "schema#8": [
+    {
+      "text": "kind"
+    }
+  ],
+  "schema#9": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#10": [
+    {
+      "text": "string"
+    }
+  ],
+  "schema#11": [
+    {
+      "text": "enum"
+    }
+  ],
+  "schema#12": [
+    {
+      "text": "reading"
+    }
+  ],
+  "schema#13": [
+    {
+      "text": "calculation"
+    }
+  ],
+  "schema#14": [
+    {
+      "text": "figure_data"
+    }
+  ],
+  "schema#15": [
+    {
+      "text": "mixed"
+    }
+  ],
+  "schema#16": [
+    {
+      "text": "needs_strong"
+    }
+  ],
+  "schema#17": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#18": [
+    {
+      "text": "boolean"
+    }
+  ],
+  "schema#19": [
+    {
+      "text": "reason"
+    }
+  ],
+  "schema#20": [
+    {
+      "text": "type"
+    }
+  ],
+  "schema#21": [
+    {
+      "text": "string"
+    }
+  ]
+}

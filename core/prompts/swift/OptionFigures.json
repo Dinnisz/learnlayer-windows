@@ -1,0 +1,36 @@
+{
+  "transcriptionRule#0": [
+    {
+      "text": "When the options (A)–(D) are themselves drawings, graphs, diagrams or images, describe EVERY option separately, one line each, starting with its letter: \"(A): <what it shows>\", \"(B): …\", in order. For each, say the features that decide whether it is right (direction, sign, shape, labels, values, what is connected), so a reader who cannot see it can tell the options apart. Never merge two options into one line."
+    }
+  ],
+  "pattern#0": [
+    {
+      "text": "^\\s*(?:[-•*]\\s*)?(?:op(?:ç|c)[aã]o|option)?\\s*\\(?([A-E])\\)?\\s*[:\\-–—.)]\\s*(.+)$"
+    }
+  ],
+  "lines#0": [
+    {
+      "text": "("
+    },
+    {
+      "expr": "$0.letter"
+    },
+    {
+      "text": "): "
+    },
+    {
+      "expr": "$0.text"
+    }
+  ],
+  "lines#1": [
+    {
+      "text": "Options as drawn (for each wrong option, name its own flaw from this list):\n"
+    }
+  ],
+  "lines#2": [
+    {
+      "text": "\n"
+    }
+  ]
+}

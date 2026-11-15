@@ -1,0 +1,2968 @@
+{
+  "ProblemPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "question",
+      "subject",
+      "figure",
+      "parts",
+      "checks",
+      "graph",
+      "needsFigure",
+      "timing",
+      "formulas",
+      "drawing"
+    ],
+    "properties": {
+      "question": {
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "text",
+                "box",
+                "caption"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "formula",
+                    "figure"
+                  ]
+                },
+                "text": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "box": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "caption": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "figure": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "subject": {
+        "type": "string"
+      },
+      "parts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "label",
+            "topic",
+            "figureTopic",
+            "asks",
+            "evidence",
+            "paragraphs",
+            "answer",
+            "answerLatex",
+            "cards",
+            "equation",
+            "hint",
+            "steps",
+            "uses",
+            "followUps",
+            "signTable",
+            "continuity",
+            "complex",
+            "space"
+          ],
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "topic": {
+              "type": "string"
+            },
+            "equation": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "variable",
+                    "left",
+                    "right",
+                    "nonZero"
+                  ],
+                  "properties": {
+                    "variable": {
+                      "type": "string"
+                    },
+                    "left": {
+                      "type": "string"
+                    },
+                    "right": {
+                      "type": "string"
+                    },
+                    "nonZero": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "asks": {
+              "type": "string"
+            },
+            "hint": {
+              "type": "string"
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "answer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "text",
+                "expression"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "expression": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "uses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "followUps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cards": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "note",
+                  "latex",
+                  "branches",
+                  "quotes",
+                  "say",
+                  "highlight",
+                  "focus",
+                  "yaw",
+                  "figureHighlight",
+                  "assembleStep"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "latex": {
+                    "type": "string"
+                  },
+                  "branches": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "title",
+                        "latex"
+                      ],
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "latex": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "quotes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "say": {
+                    "type": "string"
+                  },
+                  "highlight": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "focus": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "x",
+                          "y",
+                          "w",
+                          "h",
+                          "mark",
+                          "note",
+                          "on"
+                        ],
+                        "properties": {
+                          "x": {
+                            "type": "number"
+                          },
+                          "y": {
+                            "type": "number"
+                          },
+                          "w": {
+                            "type": "number"
+                          },
+                          "h": {
+                            "type": "number"
+                          },
+                          "mark": {
+                            "type": "string",
+                            "enum": [
+                              "circle",
+                              "arrow"
+                            ]
+                          },
+                          "note": {
+                            "type": "string"
+                          },
+                          "on": {
+                            "type": "string",
+                            "enum": [
+                              "question",
+                              "statement"
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "yaw": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "figureHighlight": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "assembleStep": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "answerLatex": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "signTable": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "variable",
+                    "points",
+                    "rows",
+                    "variation"
+                  ],
+                  "properties": {
+                    "variable": {
+                      "type": "string"
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "text",
+                          "value"
+                        ],
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "name",
+                          "expression",
+                          "cells"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "expression": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "cells": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "variation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "name",
+                            "expression",
+                            "cells"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "expression": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "cells": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "continuity": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "point",
+                    "pointText",
+                    "left",
+                    "right",
+                    "value",
+                    "closedSide"
+                  ],
+                  "properties": {
+                    "point": {
+                      "type": "number"
+                    },
+                    "pointText": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "left": {
+                      "type": "string"
+                    },
+                    "right": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "closedSide": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "evidence": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "quote",
+                  "source",
+                  "point",
+                  "why"
+                ],
+                "properties": {
+                  "quote": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "point": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "figureTopic": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "complex",
+                "space",
+                "monotony",
+                "continuity",
+                "unitCircle",
+                "inclinedPlane",
+                "function",
+                "other",
+                null
+              ]
+            },
+            "complex": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "pointName",
+                    "modulus",
+                    "argument",
+                    "modulusText",
+                    "argumentText",
+                    "power",
+                    "resultModulus",
+                    "resultArgument"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pointName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "modulus": {
+                      "type": "number"
+                    },
+                    "argument": {
+                      "type": "number"
+                    },
+                    "modulusText": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "argumentText": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "power": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "resultModulus": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "resultArgument": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "space": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "points",
+                    "edges",
+                    "line",
+                    "plane"
+                  ],
+                  "properties": {
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "name",
+                          "x",
+                          "y",
+                          "z"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "x": {
+                            "type": "number"
+                          },
+                          "y": {
+                            "type": "number"
+                          },
+                          "z": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "edges": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "line": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "name",
+                            "point",
+                            "direction",
+                            "through",
+                            "step"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "point": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              }
+                            },
+                            "direction": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              }
+                            },
+                            "through": {
+                              "type": [
+                                "array",
+                                "null"
+                              ],
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "step": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "plane": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "name",
+                            "normal",
+                            "point",
+                            "through",
+                            "step"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "normal": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              }
+                            },
+                            "point": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              }
+                            },
+                            "through": {
+                              "type": [
+                                "array",
+                                "null"
+                              ],
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "step": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "paragraphs": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "text",
+                  "uses"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "uses": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "checks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "left",
+            "right",
+            "variable",
+            "from",
+            "to",
+            "domain"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "equal",
+                "derivative",
+                "integral",
+                "limit",
+                "jump"
+              ]
+            },
+            "left": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            },
+            "variable": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "domain": {
+              "type": "string",
+              "enum": [
+                "positive",
+                "any"
+              ]
+            }
+          }
+        }
+      },
+      "graph": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "xLabel",
+              "yLabel",
+              "variable",
+              "expression",
+              "xMin",
+              "xMax",
+              "parameters",
+              "draggable",
+              "area",
+              "showsCar"
+            ],
+            "properties": {
+              "xLabel": {
+                "type": "string"
+              },
+              "yLabel": {
+                "type": "string"
+              },
+              "variable": {
+                "type": "string"
+              },
+              "expression": {
+                "type": "string"
+              },
+              "xMin": {
+                "type": "number"
+              },
+              "xMax": {
+                "type": "number"
+              },
+              "parameters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "value",
+                    "min",
+                    "max"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "draggable": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "area": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "from",
+                      "to",
+                      "draggableBound"
+                    ],
+                    "properties": {
+                      "from": {
+                        "type": "number"
+                      },
+                      "to": {
+                        "type": "number"
+                      },
+                      "draggableBound": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "showsCar": {
+                "type": "boolean"
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "needsFigure": {
+        "type": "boolean"
+      },
+      "drawing": {
+        "type": "boolean"
+      },
+      "timing": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "signals",
+              "circuit"
+            ],
+            "properties": {
+              "signals": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "levels"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "levels": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              },
+              "circuit": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "signal",
+                    "kind",
+                    "edge",
+                    "clock",
+                    "inputs"
+                  ],
+                  "properties": {
+                    "signal": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "JK",
+                        "D",
+                        "T",
+                        "SR",
+                        "comb"
+                      ]
+                    },
+                    "edge": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "clock": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "inputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "pin",
+                          "expression"
+                        ],
+                        "properties": {
+                          "pin": {
+                            "type": "string"
+                          },
+                          "expression": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "formulas": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "latex"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "latex": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "QuestionClassifier.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "kind",
+      "needs_strong",
+      "reason"
+    ],
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "reading",
+          "calculation",
+          "figure_data",
+          "mixed"
+        ]
+      },
+      "needs_strong": {
+        "type": "boolean"
+      },
+      "reason": {
+        "type": "string"
+      }
+    }
+  },
+  "FastTranscription.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "question"
+    ],
+    "properties": {
+      "question": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "text",
+            "box",
+            "caption"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "text",
+                "formula",
+                "figure"
+              ]
+            },
+            "text": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "box": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "number"
+              }
+            },
+            "caption": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "ExplanationPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "subject",
+      "equation",
+      "steps",
+      "graph",
+      "checks",
+      "symbols",
+      "solving",
+      "premade",
+      "needsFigure"
+    ],
+    "properties": {
+      "premade": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "params"
+            ],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "needsFigure": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "solving": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "line",
+            "move"
+          ],
+          "properties": {
+            "line": {
+              "type": "string"
+            },
+            "move": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "symbols": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target",
+            "meaning"
+          ],
+          "properties": {
+            "target": {
+              "type": "string"
+            },
+            "meaning": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "subject": {
+        "type": "string"
+      },
+      "equation": {
+        "type": "string"
+      },
+      "steps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text",
+            "answer",
+            "marks",
+            "yaw",
+            "figureHighlight",
+            "assembleStep"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "question",
+                "hint",
+                "step",
+                "animation"
+              ]
+            },
+            "text": {
+              "type": "string"
+            },
+            "answer": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "marks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "style",
+                  "target"
+                ],
+                "properties": {
+                  "style": {
+                    "type": "string",
+                    "enum": [
+                      "circle",
+                      "underline"
+                    ]
+                  },
+                  "target": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "yaw": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "figureHighlight": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "assembleStep": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "graph": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "xLabel",
+              "yLabel",
+              "variable",
+              "expression",
+              "xMin",
+              "xMax",
+              "parameters",
+              "draggable",
+              "area",
+              "showsCar"
+            ],
+            "properties": {
+              "xLabel": {
+                "type": "string"
+              },
+              "yLabel": {
+                "type": "string"
+              },
+              "variable": {
+                "type": "string"
+              },
+              "expression": {
+                "type": "string"
+              },
+              "xMin": {
+                "type": "number"
+              },
+              "xMax": {
+                "type": "number"
+              },
+              "parameters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "value",
+                    "min",
+                    "max"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "draggable": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "area": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "from",
+                      "to",
+                      "draggableBound"
+                    ],
+                    "properties": {
+                      "from": {
+                        "type": "number"
+                      },
+                      "to": {
+                        "type": "number"
+                      },
+                      "draggableBound": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "showsCar": {
+                "type": "boolean"
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "checks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "left",
+            "right",
+            "variable",
+            "from",
+            "to"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "equal",
+                "derivative",
+                "integral"
+              ]
+            },
+            "left": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            },
+            "variable": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "IllustrationPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "title",
+      "width",
+      "height",
+      "duration",
+      "parameters",
+      "elements",
+      "template",
+      "needsFigure"
+    ],
+    "properties": {
+      "template": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "angle",
+              "angleMarks",
+              "angles",
+              "axes",
+              "circles",
+              "components",
+              "connect",
+              "curves",
+              "events",
+              "f",
+              "figurePoints",
+              "fit",
+              "forces",
+              "g",
+              "kind",
+              "marks",
+              "motion",
+              "parameter",
+              "points",
+              "polygons",
+              "radius",
+              "segments",
+              "showSinCos",
+              "tangent",
+              "xMax",
+              "xMin",
+              "xName",
+              "xUnit",
+              "yName",
+              "yUnit"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "function",
+                  "series",
+                  "unitCircle",
+                  "complexPlane",
+                  "inclinedPlane",
+                  "timeline",
+                  "geometry"
+                ]
+              },
+              "f": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "g": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "xMin": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "xMax": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "marks": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text",
+                    "x"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "tangent": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "points": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "answer",
+                    "text",
+                    "x",
+                    "y"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "text": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "answer": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "xName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "xUnit": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "yName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "yUnit": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "connect": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "fit": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "none",
+                  "linear",
+                  "throughOrigin",
+                  null
+                ]
+              },
+              "angles": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text",
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "showSinCos": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "radius": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "angle": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "forces": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "asked",
+                    "degrees",
+                    "direction",
+                    "kind",
+                    "text"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "weight",
+                        "normal",
+                        "friction",
+                        "applied",
+                        "tension"
+                      ]
+                    },
+                    "text": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "direction": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "up-the-plane",
+                        "down-the-plane",
+                        "perpendicular",
+                        "vertical",
+                        "angle",
+                        null
+                      ]
+                    },
+                    "degrees": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "asked": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "motion": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "up",
+                  "down",
+                  "none",
+                  null
+                ]
+              },
+              "events": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text",
+                    "year"
+                  ],
+                  "properties": {
+                    "year": {
+                      "type": "number"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "components": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "figurePoints": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "answer",
+                    "name",
+                    "x",
+                    "y"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "x": {
+                      "type": "string"
+                    },
+                    "y": {
+                      "type": "string"
+                    },
+                    "answer": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "parameter": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "label",
+                      "max",
+                      "min",
+                      "name",
+                      "value"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      },
+                      "min": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "segments": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "polygons": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "asked",
+                    "vertices"
+                  ],
+                  "properties": {
+                    "vertices": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "asked": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "circles": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "centre",
+                    "radius",
+                    "through"
+                  ],
+                  "properties": {
+                    "centre": {
+                      "type": "string"
+                    },
+                    "radius": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "through": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "angleMarks": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "from",
+                    "text",
+                    "to",
+                    "vertex"
+                  ],
+                  "properties": {
+                    "vertex": {
+                      "type": "string"
+                    },
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "curves": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "f",
+                    "xMax",
+                    "xMin"
+                  ],
+                  "properties": {
+                    "f": {
+                      "type": "string"
+                    },
+                    "xMin": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "xMax": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "axes": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "premade": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "params",
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "needsFigure": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "title": {
+        "type": "string"
+      },
+      "width": {
+        "type": "number"
+      },
+      "height": {
+        "type": "number"
+      },
+      "duration": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "parameters": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "label",
+            "value",
+            "min",
+            "max"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            },
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "elements": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "x",
+            "y",
+            "x2",
+            "y2",
+            "r",
+            "w",
+            "h",
+            "text",
+            "color",
+            "dashed",
+            "curveX",
+            "curveY",
+            "from",
+            "to",
+            "q",
+            "component",
+            "current",
+            "active",
+            "visible"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "point",
+                "line",
+                "arrow",
+                "circle",
+                "rect",
+                "label",
+                "curve",
+                "spring",
+                "charge",
+                "fieldLines",
+                "component",
+                "state",
+                "transition"
+              ]
+            },
+            "x": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "y": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "x2": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "y2": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "r": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "w": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "h": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "text": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "color": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "dashed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "curveX": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "curveY": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "q": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "component": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "current": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "active": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "visible": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "TextHelpPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "subject",
+      "asks",
+      "hint",
+      "explanation",
+      "graph",
+      "followUps"
+    ],
+    "properties": {
+      "subject": {
+        "type": "string"
+      },
+      "asks": {
+        "type": "string"
+      },
+      "hint": {
+        "type": "string"
+      },
+      "explanation": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "graph": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "xLabel",
+              "yLabel",
+              "variable",
+              "expression",
+              "xMin",
+              "xMax",
+              "parameters",
+              "draggable",
+              "area",
+              "showsCar"
+            ],
+            "properties": {
+              "xLabel": {
+                "type": "string"
+              },
+              "yLabel": {
+                "type": "string"
+              },
+              "variable": {
+                "type": "string"
+              },
+              "expression": {
+                "type": "string"
+              },
+              "xMin": {
+                "type": "number"
+              },
+              "xMax": {
+                "type": "number"
+              },
+              "parameters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "value",
+                    "min",
+                    "max"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "min": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "draggable": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "area": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "from",
+                      "to",
+                      "draggableBound"
+                    ],
+                    "properties": {
+                      "from": {
+                        "type": "number"
+                      },
+                      "to": {
+                        "type": "number"
+                      },
+                      "draggableBound": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "showsCar": {
+                "type": "boolean"
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "followUps": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "VariantPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "kind",
+      "statement",
+      "values",
+      "unit",
+      "hint",
+      "variable",
+      "left",
+      "right",
+      "nonZero",
+      "example"
+    ],
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "number",
+          "function"
+        ]
+      },
+      "statement": {
+        "type": "string"
+      },
+      "values": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "value",
+            "unit"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "unit": {
+        "type": "string"
+      },
+      "hint": {
+        "type": "string"
+      },
+      "variable": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "left": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "right": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "nonZero": {
+        "type": [
+          "boolean",
+          "null"
+        ]
+      },
+      "example": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    }
+  },
+  "MascotLessonPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "angle",
+      "mistake",
+      "beats",
+      "summary"
+    ],
+    "properties": {
+      "angle": {
+        "type": "string"
+      },
+      "mistake": {
+        "type": "string"
+      },
+      "beats": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "say",
+            "show",
+            "calc",
+            "check"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "explain",
+                "wrong",
+                "play",
+                "check"
+              ]
+            },
+            "say": {
+              "type": "string"
+            },
+            "show": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "op",
+                  "option",
+                  "quote",
+                  "label",
+                  "box",
+                  "note",
+                  "step",
+                  "on",
+                  "mistake",
+                  "why"
+                ],
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "zoom",
+                      "highlight",
+                      "underline",
+                      "circle",
+                      "crossOut",
+                      "point",
+                      "arrow",
+                      "pitfall"
+                    ]
+                  },
+                  "option": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "quote": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "box": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "x",
+                          "y",
+                          "w",
+                          "h"
+                        ],
+                        "properties": {
+                          "x": {
+                            "type": "number"
+                          },
+                          "y": {
+                            "type": "number"
+                          },
+                          "w": {
+                            "type": "number"
+                          },
+                          "h": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "step": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "on": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mistake": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "why": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "calc": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "line",
+                    "fly"
+                  ],
+                  "properties": {
+                    "line": {
+                      "type": "string"
+                    },
+                    "fly": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "check": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "ask",
+                    "options",
+                    "correct",
+                    "right",
+                    "wrong"
+                  ],
+                  "properties": {
+                    "ask": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "correct": {
+                      "type": "integer"
+                    },
+                    "right": {
+                      "type": "string"
+                    },
+                    "wrong": {
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "summary": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "say",
+              "key"
+            ],
+            "properties": {
+              "say": {
+                "type": "string"
+              },
+              "key": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
+  },
+  "VoiceTutorPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "opening",
+      "drawing",
+      "spoken"
+    ],
+    "properties": {
+      "opening": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "spoken": {
+        "type": "string"
+      },
+      "drawing": {
+        "type": "array",
+        "maxItems": 8,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "term",
+            "from",
+            "to",
+            "latex",
+            "expression",
+            "variable",
+            "xMin",
+            "xMax",
+            "segment",
+            "anchor",
+            "point",
+            "label"
+          ],
+          "properties": {
+            "op": {
+              "type": "string",
+              "enum": [
+                "highlight",
+                "circle",
+                "arrow",
+                "formula",
+                "plot"
+              ]
+            },
+            "term": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "latex": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expression": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "variable": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "xMin": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "xMax": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "segment": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "anchor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "point": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "label": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "FigureTranscription.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "figure"
+    ],
+    "properties": {
+      "figure": {
+        "type": "string"
+      }
+    }
+  },
+  "VisualAidPrompt.schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "kind",
+      "expression",
+      "variable",
+      "xMin",
+      "xMax",
+      "xLabel",
+      "yLabel"
+    ],
+    "properties": {
+      "kind": {
+        "type": "string",
+        "enum": [
+          "none",
+          "graph",
+          "diagram"
+        ]
+      },
+      "expression": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "variable": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "xMin": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "xMax": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "xLabel": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "yLabel": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    }
+  }
+}
