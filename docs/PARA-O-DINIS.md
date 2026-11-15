@@ -45,3 +45,13 @@ O `updater` do Tauri precisa de um URL HTTPS com o `latest.json` e de um par de 
 
 ### 6. Entrar na conta no Worker de teste
 Para verificar a Fase 1 ao vivo: abrir a app, «Sign in or create an account», entrar no browser. Os critérios que dependem disto ficam marcados «falta verificação do Dinis».
+
+### 7. Experimentar o Alt-clique (Fase 4), quando a app compilar
+Depende do ponto 1. Com a app aberta (`npm run tauri dev`):
+1. Abre `referencia-mac/Tools/AnywhereProbe/quiz.html` no Chrome, carrega em **Alt** e clica numa pergunta. Deve abrir o palco por cima do Chrome com essa pergunta. O link por baixo não pode abrir e o menu do Chrome não pode aparecer quando largas o Alt.
+2. Faz o mesmo num PDF de `exames/` aberto no Edge, no Acrobat Reader e no Word (um `.docx` qualquer com perguntas numeradas).
+3. Em cada caso, preenche uma linha em `docs/anywhere-medicao.md`: o texto saiu completo? De onde veio («pdf», «text-range», «block», «region»: aparece em `%APPDATA%\LearnLayer\anywhere-log.jsonl`)? Quanto tempo demorou?
+4. Com o palco aberto e o foco noutra app, **Esc** tem de o fechar.
+5. Para a transcrição rápida em Debug (como no Mac): guarda a tua chave da OpenRouter no Gestor de Credenciais com
+   `cmdkey /generic:LearnLayer.OpenRouter /user:openrouter /pass:<a chave>`.
+   Numa build de release isto não é usado nunca. Cada chamada real fica em `docs/CUSTOS.md`.
