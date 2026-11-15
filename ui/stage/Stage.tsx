@@ -8,6 +8,7 @@ import { linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
+import { Variant } from "@core/problems/problemVariant";
 import { QuestionPages } from "@core/problems/questionPages";
 import { QuestionSession, type Mode } from "@core/problems/questionSession";
 import { StatementQuotes } from "@core/problems/statementQuotes";
@@ -111,6 +112,11 @@ export function Stage({
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
       if (event.key === "Escape") {
         event.preventDefault();
+        // From a similar question, Esc goes back to the exam's own.
+        if (session?.mode === "variant") {
+          session.backToOriginal();
+          return;
+        }
         session?.cancel();
         close();
         return;
@@ -391,6 +397,8 @@ function ModeView({ session }: { session: QuestionSession }) {
       return <TryView session={session} />;
     case "followUp":
       return <FollowUpView session={session} />;
+    case "variant":
+      return <VariantView session={session} />;
     default:
       return <SolutionView session={session} />;
   }
@@ -714,6 +722,111 @@ function followUpContext(session: QuestionSession, asked: string): string {
   });
 }
 
+/** The same question with new numbers: the app wrote the numbers in and knows the answer. */
+function VariantView({ session }: { session: QuestionSession }) {
+  const t = useT();
+  const [typed, setTyped] = useState("");
+  const variant = session.variant;
+  if (session.variantState === "failed") {
+    return (
+      <div className="stage-panel">
+        <p className="stage-step-note">{t("Couldn’t make a similar question this time.")}</p>
+        <button type="button" className="stage-button" onClick={() => void session.tryVariant()}>
+          {t("Try Again")}
+        </button>
+        <button type="button" className="stage-link quiet" onClick={() => session.backToOriginal()}>
+          {t("Back to the exam’s question (Esc)")}
+        </button>
+      </div>
+    );
+  }
+  if (session.variantState !== "ready" || !variant) {
+    return (
+      <p className="stage-progress" role="status">
+        <span className="stage-progress-dot" aria-hidden="true" />
+        {t("Writing a similar question…")}
+      </p>
+    );
+  }
+  const result = session.variantResult;
+  const answer =
+    variant.kind === "function"
+      ? session.variantExample
+      : session.variantAnswer === null
+        ? null
+        : Variant.format(session.variantAnswer);
+  const unreadable = variant.kind === "function" ? t("I couldn’t read that expression.") : t("Type just the number.");
+  return (
+    <div className="stage-panel">
+      <p className="stage-menu-title">{t("Similar question")}</p>
+      <p className="stage-hint">
+        <MathText text={session.variantText} />
+      </p>
+      <form
+        className="stage-try"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (typed.trim() !== "") session.checkVariant(typed);
+        }}
+      >
+        <input
+          autoFocus
+          value={typed}
+          onChange={(event) => setTyped(event.target.value)}
+          placeholder={variant.unit === "" ? t("Your answer") : t("Your answer in %@", variant.unit)}
+          aria-label={t("Your answer")}
+        />
+      </form>
+      {result && (
+        <p className={`stage-result stage-result-${result}`} role="status">
+          {result === "matches" ? t("That’s right.") : result === "differs" ? t("Not yet.") : unreadable}
+        </p>
+      )}
+      {session.showsVariantHint && variant.hint !== "" && (
+        <p className="stage-step-note">
+          <MathText text={variant.hint} />
+        </p>
+      )}
+      {session.showsVariantAnswer && answer !== null && (
+        <section className="stage-answer">
+          <span className="stage-answer-label">{variant.kind === "function" ? t("One answer") : t("Answer")}</span>
+          <div className="stage-answer-value">{answer + (variant.unit === "" ? "" : " " + variant.unit)}</div>
+          <span className="stage-step-note">{t("Same steps as the solution, with these numbers.")}</span>
+        </section>
+      )}
+      <div className="stage-action-row">
+        {!session.showsVariantHint && (
+          <button type="button" className="stage-link quiet" onClick={() => session.revealVariantHint()}>
+            {t("Hint")}
+          </button>
+        )}
+        {!session.showsVariantAnswer ? (
+          <button type="button" className="stage-link quiet" onClick={() => session.revealVariantAnswer()}>
+            {t("Show Answer")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="stage-link quiet"
+            onClick={() => {
+              session.backToOriginal();
+              session.choose("solution");
+            }}
+          >
+            {t("Show the Method")}
+          </button>
+        )}
+        <button type="button" className="stage-link quiet" onClick={() => void session.tryVariant()}>
+          {t("Another One")}
+        </button>
+        <button type="button" className="stage-link quiet" onClick={() => session.backToOriginal()}>
+          {t("Back to the exam’s question (Esc)")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TranscriptRequest({ session }: { session: QuestionSession }) {
   const t = useT();
   const [text, setText] = useState("");
@@ -759,6 +872,7 @@ function Actions({ session }: { session: QuestionSession }) {
       () => session.choose("solution"),
       session.mode !== "solution",
     ],
+    [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant],
     [
       t("Explain Better"),
       () => session.solveWithStrongerModel(),

@@ -22,6 +22,8 @@ import {
 } from "../ai/modelRouting";
 import { ProblemPrompt, QuestionClassifier } from "../prompts/problemPrompt";
 import { decodeProblemSolution, restrictedTo, type ProblemSolution } from "./problemSolution";
+import { decodeFromContent } from "../ai/replyDecoding";
+import { decodeVariant, VariantPrompt, type ProblemVariant } from "./problemVariant";
 import { RouteDecision, type Classification, type RouteOutcome } from "./routeDecision";
 import { solution as plainSolution, streamedSolution, type SolveOptions } from "./solutionRequest";
 
@@ -255,6 +257,23 @@ export class SolutionProvider {
     };
     // An answer saved before the parts were cut back may still hold other questions.
     return restrictedTo(await this.services.solutions.script(key, fetch), request.labels);
+  }
+
+  /** A practice variant of one part, from the fast model (never saved: each one should differ). */
+  async variant(request: {
+    groupText: string;
+    label: string;
+    asks: string;
+    formula: string;
+    avoiding: readonly string[];
+  }): Promise<ProblemVariant> {
+    const reply = await this.services.client({ model: AISettings.defaultModel }).complete({
+      system: VariantPrompt.system(this.services.language()),
+      user: VariantPrompt.user(request.groupText, request.label, request.asks, request.formula, request.avoiding),
+      schemaName: "variant",
+      schema: VariantPrompt.schema,
+    });
+    return decodeFromContent(reply.content, decodeVariant);
   }
 
   /** Re-solves with the stronger model (or `chosen`) and saves that instead. */

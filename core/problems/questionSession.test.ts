@@ -445,3 +445,53 @@ describe("QuestionSession cascade", () => {
     expect(open.underlinedStep).toBe(0);
   });
 });
+
+describe("QuestionSession similar question", () => {
+  it("writes the numbers in, works out the answer from the verified formula, and checks the student's", async () => {
+    const reply = JSON.stringify({
+      kind: "number",
+      statement: "Um carro parte a {v0} e acelera a {a} durante {t}. Qual é a velocidade final?",
+      values: [
+        { name: "v0", value: 10, unit: "m/s" },
+        { name: "a", value: 3, unit: "m/s²" },
+        { name: "t", value: 4, unit: "s" },
+      ],
+      unit: "m/s",
+      hint: "Use v = v0 + a t.",
+      variable: null,
+      left: null,
+      right: null,
+      nonZero: null,
+      example: null,
+    });
+    const fakeClient = { complete: async () => ({ content: reply, cost: 0 }) } as unknown as ModelClientStandIn;
+    const solver = provider(
+      () =>
+        decodeProblemSolution({
+          subject: "Física",
+          parts: [{ label: "1", asks: "v?", hint: "h", steps: [], answer: { text: "22 m/s", expression: "v0 + a*t" } }],
+          checks: [{ kind: "equal", left: "12 + 2*5", right: "22" }],
+        }),
+      { client: () => fakeClient },
+    );
+    const open = new QuestionSession(
+      { question: question("1", "1. Um carro…", ["1"]) },
+      { provider: solver.provider, config: () => "cheapFirst", subject: "Física" },
+    );
+    open.choose("solution");
+    await until(() => open.state.kind === "ready");
+    expect(open.canPractiseVariant).toBe(true);
+    await open.tryVariant();
+    expect(open.variantState).toBe("ready");
+    expect(open.variantText).toBe("Um carro parte a 10 m/s e acelera a 3 m/s² durante 4 s. Qual é a velocidade final?");
+    expect(open.variantAnswer).toBe(22);
+    open.checkVariant("22,1");
+    expect(open.variantResult).toBe("matches");
+    open.checkVariant("30");
+    expect(open.variantResult).toBe("differs");
+    open.backToOriginal();
+    expect(open.mode).toBe("solution");
+  });
+});
+
+type ModelClientStandIn = ReturnType<SolverServices["client"]>;

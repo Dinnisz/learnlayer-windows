@@ -26,6 +26,7 @@ import { RouteDecision, type RouteOutcome } from "./routeDecision";
 import { realigned, signTableProblems } from "./signTable";
 import { noteStage, solveClock, SolutionReveal, SolveKind, SolveProgress, type SolveClock } from "./solutionReveal";
 import type { SolutionProvider } from "./solutionProvider";
+import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
 
 export type SessionState =
@@ -643,6 +644,7 @@ export class QuestionSession {
 
   cancel(): void {
     this.controller?.abort();
+    this.variantController?.abort();
     this.stopSlowStart?.();
   }
 
@@ -1159,6 +1161,122 @@ export class QuestionSession {
     this.changed();
   }
 
+  // MARK: A similar one
+
+  variant: ProblemVariant | null = null;
+  /** The variant's question with its numbers and equation written in. */
+  variantText = "";
+  variantAnswer: number | null = null;
+  /** For a function: a solution checked against the variant's equation. */
+  variantExample: string | null = null;
+  variantState: "loading" | "ready" | "failed" | null = null;
+  variantResult: AttemptResult | null = null;
+  showsVariantAnswer = false;
+  showsVariantHint = false;
+  solvedVariant = false;
+  private earlierVariants: string[] = [];
+  private modeBeforeVariant: Mode | null = null;
+  private variantController: AbortController | null = null;
+
+  /** A variant needs a formula: evaluated with new numbers. */
+  get canPractiseVariant(): boolean {
+    const expression = this.part?.answer.expression;
+    return expression ? tryParseExpression(expression) !== null : false;
+  }
+
+  backToOriginal(): void {
+    this.variantController?.abort();
+    this.mode = this.modeBeforeVariant;
+    this.changed();
+  }
+
+  async tryVariant(): Promise<void> {
+    const part = this.part;
+    const expression = part?.answer.expression;
+    const formula = expression ? tryParseExpression(expression) : null;
+    if (!part || !expression || !formula) return;
+    if (this.mode !== "variant") this.modeBeforeVariant = this.mode;
+    this.mode = "variant";
+    this.variant = null;
+    this.variantAnswer = null;
+    this.variantExample = null;
+    this.variantResult = null;
+    this.showsVariantAnswer = false;
+    this.showsVariantHint = false;
+    this.variantState = "loading";
+    this.variantController?.abort();
+    const controller = new AbortController();
+    this.variantController = controller;
+    this.changed();
+    // A variant the app can't check is asked for again, then given up.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (controller.signal.aborted) return;
+      let variant: ProblemVariant;
+      try {
+        variant = await this.services.provider.variant({
+          groupText: this.requestText,
+          label: this.question.label,
+          asks: part.asks,
+          formula: expression,
+          avoiding: this.earlierVariants,
+        });
+      } catch {
+        continue;
+      }
+      if (controller.signal.aborted) return;
+      // The numbers and equation shown must be the ones checked against.
+      const text = Variant.text(variant, formula);
+      if (text === null) continue;
+      if (variant.kind === "number") {
+        const answer = Variant.answer(variant, formula);
+        if (answer === null) continue;
+        this.variantAnswer = answer;
+      } else {
+        // Answers are checked against its own equation, so that must read.
+        if (Variant.solves(variant, tryParseExpression(variant.variable ?? "t")!) === null) continue;
+        const example = variant.example ? tryParseExpression(variant.example) : null;
+        if (example && Variant.solves(variant, example) === true) this.variantExample = variant.example;
+      }
+      this.variant = variant;
+      this.variantText = text;
+      this.earlierVariants.push(text);
+      this.variantState = "ready";
+      this.changed();
+      return;
+    }
+    if (!controller.signal.aborted) {
+      this.variantState = "failed";
+      this.changed();
+    }
+  }
+
+  checkVariant(typed: string): void {
+    const variant = this.variant;
+    if (!variant) return;
+    if (variant.kind === "number") {
+      if (this.variantAnswer === null) return;
+      const value = typedNumber(typed);
+      this.variantResult =
+        value === null ? "unreadable" : Variant.agrees(value, this.variantAnswer) ? "matches" : "differs";
+    } else {
+      const candidate = typedFunction(typed);
+      const solves = candidate ? Variant.solves(variant, candidate) : null;
+      this.variantResult = solves === null ? "unreadable" : solves ? "matches" : "differs";
+    }
+    if (this.variantResult === "matches" && !this.showsVariantAnswer) this.solvedVariant = true;
+    this.changed();
+  }
+
+  revealVariantAnswer(): void {
+    this.showsVariantAnswer = true;
+    this.changed();
+  }
+
+  revealVariantHint(): void {
+    this.showsVariantHint = true;
+    this.changed();
+  }
+
   // MARK: Asking about the exercise
 
   get followUps(): string[] {
@@ -1203,6 +1321,8 @@ export class QuestionSession {
 
   /** How it went, for the memory; null when the student only looked. */
   get reviewGrade(): "easy" | "good" | "hard" | null {
+    // Solving a fresh variant shows the method stuck, whatever came before.
+    if (this.solvedVariant) return "good";
     if (this.sawSolution) return "hard";
     if (this.solvedAlone) return this.usedHint ? "good" : "easy";
     if (this.usedHint || this.attemptResult === "differs") return "hard";
