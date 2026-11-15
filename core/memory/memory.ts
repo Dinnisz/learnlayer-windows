@@ -446,7 +446,7 @@ export const ExplanationPlanner = {
     let check = false;
     let channel = "text";
     let voiceBudget = 0;
-    let offerSimilar = false;
+    let offerSimilar: boolean;
     switch (input.state) {
       case "new":
         depth = 4;
