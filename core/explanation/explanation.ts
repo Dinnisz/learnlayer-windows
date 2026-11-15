@@ -205,9 +205,11 @@ export const ExplanationPrompt = {
     });
   },
 
-  user(equation: string, context: string, history = ""): string {
+  /** With a plan from the memory, its block replaces "what the student studied recently". */
+  user(equation: string, context: string, history = "", plan: string | null = null): string {
     let message = swiftText("ExplanationPrompt", "message#0", { equation, context });
-    if (history !== "") message += swiftText("ExplanationPrompt", "plan#1") + history;
+    if (plan) message += swiftText("ExplanationPrompt", "plan#0") + plan;
+    else if (history !== "") message += swiftText("ExplanationPrompt", "plan#1") + history;
     return message;
   },
 
@@ -220,6 +222,10 @@ export interface ExplanationServices {
   language(): string;
   /** Working without the API: the sample explanation. */
   mock?: (() => ExplanationScript) | null;
+  /** The plan the memory reads for this equation: its prompt block and its cache token. */
+  plan?: (equation: string) => { block: string; token: string } | null;
+  /** Remembers the equation and its explanation (MemoryStore). */
+  remember?: (equation: string, script: ExplanationScript) => void;
 }
 
 /** Gets the steps for an equation from the model, once: they are saved (`explanations.json`). */
@@ -227,12 +233,13 @@ export class ExplanationProvider {
   constructor(readonly services: ExplanationServices) {}
 
   private key(equation: string, context: string, model: string): Promise<string> {
+    const token = this.services.mock ? "" : (this.services.plan?.(equation)?.token ?? "");
     return cacheKey(
       (this.services.mock ? "mock-" : "") + ExplanationPrompt.version,
       model,
       this.services.language(),
       "",
-      "",
+      token,
       equation,
       context,
     );
@@ -246,14 +253,17 @@ export class ExplanationProvider {
     const key = await this.key(equation, context, model);
     return this.services.cache.script(key, async () => {
       if (this.services.mock) return this.services.mock();
+      const plan = this.services.plan?.(equation) ?? null;
       const { content } = await this.services.client(model).complete({
         system: ExplanationPrompt.system(this.services.language()),
-        user: ExplanationPrompt.user(equation, context),
+        user: ExplanationPrompt.user(equation, context, "", plan?.block ?? null),
         schemaName: "explanation",
         schema: ExplanationPrompt.schema,
         signal,
       });
-      return decodeFromContent(content, decodeExplanationScript);
+      const script = decodeFromContent(content, decodeExplanationScript);
+      this.services.remember?.(equation, script);
+      return script;
     });
   }
 }

@@ -13,6 +13,8 @@ import {
   type ExplanationScript,
 } from "@core/explanation/explanation";
 import { DiskCache } from "@core/ai/diskCache";
+import { ConceptSlug, Plans, type MemoryStore } from "@core/memory/memory";
+import { memoryStore } from "../memory/memory";
 import { isSignedOut } from "@core/ai/modelClient";
 import mockExplanation from "@core/mocks/MockExplanation.json";
 import type { PageText, Rect } from "@core/pdf/page";
@@ -26,6 +28,8 @@ import "../stage/stage.css";
 import "./explanation.css";
 
 let provider: ExplanationProvider | null = null;
+let memory: MemoryStore | null = null;
+void memoryStore().then((store) => (memory = store));
 
 /** The explanations, saved in `explanations.json`. With mocks, the Mac's sample. */
 function explanationProvider(): ExplanationProvider {
@@ -34,6 +38,28 @@ function explanationProvider(): ExplanationProvider {
     client: (model) => modelClient({ model }),
     language: drawingLanguage,
     mock: usesMock() ? () => decodeExplanationScript(mockExplanation) : null,
+    // The memory reads the plan; the model fills it in (ExplanationPlanner).
+    plan: (equation) => {
+      if (!memory) return null;
+      const plan = memory.plan({
+        question: equation,
+        kind: "formula",
+        area: "math",
+        concept: ConceptSlug.make(equation),
+      });
+      return { block: Plans.promptBlock(plan), token: Plans.cacheToken(plan) };
+    },
+    remember: (equation, script) =>
+      memory?.record({
+        text: equation,
+        documentName: null,
+        page: null,
+        concepts: [ConceptSlug.make(equation)],
+        kind: "formula",
+        language: drawingLanguage(),
+        explanationJSON: JSON.stringify(script),
+        area: "math",
+      }),
   });
   return provider;
 }

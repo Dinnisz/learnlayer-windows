@@ -25,6 +25,8 @@ import { QuestionPages } from "@core/problems/questionPages";
 import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
 import { QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
 import { CurveGraph } from "../figures/CurveGraph";
+import { ConceptSlug } from "@core/memory/memory";
+import { memoryStore } from "../memory/memory";
 import { detectTimingDiagram, timingPath, TimingDiagrams, type GreyBitmap } from "@core/timing/timing";
 import { IllustrationView } from "../figures/IllustrationView";
 import { SignTableView } from "../figures/SignTableView";
@@ -130,6 +132,19 @@ async function prepare(
       timing,
     },
     sessionServices(),
+  );
+  // The question is remembered for the Memory map (the Mac's ReaderModel does the same on opening).
+  void memoryStore().then((memory) =>
+    memory.record({
+      text: question.text,
+      documentName: `${document.name}.pdf`,
+      page: question.pageIndex,
+      concepts: [ConceptSlug.make(question.text)],
+      kind: "exercise",
+      language: drawingLanguage(),
+      explanationJSON: null,
+      area: ConceptSlug.area(""),
+    }),
   );
   void session.openQuietly();
   return { session, page };
