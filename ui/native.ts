@@ -5,6 +5,8 @@ import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { Preferences, SessionGateway } from "@core/account/accountModel";
 import { productionBase, productionSite, type Environment } from "@core/ai/aiGateway";
 import type { AuthTokens, Fetch } from "@core/ai/backendClient";
+import type { DataFiles } from "@core/ai/diskCache";
+import type { StreamingFetch } from "@core/ai/modelClient";
 import { platformNamed, type PlatformName } from "@core/platform";
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -56,6 +58,29 @@ export async function openExternal(url: string): Promise<void> {
     window.open(url, "_blank", "noopener");
   }
 }
+
+/**
+ * The app's files in its data folder (src-tauri/src/data_files.rs). In a browser they live in this page's storage,
+ * under a prefix, so interface work never touches the student's real files.
+ */
+export const dataFiles: DataFiles = isTauri
+  ? {
+      read: (name) => invoke<string | null>("data_file_read", { name }),
+      write: (name, contents) => invoke<void>("data_file_write", { name, contents }),
+    }
+  : {
+      read: async (name) => localStorage.getItem("learnlayer-file:" + name),
+      write: async (name, contents) => localStorage.setItem("learnlayer-file:" + name, contents),
+    };
+
+/** The streaming `fetch` the model client uses: the native one in the app (no CORS), the page's own in a browser. */
+export const streamingFetch: StreamingFetch = async (url, init) => {
+  if (isTauri) {
+    const { fetch } = await import("@tauri-apps/plugin-http");
+    return fetch(url, init);
+  }
+  return window.fetch(url, init);
+};
 
 /** HTTP from the native side, so the API's CORS rules (site origin only) don't apply to the app. */
 export const nativeFetch: Fetch = async (url, init) => {

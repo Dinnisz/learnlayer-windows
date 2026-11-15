@@ -57,3 +57,18 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** as ferramentas de escrita desta sessão transformam escapes como ` ` no próprio carácter; num regex, um separador de linha literal parte o código, e um espaço não separável é invisível na revisão.
 - **Escolha:** `scripts/escape-invisible.mjs` escreve esses caracteres como escapes; `npm run lint` corre-o com `--check`.
 - **Porquê:** o código tem de dizer o que faz à vista; o CI apanha qualquer recaída.
+
+## 2026-11-15 — Prompts extraídos do Swift por um programa, não reescritos à mão
+- **Dúvida:** a secção 6 manda portar os prompts palavra a palavra; são milhares de linhas com interpolações, escapes e LaTeX, e as ferramentas desta sessão alteram barras invertidas.
+- **Escolha:** `scripts/extract-prompts.mjs` lê os literais e os dicionários de esquema do Swift e grava-os em `core/prompts/swift/` (no git). O TypeScript só junta os pedaços. Um teste re-extrai e compara sempre que `referencia-mac/` existe.
+- **Porquê:** é a única forma de garantir «palavra a palavra» e a mesma chave de cache que o Mac. As duas linhas Swift que o avaliador não lê (`var graph = …` e o `if` que o segue) estão escritas como exceções explicadas no próprio gerador.
+
+## 2026-11-15 — Funções dos prompts entram na fase de cada funcionalidade
+- **Dúvida:** a Fase 2 pede «os prompts e esquemas»; vários prompts (`VoiceTutorPrompt`, `MascotLessonPrompt`, `IllustrationPrompt`, `ExplanationPlanner`…) têm funções que montam o pedido a partir de tipos que ainda não existem.
+- **Escolha:** todos os textos e esquemas ficam extraídos já; as funções que os montam entram com a funcionalidade (lista em `PROGRESSO.md`).
+- **Porquê:** portar a montagem sem os tipos obrigava a inventá-los e a reescrevê-los depois.
+
+## 2026-11-15 — KaTeX: comandos que o renderizador do Mac aceita e o KaTeX não
+- **Dúvida:** o `LatexText.normalized` do Mac escreve `\decimalcomma`, `\sen`, `\tg` (SwiftMath).
+- **Escolha:** o `normalized` fica igual (mesmos testes); a interface define estes comandos como macros do KaTeX.
+- **Porquê:** mantém o núcleo idêntico ao Mac e o texto bem desenhado no Windows.

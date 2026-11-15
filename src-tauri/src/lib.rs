@@ -3,6 +3,7 @@
 
 mod api;
 pub mod config;
+pub mod data_files;
 mod platform;
 pub mod session;
 mod tray;
@@ -158,6 +159,8 @@ pub fn run() {
             save_text_file,
             platform::pill_resize,
             tray::set_tray_labels,
+            data_files::data_file_read,
+            data_files::data_file_write,
         ])
         .setup(|app| {
             // The installer registers `learnlayer://`; a debug build registers it for this user itself.
