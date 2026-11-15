@@ -108,13 +108,7 @@ export const VoiceLocale = {
   /** The name and the identifier, so the model cannot drop the country: "European Portuguese [pt-PT]". */
   promptLanguage(identifier: string): string {
     const shown = tag(SpeechLocaleMatch.parts(identifier));
-    let name = shown;
-    try {
-      name = displayNames?.of(shown) ?? shown;
-    } catch {
-      name = shown;
-    }
-    return `${name} [${shown}]`;
+    return `${languageName(shown)} [${shown}]`;
   },
 
   /** An installed voice whose language and region match the preferred ones. */
@@ -128,26 +122,37 @@ export const VoiceLocale = {
   },
 };
 
+/** "European Portuguese" for "pt-PT", in English as the Mac's `Locale(identifier: "en")` says it. */
+function languageName(identifier: string): string {
+  try {
+    return displayNames?.of(identifier) ?? identifier;
+  } catch {
+    return identifier;
+  }
+}
+
 function tag(parts: LocaleParts): string {
   if (parts.region !== null || parts.script !== null) return parts.canonical;
   return parts.language === "" ? "en" : parts.language;
 }
 
+const defaultSpeechModel = "elevenlabs/eleven-v4-turbo";
+
 /** Dollars per character for ElevenLabs voices on OpenRouter (the audio response carries no price). */
 export const SpeechPrice = {
   /** Low latency. Half the full character rate. */
-  defaultModel: "elevenlabs/eleven-v4-turbo",
+  defaultModel: defaultSpeechModel,
   /** Cheaper and still half rate. */
   flashModel: "elevenlabs/eleven-flash-v2.5",
   fullDollarsPerCharacter: 40 / 1_000_000,
   halfDollarsPerCharacter: 20 / 1_000_000,
-  loadedRates: new Map<string, number>(),
+  loadedRates: new Map<string, number>() as Map<string, number>,
 
   isSpeechModel: (model: string) => model.toLowerCase().startsWith("elevenlabs/"),
 
   modelID(stored: string): string {
     const trimmed = stored.trim();
-    return trimmed === "" ? SpeechPrice.defaultModel : trimmed;
+    return trimmed === "" ? defaultSpeechModel : trimmed;
   },
 
   /** What that model will accept. A longer string is cut before it is sent. */
@@ -160,19 +165,15 @@ export const SpeechPrice = {
   },
 
   /** The text actually sent: Unicode scalars, cut to what the model accepts. */
-  billedText(text: string, model: string = SpeechPrice.defaultModel): string {
+  billedText(text: string, model: string = defaultSpeechModel): string {
     return Array.from(text).slice(0, SpeechPrice.maxCharacters(model)).join("");
   },
 
-  characters(text: string, model: string = SpeechPrice.defaultModel): number {
+  characters(text: string, model: string = defaultSpeechModel): number {
     return Array.from(SpeechPrice.billedText(text, model)).length;
   },
 
-  estimateDollars(
-    text: string,
-    model: string = SpeechPrice.defaultModel,
-    catalog?: ReadonlyMap<string, number>,
-  ): number {
+  estimateDollars(text: string, model: string = defaultSpeechModel, catalog?: ReadonlyMap<string, number>): number {
     const id = SpeechPrice.modelID(model);
     const rate = catalog?.get(id) ?? SpeechPrice.loadedRates.get(id) ?? SpeechPrice.dollarsPerCharacter(id);
     return SpeechPrice.characters(text, id) * rate;
