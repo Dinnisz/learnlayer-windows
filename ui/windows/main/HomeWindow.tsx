@@ -22,6 +22,10 @@ import { AccountPane } from "./panes/AccountPane";
 import { DocumentsPane } from "./panes/DocumentsPane";
 import { PlanPane } from "./panes/PlanPane";
 import { MemoryPane } from "./panes/MemoryPane";
+import { GeneralPane } from "./panes/GeneralPane";
+import { PermissionsPane } from "./panes/PermissionsPane";
+import { AIPane } from "./panes/AIPane";
+import { DataPane } from "./panes/DataPane";
 import { ConsentSheet, SignInSheet } from "./sheets/SignInSheet";
 
 const routeKey = "homeRoute";
@@ -139,12 +143,24 @@ function HomeSidebar({ selection, onSelect }: { selection: HomeRoute; onSelect: 
 }
 
 /** The panes arrive phase by phase; until then a section shows its title only. */
-function HomePane({ route, onNavigate }: { route: HomeRoute; onNavigate: (route: HomeRoute) => void }) {
+function HomePane({
+  route,
+  onNavigate,
+  onRestartIntroduction,
+}: {
+  route: HomeRoute;
+  onNavigate: (route: HomeRoute) => void;
+  onRestartIntroduction?: () => void;
+}) {
   const t = useT();
   if (route === "account") return <AccountPane onNavigate={onNavigate} />;
   if (route === "plan") return <PlanPane />;
   if (route === "documents") return <DocumentsPane />;
   if (route === "memory") return <MemoryPane />;
+  if (route === "general") return <GeneralPane onRestartIntroduction={onRestartIntroduction} />;
+  if (route === "permissions") return <PermissionsPane />;
+  if (route === "ai") return <AIPane />;
+  if (route === "data") return <DataPane />;
   return (
     <SettingsPage title={t(titleKey(route))} subtitle="" data-group={groupOf(route)}>
       {null}

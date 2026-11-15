@@ -89,6 +89,14 @@ export function sessionServices(): SessionServices {
       (await textHelpProvider().help(passage, context, image)).explanation,
     fast: fastReader(),
     transcribing: (images: readonly Uint8Array[]) => transcriptionRequests.isRequested(images),
+    // Settings › General › Default subject, for the route and the figures.
+    subject: (() => {
+      try {
+        return localStorage.getItem("preferredSubject");
+      } catch {
+        return null;
+      }
+    })(),
     illustrate: (request) => illustrationProvider().illustration({ ...request, language: drawingLanguage() }),
     language: drawingLanguage,
   };

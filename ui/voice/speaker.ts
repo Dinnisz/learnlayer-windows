@@ -202,6 +202,9 @@ async function speakWithSystem(text: string, locale: string, options: SpeakOptio
  * sentence's clip asked for at once, so the first plays as soon as it is in and the next is ready when one ends.
  */
 export async function speak(text: string, options: SpeakOptions = {}): Promise<SpeakResult> {
+  // Settings › General › Voice off: nothing is said, the text is shown for its reading time instead.
+  if (readPreference("voiceEnabled") === "0")
+    return { engine: "system", notice: null, spoken: SpokenText.forSpeech(text, SpeechPrice.flashModel), silent: true };
   const language = tutorLanguage();
   const locale = TutorLanguage.locale(language);
   const premiumWanted = premiumVoiceEnabled();

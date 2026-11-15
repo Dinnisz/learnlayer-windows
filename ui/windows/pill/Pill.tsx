@@ -8,7 +8,15 @@ import { announcementKey, resolveNotchMode } from "@core/notch/notchMode";
 import { Icon } from "../../components/Icon";
 import { useT } from "../../i18n";
 import { emptyIsland, onIsland, sendIslandCommand, type IslandSnapshot } from "../../island";
-import { anywhereEnabled, onAnywhereHookRemoved, resizePill, setAnywhereEnabled, showMain } from "../../native";
+import {
+  anywhereEnabled,
+  onAnywhereHookRemoved,
+  resizePill,
+  setAnywhereEnabled,
+  setTalkKey,
+  showMain,
+  talkKeyChoice,
+} from "../../native";
 
 /** At rest (CLAUDE.md §7). The window is this size plus a small gap above, so it reads as a pill. */
 export const pillMetrics = { width: 180, height: 32, topGap: 4, openWidth: 264 };
@@ -36,6 +44,7 @@ export function Pill() {
   // Alt-click as Settings left it; if Windows takes the hook away, the pill offers to turn it on again.
   useEffect(() => {
     void setAnywhereEnabled(anywhereEnabled());
+    void setTalkKey(talkKeyChoice());
     let stop = () => {};
     let cancelled = false;
     void onAnywhereHookRemoved(() => setIsland((current) => ({ ...current, offersAnywhere: true }))).then((unlisten) =>

@@ -117,3 +117,55 @@ export function SettingsButton({
   const classes = ["settings-button", kind, fillsWidth ? "fills" : "", className ?? ""].filter(Boolean).join(" ");
   return <button type="button" className={classes} {...rest} />;
 }
+
+/** An on/off switch in a row's control, as the Mac's SettingsToggleRow. */
+export function SettingsToggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="settings-toggle">
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        aria-label={label}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span aria-hidden="true" />
+    </label>
+  );
+}
+
+/** A pop-up choice in a row's control. */
+export function SettingsSelect<Value extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: Value;
+  options: readonly { value: Value; title: string }[];
+  onChange: (value: Value) => void;
+  label: string;
+}) {
+  return (
+    <select
+      className="settings-select"
+      value={value}
+      aria-label={label}
+      onChange={(event) => onChange(event.target.value as Value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.title}
+        </option>
+      ))}
+    </select>
+  );
+}

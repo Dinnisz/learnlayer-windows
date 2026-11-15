@@ -51,6 +51,8 @@ pub enum TalkKey {
     ControlWindows = 0,
     Copilot = 1,
     RightControl = 2,
+    /// No key: only the microphone button on the stage.
+    None = 3,
 }
 
 static TALK_KEY: AtomicU32 = AtomicU32::new(TalkKey::ControlWindows as u32);
@@ -71,6 +73,7 @@ fn update_talk() {
     let held = match TALK_KEY.load(Ordering::Relaxed) {
         1 => F23_DOWN.load(Ordering::Relaxed),
         2 => RIGHT_CONTROL_DOWN.load(Ordering::Relaxed),
+        3 => false,
         _ => CONTROL_DOWN.load(Ordering::Relaxed) && WINDOWS_DOWN.load(Ordering::Relaxed) && !key_down(VK_SHIFT),
     };
     if TALKING.swap(held, Ordering::SeqCst) != held {

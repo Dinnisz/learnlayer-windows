@@ -69,6 +69,7 @@ impl super::Platform for WindowsPlatform {
         anywhere::hook::set_talk_key(match key {
             "copilot" => anywhere::hook::TalkKey::Copilot,
             "rightControl" => anywhere::hook::TalkKey::RightControl,
+            "none" => anywhere::hook::TalkKey::None,
             _ => anywhere::hook::TalkKey::ControlWindows,
         });
     }

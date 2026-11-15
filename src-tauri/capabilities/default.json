@@ -7,10 +7,28 @@
     "core:default",
     "core:webview:allow-create-webview-window",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "ms-settings:privacy-microphone"
+        }
+      ]
+    },
     "deep-link:default",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://**" }, { "url": "http://127.0.0.1:*/**" }, { "url": "http://localhost:*/**" }]
+      "allow": [
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://127.0.0.1:*/**"
+        },
+        {
+          "url": "http://localhost:*/**"
+        }
+      ]
     }
   ]
 }

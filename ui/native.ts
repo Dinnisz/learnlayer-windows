@@ -333,3 +333,33 @@ export async function onTalkKey(handler: (held: boolean) => void): Promise<() =>
   const { listen } = await import("@tauri-apps/api/event");
   return listen<boolean>("talk", (event) => handler(event.payload));
 }
+
+/** The talk key chosen in Settings › General: "controlWindows" (default), "copilot", "rightControl" or "none". */
+export type TalkKeyChoice = "controlWindows" | "copilot" | "rightControl" | "none";
+export const talkKeyPreferenceKey = "talkKey";
+
+export function talkKeyChoice(): TalkKeyChoice {
+  try {
+    const stored = localStorage.getItem(talkKeyPreferenceKey);
+    return stored === "copilot" || stored === "rightControl" || stored === "none" ? stored : "controlWindows";
+  } catch {
+    return "controlWindows";
+  }
+}
+
+/** Saves the talk key and tells the keyboard hook (the native side knows the same names). */
+export async function setTalkKey(choice: TalkKeyChoice): Promise<void> {
+  try {
+    localStorage.setItem(talkKeyPreferenceKey, choice);
+  } catch {
+    // Kept for this launch only.
+  }
+  if (isTauri) await invoke<void>("talk_key_set", { key: choice });
+}
+
+/** Opens Windows Settings at the microphone's privacy page (the only system page the app opens). */
+export async function openMicrophoneSettings(): Promise<void> {
+  if (!isTauri) return;
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  await openUrl("ms-settings:privacy-microphone");
+}
