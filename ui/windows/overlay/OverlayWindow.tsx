@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readClick, draftText, type ClickRead } from "@core/anywhere/clickReading";
 import { greyImage, type LocatorLine } from "@core/anywhere/questionRegion";
+import { screenQuestionFromUIA } from "@core/anywhere/uiaQuestion";
 import {
   anywhereLogEntry,
   examQuestionFromScreen,
@@ -98,15 +99,44 @@ const nativeSources: ClickSources = {
 async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<StageSource | null> {
   const scale = read.scale || 1;
   const point = { x: read.point.x / scale, y: read.point.y / scale };
-  const found = read.found
-    ? ScreenQuestions.make({
-        text: read.found.text,
-        frame: points(read.found.frame, scale),
-        appName: read.appName,
-        hasImage: read.found.hasImage,
-        method: read.found.method,
-        focus: read.found.focus,
-      })
+  if (read.refused) return null;
+  // Alt-click on selected text explains that text.
+  if (read.selection) {
+    const selected = ScreenQuestions.make({
+      text: read.selection.text,
+      frame: points(read.selection.frame, scale),
+      appName: read.appName,
+      hasImage: false,
+      method: "selection",
+    });
+    void appendLog(selected, read.appName);
+    const question = examQuestionFromScreen(selected);
+    return {
+      kind: "picture",
+      question,
+      picture: null,
+      figureBoxes: [],
+      draft: null,
+      transcribes: false,
+      ocrText: "",
+      session: () => new QuestionSession({ question }, sessionServices()),
+    };
+  }
+  const uia = read.found;
+  const found = uia
+    ? screenQuestionFromUIA(
+        {
+          longText: uia.longText ? { ...uia.longText, frame: points(uia.longText.frame, scale) } : null,
+          block: uia.block
+            ? {
+                index: uia.block.index,
+                nodes: uia.block.nodes.map((node) => ({ ...node, frame: points(node.frame, scale) })),
+              }
+            : null,
+          focus: uia.focus,
+        },
+        read.appName,
+      )
     : null;
   const picture = await sources.picture(read);
   const frame = read.window ? points(read.window, scale) : null;

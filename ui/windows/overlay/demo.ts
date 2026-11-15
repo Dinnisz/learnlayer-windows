@@ -83,6 +83,7 @@ export async function demoClick(): Promise<{ read: NativeClickRead; picture: Win
       monitor: { x: 0, y: 0, width: window.innerWidth * scale, height: window.innerHeight * scale },
       scale,
       appName: "Demo",
+      refused: null,
       found: null,
       selection: null,
       window: { ...frame, pixelWidth: canvas.width, pixelHeight: canvas.height },

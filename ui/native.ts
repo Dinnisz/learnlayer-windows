@@ -232,10 +232,24 @@ export interface NativeClickRead {
   monitor: PixelRect;
   scale: number;
   appName: string;
-  /** UI Automation's reading under the point, when the app exposes one. */
-  found: { text: string; frame: PixelRect; hasImage: boolean; method: string; focus: string } | null;
+  /** "protected": an exam browser or a password manager, where nothing is read. */
+  refused: "protected" | null;
+  /** What UI Automation exposes under the point (a document's text, or the block around it), when anything. */
+  found: {
+    longText: { text: string; index: number; frame: PixelRect } | null;
+    block: {
+      index: number;
+      nodes: {
+        text: string;
+        frame: PixelRect;
+        kind: "text" | "image" | "link" | "button" | "group";
+        hasImage: boolean;
+      }[];
+    } | null;
+    focus: string;
+  } | null;
   /** The text selected in the app, when the click fell on it. */
-  selection: { text: string; frame: PixelRect; context: string } | null;
+  selection: { text: string; frame: PixelRect } | null;
   /** The window under the point, when a picture of it was taken (`anywhere_picture` gives its pixels). */
   window: (PixelRect & { pixelWidth: number; pixelHeight: number }) | null;
   /** The text the OCR read on that picture, in pixels from the picture's top-left. */

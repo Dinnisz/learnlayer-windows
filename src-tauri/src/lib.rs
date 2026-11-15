@@ -158,6 +158,12 @@ pub fn run() {
             session_clear_handoff,
             save_text_file,
             platform::pill_resize,
+            platform::anywhere_set_enabled,
+            platform::anywhere_picture,
+            platform::anywhere_pdf,
+            platform::anywhere_close,
+            platform::anywhere_interactive,
+            platform::local_openrouter_key,
             tray::set_tray_labels,
             data_files::data_file_read,
             data_files::data_file_write,
@@ -171,6 +177,10 @@ pub fn run() {
             }
             tray::create(app.handle())?;
             platform::current().create_pill(app.handle())?;
+            // Alt-click is on until Settings turns it off; if the hooks can't start, the app still runs.
+            if let Err(error) = platform::current().start_anywhere(app.handle(), true) {
+                eprintln!("Alt-click is unavailable: {error}");
+            }
             Ok(())
         })
         .on_window_event(|window, event| {

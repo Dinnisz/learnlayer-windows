@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "What the LearnLayer windows may ask the native side to do.",
-  "windows": ["main", "pill", "reader-*"],
+  "windows": ["main", "pill", "reader-*", "overlay"],
   "permissions": [
     "core:default",
     "core:webview:allow-create-webview-window",

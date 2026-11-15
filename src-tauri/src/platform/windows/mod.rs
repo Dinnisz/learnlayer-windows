@@ -1,5 +1,6 @@
 //! The Windows implementation of `Platform`. Win32/WinRT code goes in this folder and nowhere else.
 
+pub mod anywhere;
 pub mod credentials;
 pub mod pill;
 
@@ -38,5 +39,40 @@ impl super::Platform for WindowsPlatform {
 
     fn resize_pill(&self, app: &AppHandle, width: f64, height: f64) -> Result<(), String> {
         pill::resize(app, width, height)
+    }
+
+    fn start_anywhere(&self, app: &AppHandle, enabled: bool) -> Result<(), String> {
+        anywhere::start(app, enabled)
+    }
+
+    fn set_anywhere_enabled(&self, enabled: bool) {
+        anywhere::hook::set_enabled(enabled);
+    }
+
+    fn anywhere_picture(&self, id: u64) -> Option<Vec<u8>> {
+        anywhere::picture(id)
+    }
+
+    fn anywhere_pdf(&self, id: u64) -> Option<Vec<u8>> {
+        anywhere::pdf(id)
+    }
+
+    fn close_overlay(&self, app: &AppHandle) {
+        anywhere::overlay::close(app);
+    }
+
+    fn overlay_interactive(&self, app: &AppHandle, interactive: bool) {
+        anywhere::overlay::set_interactive(app, interactive);
+    }
+
+    /// `LearnLayer.OpenRouter` in the Credential Manager (a generic credential, the key as its password).
+    fn local_openrouter_key(&self) -> Option<String> {
+        let entry =
+            keyring::Entry::new_with_target("LearnLayer.OpenRouter", "LearnLayer.OpenRouter", "openrouter").ok()?;
+        entry
+            .get_password()
+            .ok()
+            .map(|key| key.trim().to_string())
+            .filter(|key| !key.is_empty())
     }
 }
