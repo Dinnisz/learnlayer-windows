@@ -29,3 +29,42 @@ export function Mascot({ size = 84, color = "Blue" }: { size?: number; color?: M
     </svg>
   );
 }
+
+/**
+ * The mascot at work (VoiceMascot / MascotMotion on the Mac): it breathes at rest, swells a little with the voice
+ * while it speaks and glows then. It never changes shape. Reduced motion: still, only the glow.
+ */
+export function AnimatedMascot({
+  size = 56,
+  color,
+  level,
+  speaking,
+}: {
+  size?: number;
+  color?: MascotColor;
+  level: number;
+  speaking: boolean;
+}) {
+  const chosen = color ?? storedMascotColor();
+  const scale = 1 + Math.min(1, Math.max(0, level)) * 0.08;
+  return (
+    <span
+      className={`mascot-alive${speaking ? " speaking" : ""}`}
+      style={{ width: size, height: size, ["--mascot-scale" as string]: String(scale) }}
+    >
+      <Mascot size={size} color={chosen} />
+    </span>
+  );
+}
+
+export const mascotColorKey = "mascotColor";
+
+/** The colour the student chose (Settings › General), blue by default. */
+export function storedMascotColor(): MascotColor {
+  try {
+    const stored = localStorage.getItem(mascotColorKey);
+    return stored && stored in mascotColors ? (stored as MascotColor) : "Blue";
+  } catch {
+    return "Blue";
+  }
+}

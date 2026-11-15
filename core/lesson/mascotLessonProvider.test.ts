@@ -130,3 +130,18 @@ describe("MascotLessonProvider", () => {
     expect(calls).toHaveLength(1);
   });
 });
+
+describe("lessonFromWork", () => {
+  it("walks the written steps, each lit while it is said", async () => {
+    const { lessonFromWork } = await import("./readSteps");
+    const lesson = lessonFromWork(
+      "Alínea (question label): 1\nStep 1: Associar em paralelo\n  Why: as duas ligam aos mesmos pontos\nStep 2: Lei de Ohm\nAnswer: 8 mA",
+    );
+    expect(lesson.beats.map((beat) => beat.say)).toEqual([
+      "Associar em paralelo. as duas ligam aos mesmos pontos",
+      "Lei de Ohm",
+    ]);
+    expect(lesson.beats.map((beat) => beat.show[0]?.step)).toEqual([1, 2]);
+    expect(lesson.summary?.say).toBe("8 mA");
+  });
+});

@@ -20,6 +20,15 @@ import { fastReader, solutionProvider, textHelpProvider, transcriptionRequests }
 import { Icon } from "../components/Icon";
 import { MathText, MathView, untypesetMath } from "../components/Math";
 import { useT } from "../i18n";
+import {
+  LessonContext,
+  LessonOverlay,
+  useLessonControl,
+  useLessonShows,
+  useLessonState,
+  useLessonToggle,
+} from "../lesson/LessonUI";
+import type { LessonShow } from "@core/lesson/mascotLesson";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
@@ -111,6 +120,8 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   const pendingChoice = useRef<Mode | null>(null);
   const session = prepared?.session ?? null;
   useSession(session);
+  const lesson = useLessonControl(session);
+  const stopLesson = lesson.stop;
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +158,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
           session.backToOriginal();
           return;
         }
+        stopLesson();
         session?.cancel();
         close();
         return;
@@ -166,42 +178,46 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [session, choose, close]);
+  }, [session, choose, close, stopLesson]);
 
   const mode = session?.mode ?? null;
+  const showsLesson = mode === "solution" && session?.part != null && session.state.kind === "ready";
   const compact = mode === "solution" || mode === "followUp";
 
   return (
-    <div
-      className="stage"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("What do you want to do?")}
-      onMouseDown={(event) => event.target === event.currentTarget && close()}
-    >
-      <div className={`stage-column${compact ? " stage-compact" : ""}`}>
-        {source.kind === "pdf" ? (
-          <QuestionCrop
-            document={source.document}
-            opened={source.opened}
-            page={prepared?.page ?? null}
-            session={session}
-            compact={compact}
-          />
-        ) : (
-          <ScreenQuestionView source={source} session={session} compact={compact} />
-        )}
-        {session === null || mode === null ? (
-          <Menu
-            explains={session?.explains ?? false}
-            onChoose={choose}
-            onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
-          />
-        ) : (
-          <ModeView session={session} />
-        )}
+    <LessonContext.Provider value={{ state: lesson.state, player: lesson.player, toggle: lesson.toggle }}>
+      <div
+        className="stage"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("What do you want to do?")}
+        onMouseDown={(event) => event.target === event.currentTarget && close()}
+      >
+        <div className={`stage-column${compact ? " stage-compact" : ""}`}>
+          {source.kind === "pdf" ? (
+            <QuestionCrop
+              document={source.document}
+              opened={source.opened}
+              page={prepared?.page ?? null}
+              session={session}
+              compact={compact}
+            />
+          ) : (
+            <ScreenQuestionView source={source} session={session} compact={compact} />
+          )}
+          {session === null || mode === null ? (
+            <Menu
+              explains={session?.explains ?? false}
+              onChoose={choose}
+              onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
+            />
+          ) : (
+            <ModeView session={session} />
+          )}
+        </div>
+        {showsLesson ? <LessonOverlay player={lesson.player} state={lesson.state} onTap={lesson.toggle} /> : null}
       </div>
-    </div>
+    </LessonContext.Provider>
   );
 }
 
@@ -316,10 +332,11 @@ function CropPiece({
     void document.renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1);
   }, [document, pageIndex, region, scale, ready]);
   const version = session?.version;
+  const lessonShows = useLessonShows();
   const marks = useMemo(
-    () => (page && session ? cropMarks(page, region, session) : { underlines: [], circles: [] }),
+    () => (page && session ? cropMarks(page, region, session, lessonShows) : { underlines: [], circles: [] }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, region, session, version],
+    [page, region, session, version, lessonShows],
   );
   const toCrop = (rect: Rect) => ({
     left: (rect.x - region.x) * scale,
@@ -355,7 +372,12 @@ function CropPiece({
 }
 
 /** Where the open step's data stands in the crop (its printed lines), and the right option of a multiple choice. */
-function cropMarks(page: PageText, region: Rect, session: QuestionSession): { underlines: Rect[]; circles: Rect[] } {
+function cropMarks(
+  page: PageText,
+  region: Rect,
+  session: QuestionSession,
+  lessonShows: readonly LessonShow[] = [],
+): { underlines: Rect[]; circles: Rect[] } {
   const inside = (rect: Rect) => Rects.contains(region, { x: Rects.midX(rect), y: Rects.midY(rect) });
   const firstInside = (quote: string) =>
     StatementQuotes.ranges(quote, page.text).find((range) => {
@@ -380,6 +402,24 @@ function cropMarks(page: PageText, region: Rect, session: QuestionSession): { un
     if (letters.length === 1) {
       const letter = letters[0]!;
       for (const match of page.text.matchAll(new RegExp(`\\(?${letter}\\)`, "g"))) {
+        const lines = linesOf(page, match.index, match[0].length);
+        if (lines.length === 1 && inside(lines[0]!.bounds)) {
+          circles.push(lines[0]!.bounds);
+          break;
+        }
+      }
+    }
+  }
+  // The beat being said marks the words it talks about, and rings the option it names (struck out or not).
+  for (const show of lessonShows) {
+    if (show.quote) {
+      const range = firstInside(show.quote);
+      if (!range) continue;
+      const lines = linesOf(page, range.start, range.end - range.start).map((line) => line.bounds);
+      if (show.op === "circle" || show.op === "zoom" || show.op === "crossOut") circles.push(...lines);
+      else underlines.push(...lines);
+    } else if (show.option) {
+      for (const match of page.text.matchAll(new RegExp(`\\(?${show.option.toUpperCase()}[.)]`, "g"))) {
         const lines = linesOf(page, match.index, match[0].length);
         if (lines.length === 1 && inside(lines[0]!.bounds)) {
           circles.push(lines[0]!.bounds);
@@ -622,9 +662,13 @@ function StepCard({
 }) {
   const card: Card | null = part.cards && part.cards.length > 0 ? (part.cards[index] ?? null) : null;
   const selected = session.selectedStep === index;
+  const t = useT();
+  const lesson = useLessonState();
+  const lit = lesson?.step === index;
+  const pitfall = lesson?.pitfall?.step === index ? lesson.pitfall : null;
   return (
     <article
-      className={`stage-step${selected ? " selected" : ""}${session.revealingStep === index ? " arriving" : ""}`}
+      className={`stage-step${selected ? " selected" : ""}${session.revealingStep === index ? " arriving" : ""}${lit ? " lesson-lit" : ""}`}
       onMouseEnter={() => session.hover(index, true)}
       onMouseLeave={() => session.hover(index, false)}
       onClick={interactive ? () => session.select(index) : undefined}
@@ -633,6 +677,11 @@ function StepCard({
         {index + 1}
       </span>
       <div className="stage-step-body">
+        {pitfall ? (
+          <p className="stage-pitfall" role="note">
+            <strong>{t("Watch out")}</strong> {pitfall.mistake}. {pitfall.why}
+          </p>
+        ) : null}
         {card ? (
           <>
             <h4>
@@ -893,6 +942,8 @@ const QuestionSessionDetail =
 /** The field to ask about the exercise and the other ways in, under every mode. */
 function Actions({ session }: { session: QuestionSession }) {
   const t = useT();
+  const lesson = useLessonState();
+  const toggleLesson = useLessonToggle();
   const [asked, setAsked] = useState("");
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -905,6 +956,11 @@ function Actions({ session }: { session: QuestionSession }) {
       session.explains ? t("Show the explanation") : t("Solution"),
       () => session.choose("solution"),
       session.mode !== "solution",
+    ],
+    [
+      lesson?.playing ? t("Stop Explaining") : t("Explain It to Me"),
+      toggleLesson,
+      session.mode === "solution" && session.part !== null && session.state.kind === "ready",
     ],
     [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant],
     [

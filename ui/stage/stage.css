@@ -642,3 +642,89 @@
     animation: none;
   }
 }
+
+/* «Explica-me»: the mascot beside the stage, the beat's calculation, its check and the closing sentence. */
+.lesson-overlay {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 320px;
+  pointer-events: none;
+}
+
+.lesson-overlay > * {
+  pointer-events: auto;
+}
+
+.lesson-mascot {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.mascot-alive {
+  display: inline-block;
+  transform: scale(var(--mascot-scale, 1));
+  transition:
+    transform 90ms linear,
+    filter 200ms ease;
+  animation: mascot-breathe 3.6s ease-in-out infinite;
+}
+
+.mascot-alive.speaking {
+  filter: drop-shadow(0 0 12px rgb(10 132 255 / 55%));
+}
+
+@keyframes mascot-breathe {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+.lesson-calc,
+.lesson-check,
+.lesson-closing {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+  font-size: 15px;
+  animation: stage-lift 300ms var(--spring);
+}
+
+.lesson-calc {
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+.lesson-check div {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stage-step.lesson-lit {
+  outline: 2px solid var(--accent, #0a84ff);
+  outline-offset: 2px;
+}
+
+.stage-pitfall {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgb(10 132 255 / 18%);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-alive {
+    animation: none;
+    transition: filter 200ms ease;
+    transform: none;
+  }
+}

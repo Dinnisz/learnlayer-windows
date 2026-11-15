@@ -17,6 +17,9 @@ import {
 } from "@core/ai/aiGateway";
 import { ModelClient, type ModelEnvironment } from "@core/ai/modelClient";
 import { AISettings, ModelRouting } from "@core/ai/modelRouting";
+import { MascotLessonProvider } from "@core/lesson/mascotLessonProvider";
+import type { MascotLesson } from "@core/lesson/mascotLesson";
+import { lessonFromWork } from "@core/lesson/readSteps";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import { decodeProblemSolution, type ProblemSolution } from "@core/problems/problemSolution";
 import { TranscriptionRequests, type QuestionTranscription } from "@core/problems/questionTranscription";
@@ -145,4 +148,58 @@ export function textHelpProvider(): TextHelpProvider {
     mock: mock ? () => decodeTextHelp(mockTextHelp) : undefined,
   });
   return textHelp;
+}
+
+/** Whether a call can be made at all: signed in, or a local key in a debug build. */
+export async function hasCredentials(): Promise<boolean> {
+  if (usesMock()) return false;
+  if (await usesLocalKey(false)) return true;
+  return (await session.accessToken(false)) !== null;
+}
+
+/**
+ * One speech request (`POST /v1/audio/speech`, OpenRouter's body): through the LearnLayer API with the session's token
+ * and `X-LearnLayer-Purpose: speech`, one forced refresh after a 401, as the Mac's `OpenRouterSpeech` does.
+ */
+export async function requestSpeech(
+  body: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<{ status: number; bytes: Uint8Array }> {
+  const transport = await environment.transport("speech", false);
+  if (transport.bearer === "") return { status: 401, bytes: new Uint8Array() };
+  const send = async (bearer: string) => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-Title": "LearnLayer",
+      Authorization: `Bearer ${bearer}`,
+    };
+    if (transport.kind === "backend") headers["X-LearnLayer-Purpose"] = "speech";
+    const response = await streamingFetch(transport.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: signal ?? new AbortController().signal,
+    });
+    const bytes = response.body ? new Uint8Array(await new Response(response.body).arrayBuffer()) : new Uint8Array();
+    return { status: response.status, bytes };
+  };
+  let result = await send(transport.bearer);
+  if (result.status === 401 && transport.kind === "backend") {
+    const token = await environment.forceRefresh();
+    if (token) result = await send(token);
+  }
+  return result;
+}
+
+let lessons: MascotLessonProvider | null = null;
+
+/** The mascot's lessons («Explica-me»), saved in `lessons.json`. With mocks, a lesson made from the written steps. */
+export function lessonProvider(): MascotLessonProvider {
+  if (lessons) return lessons;
+  lessons = new MascotLessonProvider({
+    cache: new DiskCache<MascotLesson>("lessons.json", 100, dataFiles),
+    client: (options) => new ModelClient(environment, options),
+    ...(usesMock() ? { mock: (request) => lessonFromWork(request.work) } : {}),
+  });
+  return lessons;
 }
