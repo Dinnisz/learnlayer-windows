@@ -88,7 +88,9 @@ function readOneLiteral(source, index) {
         const interpolated = segments.some((segment) => "expr" in segment);
         return { value: segments.map((segment) => segment.text ?? "").join(""), interpolated, length: slice.length };
       }
-    } catch (error) {}
+    } catch {
+      // Not the literal's end yet (the closing quote was escaped or inside an interpolation): look further.
+    }
     search = end + 1;
   }
 }
