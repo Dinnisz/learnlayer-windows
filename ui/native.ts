@@ -190,3 +190,25 @@ export async function saveTextFile(defaultName: string, contents: string): Promi
   URL.revokeObjectURL(link.href);
   return true;
 }
+
+let readerCount = 0;
+
+/** Opens a reader window (one per PDF, as the Mac's). Outside Tauri, a browser tab. */
+export async function openReader(): Promise<void> {
+  if (!isTauri) {
+    window.open("/reader.html", "_blank");
+    return;
+  }
+  const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+  readerCount += 1;
+  // The page takes dropped files itself (HTML drag and drop), so the native drop handler stays off.
+  new WebviewWindow(`reader-${Date.now()}-${readerCount}`, {
+    url: "reader.html",
+    title: "LearnLayer",
+    width: 980,
+    height: 860,
+    minWidth: 520,
+    minHeight: 420,
+    dragDropEnabled: false,
+  });
+}

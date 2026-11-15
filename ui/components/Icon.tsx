@@ -27,6 +27,10 @@ const glyphs: Record<string, string> = {
   "arrow.turn.down.right": "\uE751", // ReturnKey
   lightbulb: "\uEA80", // Lightbulb
   xmark: "\uE711", // Cancel
+  "plus.magnifyingglass": "\uE8A3", // ZoomIn
+  "minus.magnifyingglass": "\uE71F", // ZoomOut
+  "arrow.up.left.and.arrow.down.right": "\uE9A6", // FitPage
+  doc: "\uE8E5", // OpenFile
   checkmark: "\uE73E", // CheckMark
 };
 

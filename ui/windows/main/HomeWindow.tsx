@@ -19,6 +19,7 @@ import { accountModel } from "../../account/accountStore";
 import { usePlatform, useT } from "../../i18n";
 import { appConfig, onDeepLink, onNavigate, setTrayLabels } from "../../native";
 import { AccountPane } from "./panes/AccountPane";
+import { DocumentsPane } from "./panes/DocumentsPane";
 import { PlanPane } from "./panes/PlanPane";
 import { ConsentSheet, SignInSheet } from "./sheets/SignInSheet";
 
@@ -141,6 +142,7 @@ function HomePane({ route, onNavigate }: { route: HomeRoute; onNavigate: (route:
   const t = useT();
   if (route === "account") return <AccountPane onNavigate={onNavigate} />;
   if (route === "plan") return <PlanPane />;
+  if (route === "documents") return <DocumentsPane />;
   return (
     <SettingsPage title={t(titleKey(route))} subtitle="" data-group={groupOf(route)}>
       {null}

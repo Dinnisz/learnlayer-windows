@@ -19,6 +19,7 @@ export default defineConfig({
       input: {
         main: here("./ui/index.html"),
         pill: here("./ui/pill.html"),
+        reader: here("./ui/reader.html"),
       },
     },
   },
