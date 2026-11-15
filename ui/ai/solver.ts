@@ -4,6 +4,9 @@
 
 import mockSolution from "@core/mocks/MockSolution.json";
 import mockTextHelp from "@core/mocks/MockTextHelp.json";
+import mockIllustrations from "@core/mocks/MockIllustrations.json";
+import { decodeIllustration, type Illustration } from "@core/illustrations/illustration";
+import { IllustrationProvider } from "@core/illustrations/illustrationProvider";
 import { DiskCache } from "@core/ai/diskCache";
 import {
   chatPath,
@@ -189,6 +192,25 @@ export async function requestSpeech(
     if (token) result = await send(token);
   }
   return result;
+}
+
+let illustrations: IllustrationProvider | null = null;
+
+/** The drawings beside the solutions ("Draw It"), saved in `illustrations.json`. With mocks, the first sample drawing. */
+export function illustrationProvider(): IllustrationProvider {
+  if (illustrations) return illustrations;
+  illustrations = new IllustrationProvider({
+    cache: new DiskCache<Illustration>("illustrations.json", 100, dataFiles),
+    client: (wants3D) =>
+      new ModelClient(environment, { model: wants3D ? ModelRouting.gemini : AISettings.defaultModel }),
+    mock: usesMock() ? decodeIllustration((mockIllustrations as unknown[])[0]) : null,
+  });
+  return illustrations;
+}
+
+/** The language the app writes into drawings and asks the model to write in. */
+export function drawingLanguage(): string {
+  return TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages));
 }
 
 let lessons: MascotLessonProvider | null = null;

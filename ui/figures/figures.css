@@ -1,0 +1,272 @@
+/* The figures beside the solution: white on the dimmed page, one blue accent (CLAUDE.md, rule 8). */
+
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #fff;
+  min-width: 0;
+}
+
+.figure-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, #0a84ff);
+}
+
+.figure-canvas {
+  display: flex;
+  justify-content: center;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
+}
+
+.figure-svg {
+  overflow: visible;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+
+.figure-label {
+  user-select: none;
+}
+
+/* Strokes traced in by hand, as on paper. */
+.figure-drawn {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: figure-draw 0.9s cubic-bezier(0.3, 0.1, 0.25, 1) both;
+}
+
+@keyframes figure-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+.figure-play {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font: inherit;
+  font-size: 13px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.figure-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.figure-slider > span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.figure-slider-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.figure-slider input {
+  accent-color: var(--accent, #0a84ff);
+}
+
+.figure-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.figure-status button {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+/* The curve with the draggable parameter. */
+
+.curve-graph {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 0;
+}
+
+.curve-graph-plot {
+  display: block;
+  overflow: visible;
+  touch-action: none;
+}
+
+.curve-graph-plot.draggable {
+  cursor: grab;
+}
+
+.curve-graph-plot.draggable:active {
+  cursor: grabbing;
+}
+
+.curve-graph-axes {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.curve-graph-ticks {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.curve-graph-curve {
+  fill: none;
+  stroke: var(--accent, #0a84ff);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.curve-graph-area {
+  fill: var(--accent, #0a84ff);
+  fill-opacity: 0.28;
+}
+
+.curve-graph-level {
+  stroke: var(--accent, #0a84ff);
+  stroke-opacity: 0.85;
+  stroke-width: 1.4;
+  stroke-dasharray: 5 4;
+}
+
+.curve-graph-interval {
+  stroke: var(--accent, #0a84ff);
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+
+.curve-graph-value {
+  fill: #fff;
+}
+
+.curve-graph-crossing {
+  fill: var(--accent, #0a84ff);
+}
+
+.curve-graph-mark {
+  fill: #fff;
+  font-family: "KaTeX_Main", "Cambria Math", serif;
+  font-size: 13px;
+}
+
+.curve-graph-name {
+  fill: #fff;
+  font-family: "KaTeX_Main", "Cambria Math", serif;
+  font-style: italic;
+  font-size: 20px;
+}
+
+.curve-graph-readout {
+  fill: var(--accent, #0a84ff);
+  font-family: "KaTeX_Main", "Cambria Math", serif;
+  font-style: italic;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.curve-graph-road {
+  position: relative;
+  height: 34px;
+  margin-top: 22px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.85);
+}
+
+.curve-graph-car {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.curve-graph-speed {
+  width: 20px;
+  height: 9px;
+  opacity: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)) 6px 0 / 14px 1.5px no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)) 0 4px / 20px 1.5px no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)) 10px 8px / 10px 1.5px no-repeat;
+}
+
+.curve-graph-car.moving .curve-graph-speed {
+  opacity: 1;
+}
+
+/* The sign table, exam style. */
+
+.sign-table {
+  border-collapse: collapse;
+  color: #fff;
+  font-family: "KaTeX_Main", "Cambria Math", serif;
+  font-style: italic;
+}
+
+.sign-table th {
+  font-weight: normal;
+  text-align: right;
+  padding: 0 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+.sign-table td {
+  text-align: center;
+  padding: 6px 6px;
+  white-space: nowrap;
+}
+
+.sign-table tr.ruled > * {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.sign-table tr.faint-rule > * {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sign-table .sign-plus {
+  color: var(--accent, #0a84ff);
+}
+
+.sign-table .sign-arrow {
+  color: var(--accent, #0a84ff);
+  font-style: normal;
+  font-weight: 300;
+  font-size: 1.5em;
+  padding: 0 8px;
+}
+
+.sign-table .sign-value {
+  font-size: 0.9em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figure-drawn {
+    animation: none;
+  }
+}

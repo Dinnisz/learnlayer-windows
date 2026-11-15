@@ -315,7 +315,7 @@
 
 .stage-formulas {
   flex: none;
-  width: 220px;
+  width: clamp(220px, 34%, 380px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -778,4 +778,38 @@
   margin: 0;
   font-size: 16px;
   line-height: 1.45;
+}
+
+/* The figures under the formulas: the sign table fitted to the column, the drawing, the curve. */
+.stage-figures {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.stage-figure-fit {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.stage-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 255, 255, 0.8);
+  animation: stage-spin 0.9s linear infinite;
+}
+
+@keyframes stage-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-spinner {
+    animation: none;
+  }
 }

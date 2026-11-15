@@ -23,10 +23,20 @@ import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import type { ExamQuestion } from "@core/problems/questionDetector";
 import { QuestionPages } from "@core/problems/questionPages";
 import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
-import { QuestionSession, type Mode } from "@core/problems/questionSession";
+import { QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
+import { CurveGraph } from "../figures/CurveGraph";
+import { IllustrationView } from "../figures/IllustrationView";
+import { SignTableView } from "../figures/SignTableView";
 import { StatementQuotes } from "@core/problems/statementQuotes";
 import { describePart, TextHelpContext } from "@core/problems/textHelp";
-import { fastReader, solutionProvider, textHelpProvider, transcriptionRequests } from "../ai/solver";
+import {
+  drawingLanguage,
+  fastReader,
+  illustrationProvider,
+  solutionProvider,
+  textHelpProvider,
+  transcriptionRequests,
+} from "../ai/solver";
 import { Icon } from "../components/Icon";
 import { MathText, MathView, untypesetMath } from "../components/Math";
 import { useT } from "../i18n";
@@ -67,7 +77,7 @@ export interface PictureQuestion {
 export type StageSource = { kind: "pdf"; document: ReaderDocument; opened: OpenedQuestion } | PictureQuestion;
 
 /** The services every session gets: the solver, the routing, the follow-up questions, the fast reading. */
-export function sessionServices() {
+export function sessionServices(): SessionServices {
   return {
     provider: solutionProvider(),
     config: () => solutionProvider().services.config(),
@@ -75,6 +85,8 @@ export function sessionServices() {
       (await textHelpProvider().help(passage, context, image)).explanation,
     fast: fastReader(),
     transcribing: (images: readonly Uint8Array[]) => transcriptionRequests.isRequested(images),
+    illustrate: (request) => illustrationProvider().illustration({ ...request, language: drawingLanguage() }),
+    language: drawingLanguage,
   };
 }
 
@@ -628,6 +640,13 @@ function SolutionView({ session }: { session: QuestionSession }) {
   const evidence = session.evidenceAnswer;
   const formulas = formulasFor(solution, part);
   const visible = session.visibleSolutionSteps;
+  // The figure, the curve and the drawing go in the right column, under the formulas.
+  const side =
+    !evidence &&
+    (session.solutionFigure !== null ||
+      session.expectsFigure ||
+      (session.showsGraph && session.hasGraph) ||
+      session.showsIllustration);
   return (
     <div className="stage-panel stage-solution">
       {solution.figure && (
@@ -651,21 +670,73 @@ function SolutionView({ session }: { session: QuestionSession }) {
               .map((index) => <StepCard key={index} part={part} index={index} session={session} interactive />)
           )}
         </div>
-        {formulas.length > 0 && (
+        {(formulas.length > 0 || side) && (
           <aside className="stage-formulas" aria-label={t("Formulas")}>
-            <h3>{t("Formulas")}</h3>
+            {formulas.length > 0 && <h3>{t("Formulas")}</h3>}
             {formulas.map((formula) => (
               <div key={formula.name + formula.latex} className="stage-formula">
                 <span>{formula.name}</span>
                 <MathView latex={formula.latex} />
               </div>
             ))}
+            {side && <SideFigures session={session} />}
           </aside>
         )}
       </div>
       <Actions session={session} />
     </div>
   );
+}
+
+/** The right column's figures: the one beside the steps (or the drawing on its way), and the solution's curve. */
+function SideFigures({ session }: { session: QuestionSession }) {
+  const figure = session.solutionFigure;
+  const graph = session.sideGraph;
+  return (
+    <div className="stage-figures">
+      {figure?.kind === "table" ? (
+        <div className="stage-figure-fit">
+          <SignTableView table={figure.table} />
+        </div>
+      ) : figure?.kind === "drawing" ? (
+        <IllustrationView scene={figure.scene} revealed={session.figureRevealed} step={session.figureStep} />
+      ) : session.expectsFigure && !session.showsIllustration ? (
+        // The drawing on its way, or why it isn't there (the drawing's own item shows it otherwise).
+        <IllustrationPanel session={session} />
+      ) : null}
+      {session.showsGraph && graph && session.hasGraph && <CurveGraph graph={graph} session={session} height={220} />}
+      {session.showsIllustration && <IllustrationPanel session={session} />}
+    </div>
+  );
+}
+
+/** The question's drawing, or what is happening with it: never a spinner with nothing behind it. */
+function IllustrationPanel({ session }: { session: QuestionSession }) {
+  const t = useT();
+  switch (session.illustrationState) {
+    case "ready":
+      return session.illustration ? (
+        <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
+      ) : null;
+    case "empty":
+      return <p className="figure-status">{t("Nothing worth drawing for this one.")}</p>;
+    case "failed":
+      return (
+        <p className="figure-status">
+          {t("Couldn’t draw this one.")}
+          <button type="button" onClick={() => session.retryIllustration()}>
+            {t("Try Again")}
+          </button>
+        </p>
+      );
+    default:
+      return (
+        <p className="figure-status" role="status">
+          <span className="stage-spinner" aria-hidden="true" />
+          {t("Drawing…")}
+        </p>
+      );
+  }
 }
 
 function AnswerBox({ part }: { part: Part }) {
@@ -994,6 +1065,16 @@ function Actions({ session }: { session: QuestionSession }) {
       session.mode === "solution" && session.part !== null && session.state.kind === "ready",
     ],
     [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant],
+    [
+      session.showsIllustration ? t("Hide Drawing") : t("Draw It"),
+      () => session.toggleIllustration(),
+      session.canDraw && session.part !== null,
+    ],
+    [
+      session.showsGraph ? t("Hide Graph") : t("Show the graph"),
+      () => session.toggleGraph(),
+      session.hasGraph && session.mode !== null,
+    ],
     [
       t("Explain Better"),
       () => session.solveWithStrongerModel(),

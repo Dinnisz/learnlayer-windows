@@ -9,7 +9,7 @@ import { decodeFromContent } from "../ai/replyDecoding";
 import type { ModelClient } from "../ai/modelClient";
 import { tryParseExpression, variables } from "../math/expression";
 import type { Part } from "../problems/problemSolution";
-import { isCircuit } from "./figureTopic";
+import { isCircuit, wants3D } from "./figureTopic";
 import { CompiledIllustration, decodeIllustration, isAllowedFreeForm, type Illustration } from "./illustration";
 import { IllustrationPrompt } from "./illustrationPrompt";
 import { compileTemplate, compilingTemplate, decodeTemplate, type IllustrationTemplate } from "./illustrationTemplate";
@@ -139,8 +139,8 @@ function asciiExpression(input: string): string {
 
 export interface IllustrationServices {
   cache: DiskCache<Illustration>;
-  /** The model the drawing is asked of (the fast solver's). */
-  client(): ModelClient;
+  /** The model the drawing is asked of: the fast solver's, or Gemini for a figure that must be 3D. */
+  client(wants3D: boolean): ModelClient;
   /** Working without the API: the first sample drawing. */
   mock?: Illustration | null;
 }
@@ -172,7 +172,7 @@ export class IllustrationProvider {
     const key = await IllustrationProvider.key(groupText, part.label, part.answer.text);
     const fetched = await this.services.cache.script(key, async () => {
       if (this.services.mock) return this.services.mock;
-      const client = this.services.client();
+      const client = this.services.client(wants3D(topicText));
       let note: string | null = null;
       for (let attempt = 0; attempt < 2; attempt++) {
         const { content } = await client.complete({
