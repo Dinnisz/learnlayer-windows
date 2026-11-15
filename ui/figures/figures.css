@@ -270,3 +270,58 @@
     animation: none;
   }
 }
+
+/* A figure in space (Oxyz), turned by dragging. */
+.space-figure {
+  width: 100%;
+  max-width: 520px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.space-figure:active {
+  cursor: grabbing;
+}
+
+.space-figure-svg {
+  display: block;
+  overflow: visible;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  user-select: none;
+}
+
+.space-section {
+  fill: var(--accent, #0a84ff);
+  fill-opacity: 0.16;
+}
+
+.space-axis {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 1.2;
+}
+
+.space-frame {
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 1;
+}
+
+.space-plane {
+  stroke: var(--accent, #0a84ff);
+  stroke-opacity: 0.5;
+  stroke-width: 1;
+}
+
+.space-edge {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 1.3;
+}
+
+.space-line {
+  stroke: var(--accent, #0a84ff);
+  stroke-width: 2;
+}
+
+.space-dot {
+  fill: #fff;
+}

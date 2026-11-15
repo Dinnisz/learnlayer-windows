@@ -46,6 +46,7 @@ import { CompiledIllustration, gatedBySteps, type Illustration } from "../illust
 import { continuityIllustration, decodeTemplate } from "../illustrations/illustrationTemplate";
 import { subjectAllowsDrawing } from "./problemSolution";
 import type { SignTable } from "./signTable";
+import { decodeSpaceFigure, SpaceFigures, type SpaceFigure } from "../illustrations/spaceFigure";
 import { decodeTimingAnswer, simulateTiming, TimingDiagrams, type TimingDiagram } from "../timing/timing";
 
 export type SessionState =
@@ -92,7 +93,10 @@ export interface SessionServices {
 }
 
 /** What goes beside the steps: the sign table (every sign checked), or a drawing. */
-export type SolutionFigure = { kind: "table"; table: SignTable } | { kind: "drawing"; scene: Illustration };
+export type SolutionFigure =
+  | { kind: "table"; table: SignTable }
+  | { kind: "drawing"; scene: Illustration }
+  | { kind: "space"; figure: SpaceFigure };
 export type IllustrationState = "loading" | "ready" | "empty" | "failed";
 
 export interface SessionInit {
@@ -1147,7 +1151,10 @@ export class QuestionSession {
   /** The app's own complex figure is ready (a failed check is not one: nothing unchecked is shown). */
   private get builtInFigureReady(): boolean {
     const part = this.part;
-    return part !== null && this.figureTopic === "complex" && this.complexDrawing(part) !== null;
+    if (!part) return false;
+    if (this.figureTopic === "complex") return this.complexDrawing(part) !== null;
+    if (this.figureTopic === "space") return this.spaceFigure(part) !== null;
+    return false;
   }
 
   /** The solution's curve, as the solver wrote it. */
@@ -1166,9 +1173,14 @@ export class QuestionSession {
   get solutionFigure(): SolutionFigure | null {
     const part = this.part;
     if (!part) return null;
+    // Complex numbers and space geometry use the app's own figure when its numbers check out.
     if (this.figureTopic === "complex") {
       const drawing = this.complexDrawing(part);
       if (drawing) return { kind: "drawing", scene: drawing };
+    }
+    if (this.figureTopic === "space") {
+      const space = this.spaceFigure(part);
+      if (space) return { kind: "space", figure: space };
     }
     if (part.signTable && signTableProblems(part.signTable).length === 0)
       return { kind: "table", table: part.signTable };
@@ -1213,6 +1225,19 @@ export class QuestionSession {
         ? ComplexFigures.illustration(figure, part.cards ?? [], part.topic ?? part.asks, this.drawingLanguage)
         : null;
     });
+  }
+
+  /** The Oxyz figure that checks out, with the edges the statement names. */
+  private spaceFigure(part: Part): SpaceFigure | null {
+    return this.cachedFigure(
+      `space
+${part.label}`,
+      () => {
+        const decoded = decodeSpaceFigure(part.space);
+        const valid = decoded ? SpaceFigures.validated(decoded) : null;
+        return valid ? SpaceFigures.inferringEdges(valid, this.question.groupText) : null;
+      },
+    );
   }
 
   private continuityDrawing(part: Part): Illustration | null {

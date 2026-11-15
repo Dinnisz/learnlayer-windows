@@ -28,6 +28,7 @@ import { CurveGraph } from "../figures/CurveGraph";
 import { detectTimingDiagram, timingPath, TimingDiagrams, type GreyBitmap } from "@core/timing/timing";
 import { IllustrationView } from "../figures/IllustrationView";
 import { SignTableView } from "../figures/SignTableView";
+import { SpaceFigureView } from "../figures/SpaceFigureView";
 import { StatementQuotes } from "@core/problems/statementQuotes";
 import { describePart, TextHelpContext } from "@core/problems/textHelp";
 import {
@@ -747,6 +748,8 @@ function SideFigures({ session }: { session: QuestionSession }) {
         <div className="stage-figure-fit">
           <SignTableView table={figure.table} />
         </div>
+      ) : figure?.kind === "space" ? (
+        <SpaceFigureView figure={figure.figure} step={session.figureStep} />
       ) : figure?.kind === "drawing" ? (
         <IllustrationView scene={figure.scene} revealed={session.figureRevealed} step={session.figureStep} />
       ) : session.expectsFigure && !session.showsIllustration ? (
