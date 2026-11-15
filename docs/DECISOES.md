@@ -47,3 +47,13 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Escolha:** todo o código específico do Windows (hook do rato, UI Automation, OCR, acrílico, pílula no topo, instalador) fica em `src-tauri/src/platform/windows/`, atrás do trait `Platform` de `src-tauri/src/platform/mod.rs`. No frontend, `ui/native.ts` é a única porta para o nativo. A interface React, o palco, a matemática, a mascote, a API e os prompts não dependem de nada do Windows. Nada é implementado para o Mac agora: `platform::current()` só tem o ramo Windows.
 - **Porquê:** um porte para o Mac passa a ser acrescentar `platform/macos/`, sem tocar no resto.
 - **Por fazer:** mover para `platform/windows/` o `CredentialManager` (`session.rs`), `data_dir`/`COMPUTERNAME` (`config.rs`); tornar a tabela de textos do Windows (`core/i18n/windows/`), o prefixo «Windows ·» de `deviceNameFor` e o «Ctrl+» da barra lateral dependentes da plataforma.
+
+## 2026-11-15 — `QuestionDetector` passa para a Fase 3
+- **Dúvida:** o CLAUDE.md põe o `QuestionDetector` no núcleo da Fase 2, mas no Mac ele lê uma `PDFPage` (texto, caixas de cada carácter, seleções, colunas).
+- **Escolha:** porta-se na Fase 3, junto com o leitor pdf.js, contra uma interface de página pura (`core/pdf/page.ts`: texto, caixa de cada carácter, caixa da página) que o pdf.js preenche e que os testes constroem à mão como o Mac faz com `Self.page(...)`. As partes que só leem texto (`QuestionLabels`, `TextNormalizer`, `ChoiceCheck`) já estão portadas.
+- **Porquê:** portar agora obrigava a inventar a geometria do pdf.js antes de a ter; os testes de `QuestionDetectorTests` só fazem sentido com páginas reais (`Tools/TestPDFs/`).
+
+## 2026-11-15 — Caracteres invisíveis no código
+- **Dúvida:** as ferramentas de escrita desta sessão transformam escapes como ` ` no próprio carácter; num regex, um separador de linha literal parte o código, e um espaço não separável é invisível na revisão.
+- **Escolha:** `scripts/escape-invisible.mjs` escreve esses caracteres como escapes; `npm run lint` corre-o com `--check`.
+- **Porquê:** o código tem de dizer o que faz à vista; o CI apanha qualquer recaída.

@@ -30,24 +30,24 @@ describe("TextNormalizer", () => {
 
   it("one gate catches characters plain text can't carry (FlattenedMathTests)", () => {
     // A phasor's combining overline, a Symbol-font Private Use µ as stored: unsafe.
-    expect(unsafeCharacters("V̅a")).not.toEqual([]);
-    expect(unsafeCharacters("")).not.toEqual([]);
+    expect(unsafeCharacters("V\u0305a")).not.toEqual([]);
+    expect(unsafeCharacters("\uF06D")).not.toEqual([]);
     // Normalized, the Symbol code is its letter and the T1 ligature code is spelled: safe.
-    expect(normalizeText("")).toBe("μ");
-    expect(unsafeCharacters(normalizeText(""))).toEqual([]);
+    expect(normalizeText("\uF06D")).toBe("μ");
+    expect(unsafeCharacters(normalizeText("\uF06D"))).toEqual([]);
     expect(normalizeText("Justi\u001Cque")).toBe("Justifique");
     expect(unsafeCharacters(normalizeText("\u001C"))).toEqual([]);
     // Portuguese accents and ordinary maths signs are safe, before and after normalizing.
     expect(unsafeCharacters("Duração ±2 µF −3 kΩ")).toEqual([]);
     expect(unsafeCharacters(normalizeText("Duração ±2 µF −3 kΩ"))).toEqual([]);
     // Invisible characters go.
-    expect(normalizeText("a​b﻿c­d")).toBe("abcd");
+    expect(normalizeText("a\u200Bb\uFEFFc\u00ADd")).toBe("abcd");
   });
 
   it("ligature codes are spelled out (QuestionDetectorTests)", () => {
     expect(normalizeText("Justi\u001Cque todas as respostas")).toBe("Justifique todas as respostas");
     expect(normalizeText("um \u001Co condutor \u001Cno")).toBe("um fio condutor fino");
     expect(normalizeText("Grupo IV \u0015 Lei de Gauss")).toBe("Grupo IV – Lei de Gauss");
-    expect(normalizeText("eﬃciente")).toBe("eficiente".replace("fi", "ffi"));
+    expect(normalizeText("e\uFB03ciente")).toBe("eficiente".replace("fi", "ffi"));
   });
 });

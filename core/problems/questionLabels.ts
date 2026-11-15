@@ -10,7 +10,7 @@ export const QuestionLabels = {
    * followed by a space or the end of the line. The trailing "." or ")" is part of the match.
    * The label is the first group; the second is the question it belongs to ("1").
    */
-  nestedExpression: /^[ \t]*((\d{1,2})(?:\.\d{1,2}){2,3})[.)]?(?!\d)(?=[ \t ]|$)/gmu,
+  nestedExpression: /^[ \t]*((\d{1,2})(?:\.\d{1,2}){2,3})[.)]?(?!\d)(?=[ \t\u00A0]|$)/gmu,
 
   /**
    * "(1)   1.   2)   1o)   1.º)" followed by text, or alone on its line before a sentence.

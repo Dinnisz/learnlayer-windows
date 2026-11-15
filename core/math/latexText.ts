@@ -19,16 +19,16 @@ function replaceAll(text: string, pattern: string, replacement: string, flags = 
 export function withAccents(latex: string): string {
   let text = latex;
   const marks: [string, string][] = [
-    [String.raw`\\'`, "́"],
-    [String.raw`\\\``, "̀"],
-    [String.raw`\\~`, "̃"],
-    [String.raw`\\\^`, "̂"],
-    [String.raw`\\"`, "̈"],
+    [String.raw`\\'`, "\u0301"],
+    [String.raw`\\\``, "\u0300"],
+    [String.raw`\\~`, "\u0303"],
+    [String.raw`\\\^`, "\u0302"],
+    [String.raw`\\"`, "\u0308"],
   ];
   for (const [command, mark] of marks) {
     text = replaceAll(text, command + String.raw`\{?([A-Za-z])\}?`, "$1" + mark);
   }
-  text = replaceAll(text, String.raw`\\c\{?([cC])\}?`, "$1̧");
+  text = replaceAll(text, String.raw`\\c\{?([cC])\}?`, "$1\u0327");
   return text.normalize("NFC");
 }
 
@@ -607,7 +607,7 @@ function combining(pattern: string, mark: string, eachCharacter: boolean, text: 
  * is no longer a digit. A spacing macron and a spacing arrow keep every character.
  */
 function withoutFusedMarks(text: string): string {
-  return text.replaceAll("̅", "¯").replaceAll("⃗", "→");
+  return text.replaceAll("\u0305", "¯").replaceAll("\u20D7", "→");
 }
 
 const unicodeSymbols: readonly (readonly [string, string])[] = (
@@ -744,9 +744,9 @@ export function latexToUnicode(latex: string): string {
   text = replaceAll(text, r`\\(?:text|textbf|textit|mathrm|mathbf|mathit)\{([^{}]*)\}`, "$1");
   text = replaceAll(text, r`\\operatorname\*?\{([^{}]*)\}`, "$1 ");
   // \overline{BC} → B¯C¯, \vec{v} → v→. A combining mark would fuse with the digit under it.
-  text = combining(r`\\overline\{([^{}]*)\}`, "̅", true, text);
-  text = combining(r`\\(?:overrightarrow|vec)\{([^{}]*)\}`, "⃗", false, text);
-  text = replaceAll(text, r`\\(?:overrightarrow|vec)\s*([A-Za-z])`, "$1⃗");
+  text = combining(r`\\overline\{([^{}]*)\}`, "\u0305", true, text);
+  text = combining(r`\\(?:overrightarrow|vec)\{([^{}]*)\}`, "\u20D7", false, text);
+  text = replaceAll(text, r`\\(?:overrightarrow|vec)\s*([A-Za-z])`, "$1\u20D7");
   text = replaceAll(text, r`\\xrightarrow\{([^{}]*)\}`, " —$1→ ");
   // \underbrace{5}_{\text{horizontais}} → 5 (horizontais)
   text = replaceAll(text, r`\\underbrace\{([^{}]*)\}_\{([^{}]*)\}`, "$1 ($2)");

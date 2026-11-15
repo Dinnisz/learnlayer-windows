@@ -115,7 +115,8 @@ describe("LatexText", () => {
     expect(LatexText.normalized("e³⁻ˣ → 1, x₁ ≤ ∞")).toBe(String.raw`e^{3-x} \to  1, x_{1} \leq  \infty `);
     expect(LatexText.normalized(String.raw`x \in ℝ`)).toContain(String.raw`\mathbb{R}`);
     for (const sample of ["d = ½ a t²", "sen θ = h/1,50", "e³⁻ˣ → 1", "f′(x) ≥ 0", "x ∈ ]−1, 0[", "α + β = 90°"]) {
-      expect(/^[\x00-\x7F]*$/.test(LatexText.normalized(sample)), sample).toBe(true);
+      const drawable = Array.from(LatexText.normalized(sample)).every((character) => character.codePointAt(0)! <= 0x7f);
+      expect(drawable, sample).toBe(true);
     }
     expect(LatexText.normalized(String.raw`x\dots`)).toBe(String.raw`x\ldots`);
   });

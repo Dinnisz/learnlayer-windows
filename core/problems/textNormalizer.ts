@@ -8,19 +8,19 @@
 
 /** Spacing accents and the combining marks they stand for. */
 const accents: Readonly<Record<string, string>> = {
-  "´": "́",
-  "`": "̀",
-  "˜": "̃",
-  ˆ: "̂",
-  "¸": "̧",
-  "¨": "̈",
-  "˚": "̊",
-  ˇ: "̌",
+  "´": "\u0301",
+  "`": "\u0300",
+  "˜": "\u0303",
+  ˆ: "\u0302",
+  "¸": "\u0327",
+  "¨": "\u0308",
+  "˚": "\u030A",
+  ˇ: "\u030C",
 };
 
 /**
  * Accented letters that occur in Portuguese (and common European
- * languages). A dangling accent that would make anything else (Ś, Ć, P̃)
+ * languages). A dangling accent that would make anything else (Ś, Ć, P\u0303)
  * belongs to another letter we can't locate, so it is dropped instead.
  */
 const validAccented = new Set(Array.from("áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ"));
@@ -47,31 +47,32 @@ export function mathLettersToPlain(text: string): string {
   return output;
 }
 
-/** T1 (Cork) codes 0x15–0x17 and 0x1B–0x1F, and the Unicode ligature block. */
-const ligatures: Readonly<Record<string, string>> = {
-  "\u0015": "–",
-  "\u0016": "—",
-  "\u0017": "",
-  "\u001B": "ff",
-  "\u001C": "fi",
-  "\u001D": "fl",
-  "\u001E": "ffi",
-  "\u001F": "ffl",
-  ﬀ: "ff",
-  ﬁ: "fi",
-  ﬂ: "fl",
-  ﬃ: "ffi",
-  ﬄ: "ffl",
-};
+/** T1 (Cork) codes 0x15–0x17 and 0x1B–0x1F, and the Unicode ligature block, by code point. */
+const ligatures: ReadonlyMap<number, string> = new Map([
+  [0x15, "–"],
+  [0x16, "—"],
+  [0x17, ""],
+  [0x1b, "ff"],
+  [0x1c, "fi"],
+  [0x1d, "fl"],
+  [0x1e, "ffi"],
+  [0x1f, "ffl"],
+  [0xfb00, "ff"],
+  [0xfb01, "fi"],
+  [0xfb02, "fl"],
+  [0xfb03, "ffi"],
+  [0xfb04, "ffl"],
+]);
 
 /**
  * pdfTeX papers set in T1-encoded Type 3 fonts with no ToUnicode map store a ligature as its font code,
  * a control character: «Justi\u{1C}que» is «Justifique», «um \u{1C}o» is «um fio». Those codes (and the
- * Unicode ligatures ﬁ, ﬂ…) are spelled out; the dashes of the same fonts become dashes.
+ * Unicode ligatures \uFB01, \uFB02…) are spelled out; the dashes of the same fonts become dashes.
  */
 export function withLigaturesSpelled(text: string): string {
-  if (!Array.from(text).some((character) => character in ligatures)) return text;
-  return Array.from(text, (character) => ligatures[character] ?? character).join("");
+  const spelled = (character: string) => ligatures.get(character.codePointAt(0)!);
+  if (!Array.from(text).some((character) => spelled(character) !== undefined)) return text;
+  return Array.from(text, (character) => spelled(character) ?? character).join("");
 }
 
 const folded = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
@@ -224,7 +225,7 @@ export function normalizeText(text: string): string {
   return symbolFontOhms(joiningBrokenLines(result))
     .replaceAll("ϵ", "ε")
     .replaceAll("�", "")
-    .replaceAll("­", "")
+    .replaceAll("\u00AD", "")
     .normalize("NFC");
 }
 
@@ -237,6 +238,6 @@ export function normalizeText(text: string): string {
 export function joiningBrokenLines(text: string): string {
   if (!text.includes("\n")) return text;
   return text
-    .replace(/(?<=\p{Ll}{2})[-­‐‑][ \t]*\r?\n[ \t]*(?=\p{Ll}{2})/gu, "")
+    .replace(/(?<=\p{Ll}{2})[-\u00AD‐‑][ \t]*\r?\n[ \t]*(?=\p{Ll}{2})/gu, "")
     .replace(/[ \t]*\r?\n[ \t]*(?=[.,;:!?]+(?:[ \t]|\r?\n|$))/gu, "");
 }
