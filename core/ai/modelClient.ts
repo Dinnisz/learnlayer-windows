@@ -249,11 +249,17 @@ export function base64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-export function userContent(text: string, images: readonly Uint8Array[]): unknown {
-  if (images.length === 0) return text;
+export function userContent(
+  text: string,
+  images: readonly Uint8Array[],
+  audio: { data: Uint8Array; format: string } | null = null,
+): unknown {
+  if (images.length === 0 && !audio) return text;
   return [
     { type: "text", text },
     ...images.map((image) => ({ type: "image_url", image_url: { url: "data:image/jpeg;base64," + base64(image) } })),
+    // OpenRouter's audio input: what the student said, for the model to transcribe (CLAUDE.md §4.5).
+    ...(audio ? [{ type: "input_audio", input_audio: { data: base64(audio.data), format: audio.format } }] : []),
   ];
 }
 
@@ -346,6 +352,8 @@ export interface CompleteRequest {
   system: string;
   user: string;
   images?: readonly Uint8Array[];
+  /** A recording sent with the text (WAV), for a model that hears it. */
+  audio?: { data: Uint8Array; format: string } | null;
   schemaName: string;
   schema: JSONSchema;
   maxTokens?: number;
@@ -437,7 +445,7 @@ export class ModelClient {
       body.response_format = { type: "json_object" };
       body.messages = [
         { role: "system", content: systemContent(request.system + "\n\nMatch this JSON schema:\n" + described, model) },
-        { role: "user", content: userContent(request.user, images) },
+        { role: "user", content: userContent(request.user, images, request.audio ?? null) },
       ];
     } else {
       body.response_format = {
@@ -446,7 +454,7 @@ export class ModelClient {
       };
       body.messages = [
         { role: "system", content: systemContent(request.system, model) },
-        { role: "user", content: userContent(request.user, images) },
+        { role: "user", content: userContent(request.user, images, request.audio ?? null) },
       ];
     }
     body.reasoning = reasoningField(

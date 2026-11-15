@@ -17,13 +17,14 @@ use windows::Win32::Foundation::{LPARAM, LRESULT, POINT, WPARAM};
 use windows::Win32::System::Threading::{GetCurrentProcessId, GetCurrentThreadId};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
-    VIRTUAL_KEY, VK_CONTROL, VK_ESCAPE, VK_LMENU, VK_RMENU, VK_SHIFT, VK_SPACE,
+    VIRTUAL_KEY, VK_CONTROL, VK_ESCAPE, VK_F23, VK_LCONTROL, VK_LMENU, VK_LWIN, VK_RCONTROL, VK_RMENU, VK_RWIN,
+    VK_SHIFT, VK_SPACE,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetAncestor, GetMessageW, GetWindowThreadProcessId, PostThreadMessageW, SetTimer,
     SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, WindowFromPoint, GA_ROOT, HC_ACTION, HHOOK,
     KBDLLHOOKSTRUCT, LLKHF_INJECTED, LLMHF_INJECTED, MSG, MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN,
-    WM_LBUTTONDOWN, WM_LBUTTONUP, WM_QUIT, WM_SYSKEYDOWN, WM_TIMER,
+    WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER,
 };
 
 /// What the hooks saw, handed to the controller's thread.
@@ -37,6 +38,85 @@ pub enum HookEvent {
     Escape,
     /// Windows had removed a hook (it answered too slowly once); it was put back.
     Removed,
+    /// The talk key is held: listen.
+    TalkBegan,
+    /// The talk key was let go: send what was said.
+    TalkEnded,
+}
+
+/// Which keys talk to the tutor (CLAUDE.md §4.3): Ctrl + Win by default; the Copilot key (it arrives as
+/// Win + Shift + F23) or the right Ctrl instead. Never Ctrl + Alt: that is AltGr on Portuguese keyboards.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TalkKey {
+    ControlWindows = 0,
+    Copilot = 1,
+    RightControl = 2,
+}
+
+static TALK_KEY: AtomicU32 = AtomicU32::new(TalkKey::ControlWindows as u32);
+static CONTROL_DOWN: AtomicBool = AtomicBool::new(false);
+static RIGHT_CONTROL_DOWN: AtomicBool = AtomicBool::new(false);
+static WINDOWS_DOWN: AtomicBool = AtomicBool::new(false);
+static F23_DOWN: AtomicBool = AtomicBool::new(false);
+static TALKING: AtomicBool = AtomicBool::new(false);
+/// The Windows key's up that belongs to a swallowed down: swallowed too, so the Start menu never opens.
+static SWALLOW_WINDOWS_UP: AtomicBool = AtomicBool::new(false);
+
+pub fn set_talk_key(key: TalkKey) {
+    TALK_KEY.store(key as u32, Ordering::SeqCst);
+}
+
+/// One begin when the talk key becomes held, one end when it is let go.
+fn update_talk() {
+    let held = match TALK_KEY.load(Ordering::Relaxed) {
+        1 => F23_DOWN.load(Ordering::Relaxed),
+        2 => RIGHT_CONTROL_DOWN.load(Ordering::Relaxed),
+        _ => CONTROL_DOWN.load(Ordering::Relaxed) && WINDOWS_DOWN.load(Ordering::Relaxed) && !key_down(VK_SHIFT),
+    };
+    if TALKING.swap(held, Ordering::SeqCst) != held {
+        send(if held {
+            HookEvent::TalkBegan
+        } else {
+            HookEvent::TalkEnded
+        });
+    }
+}
+
+/// The talk key's own bookkeeping; true when the event is the talk key's and must not reach the app below.
+fn talk_key_event(key: VIRTUAL_KEY, down: bool) -> bool {
+    let talk = TALK_KEY.load(Ordering::Relaxed);
+    if key == VK_LCONTROL || key == VK_RCONTROL || key == VK_CONTROL {
+        CONTROL_DOWN.store(down, Ordering::SeqCst);
+        if key == VK_RCONTROL {
+            RIGHT_CONTROL_DOWN.store(down, Ordering::SeqCst);
+        }
+        update_talk();
+        return false;
+    }
+    if key == VK_LWIN || key == VK_RWIN {
+        WINDOWS_DOWN.store(down, Ordering::SeqCst);
+        let swallowed = if down {
+            let chord = talk == TalkKey::ControlWindows as u32 && CONTROL_DOWN.load(Ordering::Relaxed);
+            if chord {
+                SWALLOW_WINDOWS_UP.store(true, Ordering::SeqCst);
+            }
+            chord
+        } else {
+            // The Copilot key's Win: a key that means nothing before it comes up keeps the Start menu shut.
+            if talk == TalkKey::Copilot as u32 && TALKING.load(Ordering::Relaxed) {
+                mask_menu();
+            }
+            SWALLOW_WINDOWS_UP.swap(false, Ordering::SeqCst)
+        };
+        update_talk();
+        return swallowed;
+    }
+    if key == VK_F23 && talk == TalkKey::Copilot as u32 {
+        F23_DOWN.store(down, Ordering::SeqCst);
+        update_talk();
+        return true;
+    }
+    false
 }
 
 /// An unassigned key: pressed while Alt is down, it tells the app below that Alt was not pressed alone, so its menu
@@ -165,6 +245,11 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
         let info = unsafe { &*(lparam.0 as *const KBDLLHOOKSTRUCT) };
         let message = wparam.0 as u32;
         let down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+        let up = message == WM_KEYUP || message == WM_SYSKEYUP;
+        if (down || up) && !info.flags.contains(LLKHF_INJECTED) && talk_key_event(VIRTUAL_KEY(info.vkCode as u16), down)
+        {
+            return LRESULT(1);
+        }
         if down && !info.flags.contains(LLKHF_INJECTED) {
             let key = VIRTUAL_KEY(info.vkCode as u16);
             if key == VK_ESCAPE && INTERCEPTS_ESCAPE.load(Ordering::Relaxed) {

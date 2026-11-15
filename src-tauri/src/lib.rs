@@ -164,6 +164,7 @@ pub fn run() {
             platform::anywhere_close,
             platform::anywhere_interactive,
             platform::local_openrouter_key,
+            platform::talk_key_set,
             tray::set_tray_labels,
             data_files::data_file_read,
             data_files::data_file_write,

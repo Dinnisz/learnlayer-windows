@@ -38,6 +38,8 @@ pub trait Platform: Send + Sync + 'static {
     fn close_overlay(&self, app: &AppHandle);
     /// The stage takes the mouse and keyboard (a question is open), or lets every click through (only a word shows).
     fn overlay_interactive(&self, app: &AppHandle, interactive: bool);
+    /// Which keys talk to the tutor: "controlWindows" (default), "copilot" or "rightControl" (CLAUDE.md §4.3).
+    fn set_talk_key(&self, key: &str);
     /// Development only: the OpenRouter key kept by the system for direct calls (CLAUDE.md §5.5). Never in release.
     fn local_openrouter_key(&self) -> Option<String>;
 }
@@ -93,4 +95,9 @@ pub fn local_openrouter_key() -> Option<String> {
         return None;
     }
     current().local_openrouter_key()
+}
+
+#[tauri::command]
+pub fn talk_key_set(key: String) {
+    current().set_talk_key(&key);
 }

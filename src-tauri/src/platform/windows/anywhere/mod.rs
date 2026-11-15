@@ -132,6 +132,12 @@ pub fn start(app: &AppHandle, enabled: bool) -> Result<(), String> {
                     hook::HookEvent::Escape => {
                         let _ = app.emit_to(overlay::LABEL, "anywhere-escape", ());
                     }
+                    hook::HookEvent::TalkBegan => {
+                        let _ = app.emit("talk", true);
+                    }
+                    hook::HookEvent::TalkEnded => {
+                        let _ = app.emit("talk", false);
+                    }
                     hook::HookEvent::Removed => {
                         // The pill says how to turn it back on if it stays off (`onFailSafe` on the Mac).
                         let _ = app.emit("anywhere-hook-removed", ());

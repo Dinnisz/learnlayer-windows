@@ -65,6 +65,14 @@ impl super::Platform for WindowsPlatform {
         anywhere::overlay::set_interactive(app, interactive);
     }
 
+    fn set_talk_key(&self, key: &str) {
+        anywhere::hook::set_talk_key(match key {
+            "copilot" => anywhere::hook::TalkKey::Copilot,
+            "rightControl" => anywhere::hook::TalkKey::RightControl,
+            _ => anywhere::hook::TalkKey::ControlWindows,
+        });
+    }
+
     /// `LearnLayer.OpenRouter` in the Credential Manager (a generic credential, the key as its password).
     fn local_openrouter_key(&self) -> Option<String> {
         let entry =
