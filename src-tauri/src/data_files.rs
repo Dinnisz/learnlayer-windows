@@ -12,6 +12,7 @@ pub const ALLOWED: &[&str] = &[
     "explanations.json",
     "passages.json",
     "lessons.json",
+    "illustrations.json",
     "fast-questions.json",
     "memory.json",
     "onboarding.json",
