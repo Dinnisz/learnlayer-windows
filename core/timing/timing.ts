@@ -126,7 +126,7 @@ export class BooleanExpression {
   private index = 0;
 
   constructor(text: string) {
-    this.characters = Array.from(text.replace(/̄/g, "'"));
+    this.characters = Array.from(text.replace(/\u0304/g, "'"));
     this.root = this.parseOr();
     if (!this.atEnd()) throw new Error("not a boolean expression");
   }
