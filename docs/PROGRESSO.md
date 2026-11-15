@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 3 (Leitor de PDF e palco)
-- **Próximo passo:** portar `QuestionSession` (cache, escalada, `confirm`), `SolutionReveal`, `StatementQuotes`, `SolveProgress`; depois o palco (`ui/stage/`) sobre o leitor com `core/mocks/MockSolution.json`. Feito na fase 3: `QuestionDetector` (+ colunas, ordem de leitura), `RouteDecision`, `QuestionPages`, geometria do `PageImage`, `Passage.lines`, leitor pdf.js (`ui/reader.html`).
+- **Próximo passo:** o palco (`ui/stage/`) sobre o leitor: `ReaderWindow` já tem `renderOverlay(document, opened, close)`; o palco cria um `QuestionSession` (core/problems/questionSession.ts) com um `SolutionProvider` (services: DiskCache em `dataFiles`, cliente do `ModelClient`, `mockSolution` em dev com `?mock=1`) e mostra menu 1–4, Enter, Esc, Hint, Let me try, Solution (caixa da resposta, cartões em cascata com `runCascade`, Fórmulas, sublinhados via `StatementQuotes.underlines` sobre o `PageText`), Ask. Depois: builders TextHelp v5 / ProblemVariant / ExplanationPrompt v14; `docs/fase-3.md`. Feito na fase 3: detetor, RouteDecision, QuestionPages, leitor pdf.js, verificações de escalada, StatementQuotes, SolutionReveal, SolveProgress, SolutionProvider, QuestionSession (núcleo).
 - **Última atualização:** 2026-11-15
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
@@ -112,4 +112,5 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 - 2026-11-14 — Pacote extraído; ferramentas instaladas; Fase 0 (esqueleto, traduções, CI) e Fase 1 (conta, plano, pílula, tray, sessão nativa). O SAC bloqueia o `cargo build`.
 - 2026-11-14 — Pedido do Dinis (num fork): código do sistema operativo atrás do trait `Platform`; textos, nome do dispositivo e atalhos dependentes da plataforma. Feito.
 - 2026-11-15 — Fase 2: núcleo portado (279 testes), prompts e esquemas extraídos do Swift palavra a palavra, cliente SSE, cache em disco.
+- 2026-11-15 — Fase 3: SolutionProvider + QuestionSession (núcleo) com testes; 415 testes.
 - 2026-11-15 — Fase 3 (em curso): detetor de perguntas com os testes do Mac (páginas sintéticas e `exam.pdf`/`teste-modelo-eo.pdf` via pdf.js), RouteDecision, QuestionPages, leitor pdf.js. 340 testes.
