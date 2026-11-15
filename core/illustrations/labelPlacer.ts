@@ -221,7 +221,7 @@ export class LabelPlacer {
       const box = candidate.kept(this.bounds);
       const far = owner ? Math.trunc((2 * box.distance(owner)) / Math.max(box.height, 1e-9)) : 0;
       if (best && best.cost <= far) continue;
-      const cost = far + this.cost(box, best ? best.cost - far : Number.MAX_SAFE_INTEGER, owner);
+      const cost: number = far + this.cost(box, best ? best.cost - far : Number.MAX_SAFE_INTEGER, owner);
       if (!best || cost < best.cost) best = { box, cost };
       if (!owner && cost === 0) break;
     }
