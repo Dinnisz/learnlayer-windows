@@ -1,5 +1,5 @@
 // Port of LearnLayer/Problems/Passage.swift @ ref 2026-11-04
-// (`lines(of: PDFPage)` reads a page's text layer; it comes with the pdf.js reader in phase 3 and
+// (`lines(of: PDFPage)` is `passageLinesOf` in core/pdf/passageLines.ts, against the pure page text, and
 // produces the same `PassageLine`s.)
 
 import type { AnswerParagraph, Evidence, Part } from "./problemSolution";

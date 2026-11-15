@@ -24,6 +24,21 @@ export function drawnTestPage(lines: readonly { text: string; x: number; y: numb
   );
 }
 
+/**
+ * `QuestionPagesTests.document(_:)`: one page per string, each line in its own 20-point frame from 770 down, 28
+ * points apart, system font 14.
+ */
+export function documentTestPages(texts: readonly string[]): PageText[] {
+  const pages: PageText[] = [];
+  texts.forEach((text, index) => {
+    const lines = text
+      .split("\n")
+      .map((line, row) => ({ text: line, x: 72, baseline: 770 - 28 * row - 16, fontSize: 14, advance: sansAdvance }));
+    pages.push(pageFromLines(lines, { index, pages: () => pages }));
+  });
+  return pages;
+}
+
 /** Every page of a PDF on disk, read with pdf.js's Node build. */
 export async function pdfPages(path: string): Promise<PageText[]> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -40,6 +55,7 @@ export async function pdfPages(path: string): Promise<PageText[]> {
         index,
         mediaBox: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 },
         page: (other) => pages[other] ?? null,
+        pageCount: () => document.numPages,
       }),
     );
   }

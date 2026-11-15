@@ -21,6 +21,8 @@ export interface PageText {
   boxes: readonly (Rect | null)[];
   /** The other pages of the document, by index (for a group whose statement is on the page before). */
   page(index: number): PageText | null;
+  /** How many pages the document has. */
+  pageCount(): number;
 }
 
 export const Rects = {
@@ -232,6 +234,7 @@ export function pageFromLines(
     text,
     boxes,
     page: (other) => (other === index ? page : (options.pages?.()[other] ?? null)),
+    pageCount: () => options.pages?.().length ?? 1,
   };
   return page;
 }

@@ -24,7 +24,7 @@ const isRun = (item: TextContentItem): item is TextRun => typeof (item as TextRu
  */
 export function pageTextFromRuns(
   items: readonly TextContentItem[],
-  view: { index: number; mediaBox: Rect; page: (index: number) => PageText | null },
+  view: { index: number; mediaBox: Rect; page: (index: number) => PageText | null; pageCount: () => number },
 ): PageText {
   let text = "";
   const boxes: (Rect | null)[] = [];
@@ -67,5 +67,5 @@ export function pageTextFromRuns(
     text = text.slice(0, -1);
     boxes.pop();
   }
-  return { index: view.index, mediaBox: view.mediaBox, text, boxes, page: view.page };
+  return { index: view.index, mediaBox: view.mediaBox, text, boxes, page: view.page, pageCount: view.pageCount };
 }
