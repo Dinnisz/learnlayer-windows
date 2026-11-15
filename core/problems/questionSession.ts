@@ -30,6 +30,22 @@ import { noteStage, solveClock, SolutionReveal, SolveKind, SolveProgress, type S
 import type { SolutionProvider } from "./solutionProvider";
 import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
+import { ComplexFigures, decodeComplexFigure } from "../illustrations/complexFigure";
+import {
+  figureTopicOf,
+  shouldDraw,
+  topicText,
+  wants3D,
+  examPrintsCurve,
+  type FigureTopic,
+} from "../illustrations/figureTopic";
+import { FunctionGraph } from "../illustrations/functionGraph";
+import { decodeGraph, FunctionPlot, Graphs, type Graph } from "../illustrations/graph";
+import { GraphRelevance } from "../illustrations/graphRelevance";
+import { CompiledIllustration, gatedBySteps, type Illustration } from "../illustrations/illustration";
+import { continuityIllustration, decodeTemplate } from "../illustrations/illustrationTemplate";
+import { subjectAllowsDrawing } from "./problemSolution";
+import type { SignTable } from "./signTable";
 
 export type SessionState =
   | { kind: "loading" }
@@ -61,7 +77,22 @@ export interface SessionServices {
   fast?: FastTranscriptionReader;
   /** The picture is one the app shows typeset, so it is to be transcribed (`QuestionTranscription.isRequested`). */
   transcribing?(images: readonly Uint8Array[]): Promise<boolean>;
+  /** The drawing of a part (IllustrationProvider), asked for on "Draw It" or beside the solution's steps. */
+  illustrate?(request: {
+    groupText: string;
+    part: Part;
+    figure: string | null;
+    images: readonly Uint8Array[];
+    topicText: string;
+    signal: AbortSignal;
+  }): Promise<Illustration>;
+  /** The language the app writes into a drawing ("Portuguese (Portugal)"). */
+  language?(): string;
 }
+
+/** What goes beside the steps: the sign table (every sign checked), or a drawing. */
+export type SolutionFigure = { kind: "table"; table: SignTable } | { kind: "drawing"; scene: Illustration };
+export type IllustrationState = "loading" | "ready" | "empty" | "failed";
 
 export interface SessionInit {
   question: ExamQuestion;
@@ -322,6 +353,20 @@ export class QuestionSession {
   askFocusID = 0;
   /** Bumped for every change, for `useSyncExternalStore`. */
   version = 0;
+  /** The solution's curve is on screen beside the steps ("Hide Graph"). */
+  showsGraph = false;
+  /** The draggable parameter of the solution's curve. */
+  parameterValue = 0;
+  /** Where the student dragged the end of the shaded area. */
+  areaEnd: number | null = null;
+  /** Bumped when the student lets go of the graph: the car runs again. */
+  runID = 0;
+  illustration: Illustration | null = null;
+  illustrationState: IllustrationState | null = null;
+  showsIllustration = false;
+  private illustrationController: AbortController | null = null;
+  private illustrationGeneration = 0;
+  private readonly figureCache = new Map<string, unknown>();
 
   private solvesClickedPartOnly = false;
   private hasStartedSolve = false;
@@ -769,6 +814,7 @@ export class QuestionSession {
   }
 
   cancel(): void {
+    this.illustrationController?.abort();
     this.controller?.abort();
     this.fastController?.abort();
     this.variantController?.abort();
@@ -826,6 +872,18 @@ export class QuestionSession {
         .join("\n");
       if (FigureConsistency.disagreement(solution.figure, answers) !== null) this.isConfirmed = false;
     }
+    this.parameterValue = this.solutionGraph ? (Graphs.draggableParameter(this.solutionGraph)?.value ?? 0) : 0;
+    this.figureCache.clear();
+    // A drawing of the old answer is drawn again for the new one.
+    if (this.illustration || this.illustrationState) {
+      this.illustrationController?.abort();
+      this.illustration = null;
+      this.illustrationState = null;
+      if (this.showsIllustration || this.mode === "solution") this.fetchIllustration();
+    }
+    // A curve the solver returned is part of the answer, shown with it.
+    const side = this.sideGraph;
+    if (side && Graphs.isDrawable(side)) this.showsGraph = true;
     this.solveClock = { ...this.solveClock, ready: true };
     this.state = { kind: "ready" };
     this.changed();
@@ -1015,8 +1073,285 @@ export class QuestionSession {
     if (mode === "solution") {
       this.sawSolution = true;
       this.selectedStep = null;
+      // The figure beside the steps, when a template or the solver asked for one. A sign table, the continuity
+      // graph, or a complex figure that checked out already shows the point; a returned curve covers a function.
+      const part = this.part;
+      const topic = this.figureTopic;
+      const graph = this.solutionGraph;
+      const graphCoversFunction =
+        graph !== null && Graphs.isDrawable(graph) && (topic === null || topic === "function");
+      const drawsClosedForm = part !== null && this.localCurve(part) !== null;
+      if (
+        this.canDraw &&
+        part?.signTable == null &&
+        part?.continuity == null &&
+        !this.builtInFigureReady &&
+        (wants3D(this.figureTopicText) || (!graphCoversFunction && !drawsClosedForm))
+      )
+        this.fetchIllustration();
     }
     this.changed();
+  }
+
+  // MARK: The figure beside the steps
+
+  /** The text that decides the figure: the item and its group's shared statement. */
+  get figureTopicText(): string {
+    return topicText(this.question.groupText, this.question.text, this.question.groupLabels);
+  }
+
+  /** What the figure is about: the question's words, else the solver's word. */
+  get figureTopic(): FigureTopic | null {
+    const part = this.part;
+    return part ? figureTopicOf(this.question.groupText, part.figureTopic) : null;
+  }
+
+  /** "Draw It" when a template topic or the solver asked for a drawing; languages and philosophy stay words. */
+  get canDraw(): boolean {
+    const solution = this.solution;
+    return shouldDraw({
+      topic: this.figureTopic,
+      modelAsked: solution?.drawing === true,
+      questionText: this.question.groupText,
+      subjectAllows: solution ? subjectAllowsDrawing(solution.subject) : false,
+      diagramAid: false,
+    });
+  }
+
+  /** The app's own complex figure is ready (a failed check is not one: nothing unchecked is shown). */
+  private get builtInFigureReady(): boolean {
+    const part = this.part;
+    return part !== null && this.figureTopic === "complex" && this.complexDrawing(part) !== null;
+  }
+
+  /** The solution's curve, as the solver wrote it. */
+  get solutionGraph(): Graph | null {
+    return this.solution ? decodeGraph(this.solution.graph) : null;
+  }
+
+  private cachedFigure<T>(key: string, make: () => T): T {
+    if (this.figureCache.has(key)) return this.figureCache.get(key) as T;
+    const value = make();
+    this.figureCache.set(key, value);
+    return value;
+  }
+
+  /** The sign table (only when every sign checks out), the continuity graph, or the drawing; null for steps alone. */
+  get solutionFigure(): SolutionFigure | null {
+    const part = this.part;
+    if (!part) return null;
+    if (this.figureTopic === "complex") {
+      const drawing = this.complexDrawing(part);
+      if (drawing) return { kind: "drawing", scene: drawing };
+    }
+    if (part.signTable && signTableProblems(part.signTable).length === 0)
+      return { kind: "table", table: part.signTable };
+    const continuity = this.continuityDrawing(part);
+    if (continuity) return { kind: "drawing", scene: continuity };
+    const local = this.localCurve(part);
+    if (local) return { kind: "drawing", scene: local };
+    if (this.canDraw && this.illustration && this.illustrationState === "ready")
+      return { kind: "drawing", scene: this.gatedDrawing(this.illustration, part) };
+    return null;
+  }
+
+  /** A figure is coming (the drawing is on its way), or a passage with its quotes: the layout keeps its column. */
+  get expectsFigure(): boolean {
+    if (this.state.kind === "loading") return this.mode === "solution" && this.expectsTextAnswer;
+    return (
+      this.evidenceAnswer !== null ||
+      this.solutionFigure !== null ||
+      (this.canDraw && (this.illustrationState === "loading" || this.illustrationState === "failed"))
+    );
+  }
+
+  /** g drawn from its closed form, with no model call. */
+  private localCurve(part: Part): Illustration | null {
+    return this.cachedFigure(`local\n${part.label}\n${part.answer.text}`, () =>
+      this.curveIsDecorative
+        ? null
+        : FunctionGraph.illustration(this.question.groupText, part, this.solutionGraph, this.drawingLanguage),
+    );
+  }
+
+  private gatedDrawing(drawing: Illustration, part: Part): Illustration {
+    return this.cachedFigure(`gated\n${part.label}\n${this.illustrationGeneration}`, () =>
+      gatedBySteps(drawing, part.cards ?? []),
+    );
+  }
+
+  private complexDrawing(part: Part): Illustration | null {
+    return this.cachedFigure(`complex\n${part.label}`, () => {
+      const figure = decodeComplexFigure(part.complex);
+      return figure
+        ? ComplexFigures.illustration(figure, part.cards ?? [], part.topic ?? part.asks, this.drawingLanguage)
+        : null;
+    });
+  }
+
+  private continuityDrawing(part: Part): Illustration | null {
+    const continuity = part.continuity;
+    if (!continuity) return null;
+    return this.cachedFigure(`continuity\n${part.label}`, () => {
+      const scene = continuityIllustration(continuity, part.topic ?? part.asks, this.drawingLanguage);
+      return scene ? gatedBySteps(scene, part.cards ?? []) : null;
+    });
+  }
+
+  private get drawingLanguage(): string {
+    return this.services.language?.() ?? "Portuguese (Portugal)";
+  }
+
+  /** The text of this item and part, for deciding whether a curve explains it. */
+  private get partText(): string {
+    return GraphRelevance.text(this.question.text, this.part);
+  }
+
+  private get curveIsDecorative(): boolean {
+    return this.part !== null && GraphRelevance.isDecorative(this.partText);
+  }
+
+  /** A derivative's sign or a limit with no formula to plot: the app sketches the shape. */
+  private get shapeSketch(): Graph | null {
+    if (!this.part || !FunctionGraph.accepts(this.solution?.subject) || examPrintsCurve(this.question.groupText))
+      return null;
+    return GraphRelevance.sketch(this.partText);
+  }
+
+  /** The curve already beside the steps (the branches, or a function drawing). */
+  private get functionCurveIsOnStage(): boolean {
+    const figure = this.solutionFigure;
+    if (figure?.kind !== "drawing") return false;
+    return this.part?.continuity != null || decodeTemplate(figure.scene.template)?.kind === "function";
+  }
+
+  /** The solution's curve, else a maths function plotted from the question; null when a sign table is the figure. */
+  get graph(): Graph | null {
+    if (this.solutionFigure?.kind === "table") return null;
+    if (this.curveIsDecorative) return null;
+    const falls = GraphRelevance.statedFall(this.partText);
+    const agrees = (graph: Graph) => (falls === null ? true : GraphRelevance.agrees(graph, falls));
+    const subject = this.solution?.subject ?? null;
+    const given = this.solutionGraph;
+    const fitted = FunctionPlot.graph(this.question.groupText, subject, this.part, given);
+    const local = fitted ? Graphs.fittedToMarks(fitted) : null;
+    if (local && local.marks.some((mark) => mark.role === "value" || mark.role === "crossing") && agrees(local))
+      return local;
+    if (given && Graphs.isDrawable(given) && agrees(Graphs.fittedToMarks(given))) return Graphs.fittedToMarks(given);
+    const plain = FunctionPlot.graph(this.question.groupText, subject, this.part);
+    if (plain && agrees(plain)) return plain;
+    return this.shapeSketch;
+  }
+
+  /** The curve drawn beside the steps; null when that curve is already the figure. */
+  get sideGraph(): Graph | null {
+    if (this.functionCurveIsOnStage) return null;
+    return this.graph;
+  }
+
+  get hasGraph(): boolean {
+    const side = this.sideGraph;
+    return side !== null && Graphs.isDrawable(side);
+  }
+
+  /** The step the graph is drawn at: marks from a later step stay hidden. */
+  get graphStep(): number {
+    return this.figureStep;
+  }
+
+  toggleGraph(): void {
+    this.showsGraph = !this.showsGraph;
+    this.changed();
+  }
+
+  setParameterValue(value: number): void {
+    const parameter = this.sideGraph ? Graphs.draggableParameter(this.sideGraph) : null;
+    if (!parameter) return;
+    this.parameterValue = Math.min(parameter.max, Math.max(parameter.min, value));
+    this.changed();
+  }
+
+  setAreaEnd(value: number): void {
+    this.areaEnd = value;
+    this.changed();
+  }
+
+  replayCar(): void {
+    this.runID += 1;
+    this.changed();
+  }
+
+  /** Asked for once, on the first "Draw It"; saved after that. */
+  toggleIllustration(): void {
+    this.showsIllustration = !this.showsIllustration;
+    if (this.showsIllustration) this.fetchIllustration();
+    this.changed();
+  }
+
+  /** The drawing, asked for once (Draw It, or by itself beside the solution's steps). */
+  fetchIllustration(): void {
+    const part = this.part;
+    const illustrate = this.services.illustrate;
+    if (this.illustration || this.illustrationState === "loading" || !part || !illustrate) return;
+    this.illustrationState = "loading";
+    this.illustrationGeneration += 1;
+    const generation = this.illustrationGeneration;
+    const controller = new AbortController();
+    this.illustrationController = controller;
+    // A drawing given up on never leaves "Drawing…" behind: unless a newer one started, it goes back to not asked.
+    const abandon = () => {
+      if (generation === this.illustrationGeneration && this.illustrationState === "loading")
+        this.illustrationState = null;
+    };
+    void illustrate({
+      groupText: this.question.groupText,
+      part,
+      figure: this.solution?.figure ?? null,
+      images: this.images,
+      topicText: this.figureTopicText,
+      signal: controller.signal,
+    })
+      .then((drawn) => {
+        if (controller.signal.aborted || generation !== this.illustrationGeneration) return abandon();
+        this.illustration = drawn;
+        // Not drawable as asked (free-form refused, a template that doesn't compile): say so.
+        this.illustrationState =
+          drawn.elements.length === 0 || !new CompiledIllustration(drawn).isDrawable
+            ? drawn.rejected === true
+              ? "failed"
+              : "empty"
+            : "ready";
+        this.drawingChecked(drawn);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) abandon();
+        else if (generation === this.illustrationGeneration) this.illustrationState = "failed";
+      })
+      .finally(() => this.changed());
+    this.changed();
+  }
+
+  /** "Try Again" on a drawing that failed: asked once more (a failure is not saved). */
+  retryIllustration(): void {
+    if (this.illustrationState !== "failed") return;
+    this.illustrationState = null;
+    this.fetchIllustration();
+  }
+
+  /** The drawing put a mark the solution names somewhere else than the curve does: the stronger model solves again. */
+  private resolvedAfterDrawing = false;
+
+  private drawingChecked(drawn: Illustration): void {
+    if (
+      (drawn.disagreements ?? []).length === 0 ||
+      !(this.route === "fast" || !this.firstModelIsStrong) ||
+      this.solvedByStrongerModel ||
+      this.resolvedAfterDrawing
+    )
+      return;
+    this.resolvedAfterDrawing = true;
+    this.isConfirmed = false;
+    void this.confirm();
   }
 
   // MARK: Steps
@@ -1201,6 +1536,11 @@ export class QuestionSession {
   }
 
   /** The cascade paused with `shown` steps on screen, no timer running, for tests. */
+  /** The stage check: a written-out solution shown as if it came from the solver (the Mac's `debugShow`). */
+  showForTesting(solution: ProblemSolution): void {
+    this.show(solution);
+  }
+
   beginCascadeForTesting(shown: number): void {
     this.cascadeKey = this.solutionKey;
     this.cascadeShown = shown;
