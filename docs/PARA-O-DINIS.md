@@ -55,3 +55,10 @@ Depende do ponto 1. Com a app aberta (`npm run tauri dev`):
 5. Para a transcrição rápida em Debug (como no Mac): guarda a tua chave da OpenRouter no Gestor de Credenciais com
    `cmdkey /generic:LearnLayer.OpenRouter /user:openrouter /pass:<a chave>`.
    Numa build de release isto não é usado nunca. Cada chamada real fica em `docs/CUSTOS.md`.
+
+### 8. Experimentar a voz (Fase 5), quando a app compilar
+1. **Voz pt-PT do Windows**, para quando a voz premium não está ligada: Definições › Hora e idioma › Voz › Adicionar vozes › «Português (Portugal)». Sem ela, as respostas aparecem escritas em vez de faladas.
+2. **Microfone:** na primeira vez que carregas em **Ctrl+Win**, o Windows pode perguntar se a app pode usar o microfone. Diz que sim, ou ativa-o em Definições › Privacidade e segurança › Microfone.
+3. **«Explica-me»:** abre `exames/` (Matemática A) no leitor, escolhe uma pergunta, carrega em 3 e depois em «Explica-me». Confirma que a voz é de Portugal e que cada passo acende enquanto é dito.
+4. **Tecla de falar:** mantém **Ctrl+Win**, diz «não percebi o passo 2» e larga. Deve ouvir-se logo «Vamos ao ponto 2.» e depois a resposta. Anota em `docs/DECISOES.md` quanto tempo passa entre largar a tecla e começar a ouvir-se.
+5. **Custos:** com a voz premium desligada, confirma no Worker de teste que não há pedidos `/v1/audio/speech`.

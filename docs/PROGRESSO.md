@@ -4,8 +4,8 @@
 
 ## Estado atual
 
-- **Fase atual:** 5 (Voz e mascote)
-- **Próximo passo:** fase 5. Feito: `core/voice/speechPlan.ts` (motor, voz ElevenLabs por língua — Joana em pt-PT —, corpo do pedido, preço, voz do sistema), com os testes do Mac. A seguir: Ler `referencia-mac/LearnLayer/Voice/*` (`VoiceTutorPrompt.swift` v24, `OpenRouterSpeech.swift`, `SpeechPlaybackPlan.swift`, `VoiceTutorOpener.swift`, `VoiceMascot*.swift`, `MascotMotion.swift`) e `Lesson/*` (`MascotLessonPrompt.swift` v14, `LessonRun.swift`, `SpeechSync.swift`, `HighlightPlan.swift`). Plano: (1) núcleo puro com os testes do Mac (prompts v24/v14, plano de reprodução, sincronização das marcas, escolha da voz pt-PT, `SpeechActivity`); (2) TTS pelo backend e voz do sistema como recurso; (3) push-to-talk (Ctrl+Win no hook de teclado) e STT (4.5); (4) mascote animada e «Explica-me» no palco; (5) onda na pílula.
+- **Fase atual:** 6 (Figuras)
+- **Próximo passo:** fase 6. Ler `referencia-mac/LearnLayer/Illustrations/*` (`IllustrationPrompt.swift` v22, templates), `Explanation/*` (o explicador de fórmulas que passou da fase 3: `EquationDetector`, `ExplanationPrompt` v14, gráfico com parâmetro arrastável), `Problems/SignTable*.swift` (o núcleo já existe em `core/problems/signTable.ts`; falta o quadro desenhado), `Timing/`, `Code/` e as figuras 3D (`Explanation/Figure3D*.swift`, `Circuit3D*.swift`, `SpaceFigure*.swift`). Plano: (1) templates puros com os testes do Mac, cada figura verificada antes de aparecer; (2) desenho em SVG/Canvas (curvas que se desenham, parâmetro a 60 fps) e three.js para o 3D; (3) explicador de fórmulas no leitor; (4) as marcas da voz e da lição na figura.
 - **Última atualização:** 2026-11-15
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
@@ -69,7 +69,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 | 2 | Núcleo portado (`core/`) e cliente de IA (SSE, refresh no 401, erros, cache) | ✅ feito; chamada real por verificar — `fase-2.md` |
 | 3 | Leitor de PDF (pdf.js) e palco (menu, Hint, Let me try, Solution, Ask, Try a Similar One) | ✅ feito no browser com mocks; explicador de fórmulas passou para a fase 6 — `fase-3.md` |
 | 4 | Alt-clique em qualquer app (hook, UIA, PDF por caminho, captura + OCR, transcrição rápida) | ✅ núcleo, palco e nativo escritos; nativo por compilar e medir (SAC) — `fase-4.md` |
-| 5 | Voz e mascote (TTS, STT, push-to-talk, «Explica-me») | por fazer |
+| 5 | Voz e mascote (TTS, STT, push-to-talk, «Explica-me») | ✅ feito no browser; voz pt-PT, microfone e latência por verificar — `fase-5.md` |
 | 6 | Figuras (templates, 3D, quadros de sinais, diagramas temporais, código) | por fazer |
 | 7 | Onboarding, Memória, Definições completas | por fazer |
 | 8 | Distribuição (instalador, assinatura, atualização, sincronização cifrada) | por fazer |
@@ -78,7 +78,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 - **Fase 3 (feito, salvo):** `QuestionTranscription` (blocos), `QuestionSession` (o coração: cache, escalada, `confirm`), `SolutionReveal`, `StatementQuotes`, `SolveProgress`, `TextHelp`/`SelectionAsk` (builder do prompt v5), `ProblemVariant` (builder), `ExplanationPrompt` (builder v14), mensagens de recusa no palco.
 - **Fase 4 (feito, salvo):** ler antecipadamente o PDF à frente antes do primeiro clique; `SelectionSession` (fase 7, com a pílula).
-- **Fase 5:** `MascotLessonPrompt` (v14), `VoiceTutorPrompt` (v24), `SpeechVoicePlan`, `SpeechActivity` (+ testes de `NotchGlyphTests` que ficaram), `SpeechVoiceLocaleTests`.
+- **Fase 5 (feito, salvo):** STT nativo do Windows; `holdingTheSymbol`, `namingTheFormula` e `VoiceTutorGuard` (com as figuras); gestos da mascote; `SpeechActivity` e os testes de `NotchGlyphTests` que ficaram.
 - **Fase 6:** `IllustrationPrompt` (v22), `ComplexFigure`, templates, 3D.
 - **Fase 7:** `ExplanationPlanner`, `MemoryStore`, `BrainSync*`.
 
@@ -112,6 +112,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 - 2026-11-14 — Pacote extraído; ferramentas instaladas; Fase 0 (esqueleto, traduções, CI) e Fase 1 (conta, plano, pílula, tray, sessão nativa). O SAC bloqueia o `cargo build`.
 - 2026-11-14 — Pedido do Dinis (num fork): código do sistema operativo atrás do trait `Platform`; textos, nome do dispositivo e atalhos dependentes da plataforma. Feito.
 - 2026-11-15 — Fase 2: núcleo portado (279 testes), prompts e esquemas extraídos do Swift palavra a palavra, cliente SSE, cache em disco.
+- 2026-11-15 — Fase 5 fechada: voz premium ou do sistema, tecla de falar, transcrição na nuvem, tutor por voz, «Explica-me» (lição v14, DeepSeek com o Sonnet por trás), mascote animada. 572 testes.
 - 2026-11-15 — Fase 4 fechada: lado nativo escrito (hooks, UIA, captura, OCR, caminho do PDF, janela do palco), pílula com «Ativar Alt-clique». Por compilar e medir: SAC. 506 testes.
 - 2026-11-15 — Fase 4 (em curso): núcleo do Alt-clique portado com os testes do Mac (QuestionCropTests, OptionClickFixes, PDFQuestionRead, FastTranscription, Preread); palco por cima do ecrã. 501 testes.
 - 2026-11-15 — Fase 3 fechada: TextHelp v5 na pergunta livre, ProblemVariant («Try a Similar One»). 430 testes.
