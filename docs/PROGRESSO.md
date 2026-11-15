@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 6 (Figuras)
-- **Próximo passo:** fase 6. Ler `referencia-mac/LearnLayer/Illustrations/*` (`IllustrationPrompt.swift` v22, templates), `Explanation/*` (o explicador de fórmulas que passou da fase 3: `EquationDetector`, `ExplanationPrompt` v14, gráfico com parâmetro arrastável), `Problems/SignTable*.swift` (o núcleo já existe em `core/problems/signTable.ts`; falta o quadro desenhado), `Timing/`, `Code/` e as figuras 3D (`Explanation/Figure3D*.swift`, `Circuit3D*.swift`, `SpaceFigure*.swift`). Plano: (1) templates puros com os testes do Mac, cada figura verificada antes de aparecer; (2) desenho em SVG/Canvas (curvas que se desenham, parâmetro a 60 fps) e three.js para o 3D; (3) explicador de fórmulas no leitor; (4) as marcas da voz e da lição na figura.
+- **Próximo passo:** fase 6, a meio. Feito e em commits: modelo das figuras, `LabelPlacer`, compilador de templates (função, série, círculo trigonométrico, plano complexo, plano inclinado, cronologia, geometria, continuidade), renderizador (lista de desenho → SVG), `FunctionGraph`/`FunctionPlot`/`GraphRelevance`, `ComplexFigure`, prompt v22 + fornecedor (`illustrations.json`), figuras pré-feitas que usam templates, a figura ao lado dos passos na sessão e no palco (quadro de sinais, curva arrastável a 60 fps, «Desenhar», «Esconder gráfico»). Falta, por esta ordem: (1) blocos de código com cores VS Code (`Code/*`); (2) diagramas temporais (`Timing/*`); (3) explicador de fórmulas no leitor (`Explanation/*`, `ExplanationPrompt` v14); (4) 3D com three.js (`SpaceFigure*`, `Figure3D*`, `Circuit3D*`); (5) as figuras pré-feitas animadas (FigureCanvas) e as marcas da voz/lição na figura; (6) `docs/fase-6.md`.
 - **Última atualização:** 2026-11-15
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
@@ -70,7 +70,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 | 3 | Leitor de PDF (pdf.js) e palco (menu, Hint, Let me try, Solution, Ask, Try a Similar One) | ✅ feito no browser com mocks; explicador de fórmulas passou para a fase 6 — `fase-3.md` |
 | 4 | Alt-clique em qualquer app (hook, UIA, PDF por caminho, captura + OCR, transcrição rápida) | ✅ núcleo, palco e nativo escritos; nativo por compilar e medir (SAC) — `fase-4.md` |
 | 5 | Voz e mascote (TTS, STT, push-to-talk, «Explica-me») | ✅ feito no browser; voz pt-PT, microfone e latência por verificar — `fase-5.md` |
-| 6 | Figuras (templates, 3D, quadros de sinais, diagramas temporais, código) | por fazer |
+| 6 | Figuras (templates, 3D, quadros de sinais, diagramas temporais, código) | em curso |
 | 7 | Onboarding, Memória, Definições completas | por fazer |
 | 8 | Distribuição (instalador, assinatura, atualização, sincronização cifrada) | por fazer |
 
