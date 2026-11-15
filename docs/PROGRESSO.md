@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 3 (Leitor de PDF e palco)
-- **Próximo passo:** acabar a fase 3 com os builders dos prompts `TextHelp` v5 (`referencia-mac/LearnLayer/Problems/TextHelp.swift`, ligar a `QuestionSession.ask` em `ui/stage/Stage.tsx`, que hoje usa `followUpContext` simples), `ProblemVariant` («Try a Similar One») e `ExplanationPrompt` v14; depois começar a fase 4 (Alt-clique). O leitor e o palco funcionam no browser com o MockSolution (ver `docs/fase-3.md`).
+- **Próximo passo:** `ProblemVariant` («Try a Similar One»: `referencia-mac/LearnLayer/Problems/ProblemVariant.swift`, texto já extraído em `core/prompts/swift/ProblemVariant.json` e esquema `VariantPrompt.schema`; ligar a `QuestionSession` como `tryVariant`/`checkVariant` e um botão nas ações do palco) e `ExplanationPrompt` v14 (fórmula solta); depois começar a fase 4 (Alt-clique). Feito: TextHelp v5 ligado à pergunta livre do palco.
 - **Última atualização:** 2026-11-15
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
