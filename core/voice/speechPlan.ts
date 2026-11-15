@@ -87,7 +87,7 @@ export const SpeechLocaleMatch = {
 
 const displayNames = (() => {
   try {
-    return new Intl.DisplayNames(["en"], { type: "language" });
+    return new Intl.DisplayNames(["en"], { type: "language", languageDisplay: "standard" });
   } catch {
     return null;
   }
@@ -105,7 +105,7 @@ export const VoiceLocale = {
     return ranked[0] ? tag(ranked[0]) : "en";
   },
 
-  /** The name and the identifier, so the model cannot drop the country: "European Portuguese [pt-PT]". */
+  /** The name and the identifier, so the model cannot drop the country: "Portuguese (Portugal) [pt-PT]". */
   promptLanguage(identifier: string): string {
     const shown = tag(SpeechLocaleMatch.parts(identifier));
     return `${languageName(shown)} [${shown}]`;
