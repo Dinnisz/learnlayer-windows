@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 3 (Leitor de PDF e palco)
-- **Próximo passo:** pdf.js no `ui/` com uma interface de página pura em `core/pdf/page.ts` (texto + caixa de cada carácter); portar `QuestionDetector` com os testes de `QuestionDetectorTests` contra `referencia-mac/Tools/TestPDFs/` e `exames/`; depois o palco com `core/mocks/MockSolution.json`.
+- **Próximo passo:** portar `QuestionSession` (cache, escalada, `confirm`), `SolutionReveal`, `StatementQuotes`, `SolveProgress`; depois o palco (`ui/stage/`) sobre o leitor com `core/mocks/MockSolution.json`. Feito na fase 3: `QuestionDetector` (+ colunas, ordem de leitura), `RouteDecision`, `QuestionPages`, geometria do `PageImage`, `Passage.lines`, leitor pdf.js (`ui/reader.html`).
 - **Última atualização:** 2026-11-15
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
@@ -36,7 +36,9 @@ Learnlayer/
 ├─ core/                   TypeScript puro, sem DOM: porte fiel da lógica Swift
 │  ├─ account/             AppLogin (PKCE), HomeRoute, AccountModel
 │  ├─ ai/                  AIGateway, BackendClient, ModelClient (SSE), PartialJSON, ModelRouting, DiskCache
-│  ├─ problems/            ProblemSolution, ChoiceCheck, SignTable, Passage, QuestionLabels, TextNormalizer, FlattenedMath
+│  ├─ pdf/                 PageText (texto + caixa de cada carácter), colunas, ordem de leitura, pdf.js → PageText
+│  ├─ problems/            QuestionDetector, QuestionPages, RouteDecision, ProblemSolution, ChoiceCheck, SignTable, Passage…
+│  ├─ testing/             páginas de teste (CoreText imitado, PDFs reais via pdf.js em Node)
 │  ├─ prompts/             prompts e esquemas (swift/*.json gerados do Mac; problemPrompt.ts junta-os)
 │  ├─ math/                Expression/Verifier, LatexText
 │  ├─ illustrations/       FigureTopic
@@ -45,7 +47,8 @@ Learnlayer/
 │  ├─ mocks/               Mock*.json do Mac (respostas falsas para desenvolver sem API)
 │  └─ platform.ts          o que muda entre sistemas (nome do dispositivo, atalhos)
 ├─ ui/                     React + Vite, só apresentação
-│  ├─ windows/             main (janela principal), pill
+│  ├─ windows/             main (janela principal), pill, reader (leitor de PDF)
+│  ├─ reader/              ReaderDocument (pdf.js)
 │  ├─ components/          SettingsKit, Sheet, Icon (Segoe Fluent), Mascot
 │  ├─ account/             accountStore, demo (?demo=…)
 │  └─ native.ts            a única porta para o nativo
@@ -73,11 +76,16 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## O que ainda falta portar, por fase
 
-- **Fase 3:** `QuestionDetector` (+ `QuestionPages`, `PDFColumns`, `PDFReadingOrder`, `PageImage`), `Passage.lines(of: page)`, `QuestionTranscription` (blocos), `QuestionSession` (o coração: cache, escalada, `confirm`), `SolutionReveal`, `StatementQuotes`, `SolveProgress`, `TextHelp`/`SelectionAsk` (builder do prompt v5), `ProblemVariant` (builder), `ExplanationPrompt` (builder v14), mensagens de recusa no palco.
+- **Fase 3:** `QuestionTranscription` (blocos), `QuestionSession` (o coração: cache, escalada, `confirm`), `SolutionReveal`, `StatementQuotes`, `SolveProgress`, `TextHelp`/`SelectionAsk` (builder do prompt v5), `ProblemVariant` (builder), `ExplanationPrompt` (builder v14), mensagens de recusa no palco.
 - **Fase 4:** o resto de `FastTranscription` (cache `fast-questions.json`, `FastDeadline`), `QuestionRegion`, `QuestionBand`, `DocumentPreread`, `PrereadPlan`.
 - **Fase 5:** `MascotLessonPrompt` (v14), `VoiceTutorPrompt` (v24), `SpeechVoicePlan`, `SpeechActivity` (+ testes de `NotchGlyphTests` que ficaram), `SpeechVoiceLocaleTests`.
 - **Fase 6:** `IllustrationPrompt` (v22), `ComplexFigure`, templates, 3D.
 - **Fase 7:** `ExplanationPlanner`, `MemoryStore`, `BrainSync*`.
+
+## Deteção nos exames de `exames/` (relatório, `EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts`)
+
+- Matemática A, FQ A, Geografia A, Filosofia: etiquetas como esperado (5.(AE2018)/5.(AE2023)…).
+- Biologia e Geologia, Português, História A, Francês, Inglês: em algumas páginas a numeração mistura «II.1» com «2», «3» (grupos que recomeçam a numeração). Falta comparar com a app Mac nos mesmos PDFs (o texto do pdf.js pode vir por outra ordem que o do PDFKit). Cada página leva no máximo ~20 ms.
 
 ## Reparos ao Mac (comportamentos portados tal como estão)
 
@@ -104,3 +112,4 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 - 2026-11-14 — Pacote extraído; ferramentas instaladas; Fase 0 (esqueleto, traduções, CI) e Fase 1 (conta, plano, pílula, tray, sessão nativa). O SAC bloqueia o `cargo build`.
 - 2026-11-14 — Pedido do Dinis (num fork): código do sistema operativo atrás do trait `Platform`; textos, nome do dispositivo e atalhos dependentes da plataforma. Feito.
 - 2026-11-15 — Fase 2: núcleo portado (279 testes), prompts e esquemas extraídos do Swift palavra a palavra, cliente SSE, cache em disco.
+- 2026-11-15 — Fase 3 (em curso): detetor de perguntas com os testes do Mac (páginas sintéticas e `exam.pdf`/`teste-modelo-eo.pdf` via pdf.js), RouteDecision, QuestionPages, leitor pdf.js. 340 testes.
