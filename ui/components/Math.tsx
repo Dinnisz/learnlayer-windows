@@ -5,6 +5,8 @@
 import katex from "katex";
 import { memo, useMemo } from "react";
 import { latexToUnicode, normalized } from "@core/math/latexText";
+import { CodeText } from "@core/code/codeText";
+import { CodeBlockView } from "./CodeBlockView";
 
 const macros: Record<string, string> = {
   "\\decimalcomma": "{,}",
@@ -63,8 +65,28 @@ export const MathView = memo(function MathView({
   return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 });
 
-/** Text with inline maths between `$…$` or `\(…\)`; everything else is plain text. */
+/**
+ * Text with inline maths between `$…$` or `\(…\)`, and programs kept line for line in their own block (the Mac's
+ * `ProseAndCode`); everything else is plain text.
+ */
 export const MathText = memo(function MathText({ text, className }: { text: string; className?: string }) {
+  const segments = useMemo(() => CodeText.segments(text), [text]);
+  if (segments.some((segment) => segment.kind === "code"))
+    return (
+      <span className={`prose-and-code${className ? ` ${className}` : ""}`}>
+        {segments.map((segment, index) =>
+          segment.kind === "code" ? (
+            <CodeBlockView key={index} block={segment.block} />
+          ) : (
+            <InlineMath key={index} text={segment.text} />
+          ),
+        )}
+      </span>
+    );
+  return <InlineMath text={text} className={className} />;
+});
+
+const InlineMath = memo(function InlineMath({ text, className }: { text: string; className?: string }) {
   const pieces = useMemo(() => {
     const result: { math: boolean; value: string }[] = [];
     const pattern = /\$\$([^$]+)\$\$|\$([^$\n]+)\$|\\\((.+?)\\\)/g;

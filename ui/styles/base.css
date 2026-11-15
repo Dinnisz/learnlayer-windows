@@ -134,3 +134,26 @@ input {
     scroll-behavior: auto !important;
   }
 }
+
+/* Programs in a step, an answer or a question: the editor's look (CLAUDE.md, rule 8's one exception). */
+.prose-and-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.code-block {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid;
+  border-radius: 10px;
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 4;
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  user-select: text;
+}
+
+.code-block code {
+  font: inherit;
+}
