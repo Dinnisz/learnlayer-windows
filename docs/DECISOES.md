@@ -72,3 +72,8 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** o `LatexText.normalized` do Mac escreve `\decimalcomma`, `\sen`, `\tg` (SwiftMath).
 - **Escolha:** o `normalized` fica igual (mesmos testes); a interface define estes comandos como macros do KaTeX.
 - **Porquê:** mantém o núcleo idêntico ao Mac e o texto bem desenhado no Windows.
+
+## 2026-11-15 — Explicador de fórmulas soltas passa para a fase 6
+- **Dúvida:** a secção 3.3 põe o explicador de fórmulas soltas (clicar numa equação → «Explain it / Show the graph / Let me try», `ExplanationPrompt` v14) no leitor da fase 3, mas metade dele é o gráfico com parâmetro arrastável e as curvas que se desenham, que são da fase 6.
+- **Escolha:** a fase 3 fica com as perguntas de exame (detetor, palco, pista, tentar, resolução, pergunta livre, variante). O explicador de fórmulas (deteção de equações `EquationDetector`, prompt v14, menu e curva) entra na fase 6, com os gráficos.
+- **Porquê:** sem os gráficos, o explicador ficaria com um terço do comportamento do Mac; assim chega completo e testado de uma vez.
