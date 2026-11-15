@@ -1,0 +1,103 @@
+/* The formula explainer over the reader: the equation lifted in white, the menu, the steps beside it. */
+
+.explanation-card {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  align-self: flex-start;
+  margin-top: 6vh;
+}
+
+.explanation-equation {
+  width: 100%;
+}
+
+.explanation-crop {
+  position: relative;
+  max-width: 100%;
+}
+
+.explanation-crop canvas {
+  display: block;
+  filter: invert(1) drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
+  mix-blend-mode: screen;
+}
+
+.explanation-target {
+  position: absolute;
+  border: 0;
+  border-radius: 4px;
+  background: rgb(10 132 255 / 12%);
+  cursor: pointer;
+}
+
+.explanation-target:hover,
+.explanation-target:focus-visible {
+  background: rgb(10 132 255 / 28%);
+  outline: none;
+}
+
+.explanation-symbol {
+  position: absolute;
+  cursor: help;
+}
+
+.explanation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.explanation-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.explanation-bubble p {
+  margin: 0;
+}
+
+.explanation-question {
+  font-weight: 600;
+}
+
+.explanation-solving {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 18px;
+}
+
+.explanation-move {
+  display: block;
+  font-size: 13px;
+  color: var(--stage-muted);
+}
+
+.explanation-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.explanation-actions button {
+  border: 0;
+  background: transparent;
+  color: var(--stage-accent);
+  font: 15px var(--font-text);
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+@media (prefers-contrast: more) {
+  .explanation-crop canvas {
+    filter: none;
+    mix-blend-mode: normal;
+  }
+}

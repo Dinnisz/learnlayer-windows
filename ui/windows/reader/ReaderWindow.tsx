@@ -2,11 +2,13 @@
 // that opens over it is ui/stage/). Open a PDF, scroll, zoom, drag a PDF in; a click on a question's label opens it.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Rects, type Rect } from "@core/pdf/page";
+import { EquationDetector, type EquationMatch } from "@core/explanation/explanation";
+import { Rects, type PageText, type Rect } from "@core/pdf/page";
 import { questionWithLabelAt, type ExamQuestion } from "@core/problems/questionDetector";
 import { Icon } from "../../components/Icon";
 import { usePlatform, useT } from "../../i18n";
 import { PageGeometry, ReaderDocument } from "../../reader/readerDocument";
+import { ExplanationStage } from "../../explanation/ExplanationStage";
 
 /** `?open=` is read once, not again when StrictMode runs the effect twice. */
 let openedFromQuery = false;
@@ -37,6 +39,8 @@ export function ReaderWindow({ renderOverlay }: ReaderWindowProps) {
   const [dragging, setDragging] = useState(false);
   const [scale, setScale] = useState<number | "fit">("fit");
   const [opened, setOpened] = useState<OpenedQuestion | null>(null);
+  /** A loose equation clicked (not a question): the formula explainer opens over it. */
+  const [equation, setEquation] = useState<{ page: PageText; pageIndex: number; match: EquationMatch } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
@@ -195,6 +199,7 @@ export function ReaderWindow({ renderOverlay }: ReaderWindowProps) {
                 scale={resolvedScale}
                 near={nearPages.has(index)}
                 onQuestion={(question, frame) => setOpened({ question, pageIndex: index, frame })}
+                onEquation={(page, match) => setEquation({ page, pageIndex: index, match })}
               />
             ))}
           </div>
@@ -213,6 +218,16 @@ export function ReaderWindow({ renderOverlay }: ReaderWindowProps) {
         )}
       </div>
       {document && opened && renderOverlay?.(document, opened, () => setOpened(null))}
+      {document && equation && !opened && (
+        <ExplanationStage
+          key={`${equation.pageIndex}:${equation.match.text}`}
+          document={document}
+          page={equation.page}
+          pageIndex={equation.pageIndex}
+          match={equation.match}
+          close={() => setEquation(null)}
+        />
+      )}
     </div>
   );
 }
@@ -250,10 +265,12 @@ interface PageViewProps {
   /** On screen or within a screen of it: drawn. */
   near: boolean;
   onQuestion: (question: ExamQuestion, frame: OpenedQuestion["frame"]) => void;
+  /** A click on a line that reads as maths, not on a question. */
+  onEquation: (page: PageText, match: EquationMatch) => void;
 }
 
 /** One page: drawn when it comes near the screen, with its question labels clickable. */
-function PageView({ document, index, mediaBox, scale, near, onQuestion }: PageViewProps) {
+function PageView({ document, index, mediaBox, scale, near, onQuestion, onEquation }: PageViewProps) {
   const holder = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const rendering = useRef<{ document: ReaderDocument; done: Promise<void> } | null>(null);
@@ -302,7 +319,12 @@ function PageView({ document, index, mediaBox, scale, near, onQuestion }: PageVi
       onMouseLeave={() => setHovering(false)}
       onClick={(event) => {
         const question = questionAt(event);
-        if (!question) return;
+        if (!question) {
+          const text = document.textIfRead(index);
+          const match = text ? EquationDetector.equation(text, pointOnPage(event)) : null;
+          if (text && match) onEquation(text, match);
+          return;
+        }
         const box = holder.current!.getBoundingClientRect();
         const onPage = PageGeometry.rectToScreen(question.bounds, mediaBox, scale);
         const frame = {
