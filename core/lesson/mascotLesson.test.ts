@@ -1,6 +1,7 @@
 // MascotLessonTests.swift, the decoding and guard cases: what the app accepts from the model before it plays a lesson.
 
 import { describe, expect, it } from "vitest";
+import { MascotLessonPrompt } from "./mascotLessonPrompt";
 import {
   CalcCheck,
   LessonStream,
@@ -171,5 +172,45 @@ describe("MascotLesson", () => {
       "o termo A B negado, e o que sobra?",
     );
     expect(MascotLessons.spokenWithoutLatex("sem comandos")).toBe("sem comandos");
+  });
+});
+
+describe("MascotLessonPrompt", () => {
+  it("forbids retelling and names Portugal's Portuguese", () => {
+    const pt = MascotLessonPrompt.system("pt");
+    expect(MascotLessonPrompt.version).toBe("14");
+    expect(pt).toContain("European Portuguese (pt-PT)");
+    expect(pt).toContain("TEACH THE WRITTEN SOLUTION, IN YOUR OWN WORDS");
+    expect(pt).toContain('"step"');
+    expect(pt).toContain("physically exact");
+    expect(MascotLessons.minimumBeats).toBe(3);
+    for (const word of ["crossOut", '"option"', '"quote"', '"box"']) expect(pt).toContain(word);
+    const en = MascotLessonPrompt.system("en");
+    expect(en).not.toContain("pt-PT");
+    expect(en).not.toContain("você");
+    const asked = MascotLessonPrompt.user({
+      doubt: "porque não é a C?",
+      question: "Q",
+      options: { A: "2 mA" },
+      optionLetters: ["A", "B"],
+      subject: "Circuitos",
+      work: "Step 1: parallel",
+      hasPicture: true,
+    });
+    expect(asked).toContain("porque não é a C?");
+    expect(asked).toContain("ON THE STUDENT'S SCREEN");
+    expect(asked).toContain("A: 2 mA");
+    const tap = MascotLessonPrompt.user({
+      doubt: null,
+      question: "Q",
+      options: {},
+      optionLetters: [],
+      subject: null,
+      work: null,
+      hasPicture: false,
+    });
+    expect(tap).toContain("Explica-me");
+    expect(tap).toContain("no written solution yet");
+    expect(MascotLessonPrompt.schema["type"]).toBe("object");
   });
 });
