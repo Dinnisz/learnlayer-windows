@@ -67,8 +67,9 @@ describe("ExplanationSession", () => {
     expect(open.state.kind).toBe("ready");
     expect(open.script).toBeNull();
     open.choose("explain");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let tries = 0; tries < 200 && open.state.kind !== "ready"; tries++)
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(open.state.kind).toBe("ready");
     expect(open.script).not.toBeNull();
     expect(open.steps.every((step) => step.kind === "step" || step.kind === "animation")).toBe(true);
     expect(open.steps.length).toBeGreaterThan(0);
