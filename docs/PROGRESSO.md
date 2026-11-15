@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 3 (Leitor de PDF e palco)
-- **Próximo passo:** o palco (`ui/stage/`) sobre o leitor: `ReaderWindow` já tem `renderOverlay(document, opened, close)`; o palco cria um `QuestionSession` (core/problems/questionSession.ts) com um `SolutionProvider` (services: DiskCache em `dataFiles`, cliente do `ModelClient`, `mockSolution` em dev com `?mock=1`) e mostra menu 1–4, Enter, Esc, Hint, Let me try, Solution (caixa da resposta, cartões em cascata com `runCascade`, Fórmulas, sublinhados via `StatementQuotes.underlines` sobre o `PageText`), Ask. Depois: builders TextHelp v5 / ProblemVariant / ExplanationPrompt v14; `docs/fase-3.md`. Feito na fase 3: detetor, RouteDecision, QuestionPages, leitor pdf.js, verificações de escalada, StatementQuotes, SolutionReveal, SolveProgress, SolutionProvider, QuestionSession (núcleo).
+- **Próximo passo:** acabar a fase 3 com os builders dos prompts `TextHelp` v5 (`referencia-mac/LearnLayer/Problems/TextHelp.swift`, ligar a `QuestionSession.ask` em `ui/stage/Stage.tsx`, que hoje usa `followUpContext` simples), `ProblemVariant` («Try a Similar One») e `ExplanationPrompt` v14; depois começar a fase 4 (Alt-clique). O leitor e o palco funcionam no browser com o MockSolution (ver `docs/fase-3.md`).
 - **Última atualização:** 2026-11-15
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
@@ -67,7 +67,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 | 0 | Esqueleto: Tauri 2 + React + TS + Vite + Vitest + Rust, lint, CI, traduções (609 chaves, en + pt-PT) | ✅ feito (`cargo test` por verificar: SAC) — `fase-0.md` |
 | 1 | Conta e plano: pílula, tray, janela principal, login PKCE e por código, deep link, Credential Manager, `/v1/me`, checkout | ✅ núcleo + interface; nativo escrito, por compilar — `fase-1.md` |
 | 2 | Núcleo portado (`core/`) e cliente de IA (SSE, refresh no 401, erros, cache) | ✅ feito; chamada real por verificar — `fase-2.md` |
-| 3 | Leitor de PDF (pdf.js) e palco (menu, Hint, Let me try, Solution, Ask) | em curso |
+| 3 | Leitor de PDF (pdf.js) e palco (menu, Hint, Let me try, Solution, Ask) | ✅ quase: faltam os builders TextHelp/Variant/Explanation — `fase-3.md` |
 | 4 | Alt-clique em qualquer app (hook, UIA, PDF por caminho, captura + OCR, transcrição rápida) | por fazer |
 | 5 | Voz e mascote (TTS, STT, push-to-talk, «Explica-me») | por fazer |
 | 6 | Figuras (templates, 3D, quadros de sinais, diagramas temporais, código) | por fazer |
@@ -112,5 +112,6 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 - 2026-11-14 — Pacote extraído; ferramentas instaladas; Fase 0 (esqueleto, traduções, CI) e Fase 1 (conta, plano, pílula, tray, sessão nativa). O SAC bloqueia o `cargo build`.
 - 2026-11-14 — Pedido do Dinis (num fork): código do sistema operativo atrás do trait `Platform`; textos, nome do dispositivo e atalhos dependentes da plataforma. Feito.
 - 2026-11-15 — Fase 2: núcleo portado (279 testes), prompts e esquemas extraídos do Swift palavra a palavra, cliente SSE, cache em disco.
+- 2026-11-15 — Fase 3: palco sobre o leitor (`ui/stage/`), verificado no browser com o exam.pdf do Mac.
 - 2026-11-15 — Fase 3: SolutionProvider + QuestionSession (núcleo) com testes; 415 testes.
 - 2026-11-15 — Fase 3 (em curso): detetor de perguntas com os testes do Mac (páginas sintéticas e `exam.pdf`/`teste-modelo-eo.pdf` via pdf.js), RouteDecision, QuestionPages, leitor pdf.js. 340 testes.
