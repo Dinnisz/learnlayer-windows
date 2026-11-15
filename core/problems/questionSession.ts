@@ -5,7 +5,7 @@
 
 import { isBlocked, isSignedOut, isTransient } from "../ai/modelClient";
 import { AISettings, ModelRouting, type RoutingConfig, type SolverRoute } from "../ai/modelRouting";
-import { streamedPart, type StreamedPart } from "../ai/partialJSON";
+import { PartialJSON, streamedPart, type StreamedPart } from "../ai/partialJSON";
 import { evaluate, tryParseExpression, variables, type Expression } from "../math/expression";
 import { latexToUnicode } from "../math/latexText";
 import { Verifier } from "../math/verifier";
@@ -20,7 +20,9 @@ import {
   type PassageLine,
 } from "./passage";
 import { ignoresMissingFigure, partLabelled, type Part, type ProblemSolution } from "./problemSolution";
+import type { FastTranscriptionReader } from "./fastTranscription";
 import type { ExamQuestion } from "./questionDetector";
+import { decodeBlocks, Transcriptions, type QuestionTranscription } from "./questionTranscription";
 import { QuestionText } from "./textChecks";
 import { RouteDecision, type RouteOutcome } from "./routeDecision";
 import { realigned, signTableProblems } from "./signTable";
@@ -55,6 +57,10 @@ export interface SessionServices {
   }): Promise<string[] | null>;
   now?(): number;
   setTimer?(callback: () => void, seconds: number): () => void;
+  /** The fast reading of the question's picture, raced with the solve (FastTranscription). */
+  fast?: FastTranscriptionReader;
+  /** The picture is one the app shows typeset, so it is to be transcribed (`QuestionTranscription.isRequested`). */
+  transcribing?(images: readonly Uint8Array[]): Promise<boolean>;
 }
 
 export interface SessionInit {
@@ -294,8 +300,21 @@ export class QuestionSession {
   hoveredStep: number | null = null;
   /** The step the voice is saying now, from the statement's data it names. */
   spokenStep: number | null = null;
-  /** The transcription's text, once the app shows the question typeset from it (phase 4). */
+  /** The transcription's text, once the app shows the question typeset from it. */
   shownStatement: string | null = null;
+  /** What the fast reading must pass to be shown at once (the app sets the check against its own numbers); one that
+   * fails is asked for once more, then waits for the solve's transcription instead. Says which test fails. */
+  rejectsFastTranscription: (found: QuestionTranscription) => string | null = (found) =>
+    Transcriptions.isUsable(found) ? null : "isUsable";
+  /** The part clicked ("ii"), when the picture is of one: a reading of another part is set aside. */
+  fastTranscriptionPart: string | null = null;
+  /** Called when the fast reading failed or was set aside: the app shows the crop rather than wait on. */
+  onFastTranscriptionMissed: (() => void) | null = null;
+  private transcriptionSettled = false;
+  /** A transcription that came before anyone was listening (undefined: none), handed over when someone is. */
+  private pendingTranscription: QuestionTranscription | null | undefined = undefined;
+  private transcriptionListener: ((found: QuestionTranscription | null) => void) | null = null;
+  private fastController: AbortController | null = null;
   followUpQuestion: string | null = null;
   followUpAnswer: string[] | null = null;
   isAnsweringFollowUp = false;
@@ -457,6 +476,85 @@ export class QuestionSession {
     if (this.hasStartedSolve) return;
     const saved = await this.services.provider.savedRoute(this.requestText, this.figureNote, this.images);
     if (saved !== null && !this.hasStartedSolve) await this.load();
+    else if (saved === null) await this.startFastTranscription();
+  }
+
+  // MARK: The question read from its picture
+
+  /** Called once with the question as a model read it from the picture (null when none did): the fast reading, or
+   * the solve's from the stream as soon as that field is complete, else from the solution. */
+  get onTranscription(): ((found: QuestionTranscription | null) => void) | null {
+    return this.transcriptionListener;
+  }
+
+  set onTranscription(listener: ((found: QuestionTranscription | null) => void) | null) {
+    this.transcriptionListener = listener;
+    if (listener && this.pendingTranscription !== undefined) this.settleTranscription(this.pendingTranscription);
+  }
+
+  private settleTranscription(found: QuestionTranscription | null): void {
+    if (this.transcriptionSettled) return;
+    const listener = this.transcriptionListener;
+    if (!listener) {
+      if (this.pendingTranscription === undefined) this.pendingTranscription = found;
+      return;
+    }
+    this.transcriptionSettled = true;
+    this.pendingTranscription = undefined;
+    listener(found);
+  }
+
+  private transcribes: boolean | null = null;
+
+  private async isTranscribing(): Promise<boolean> {
+    this.transcribes ??= (await this.services.transcribing?.(this.images)) ?? false;
+    return this.transcribes;
+  }
+
+  /** The question read by the fast model, in parallel with the solve: shown as soon as it arrives, unless the
+   * solve's own transcription already was, or it fails the check. */
+  private async startFastTranscription(): Promise<void> {
+    this.fastController?.abort();
+    const fast = this.services.fast;
+    if (this.transcriptionSettled || !fast?.isAvailable || !(await this.isTranscribing())) return;
+    // A saved solve already has the question in it: nothing to race.
+    const provider = this.services.provider;
+    const saved = await provider.savedRoute(this.requestText, this.figureNote, this.images);
+    if (saved !== null) {
+      const cached = await provider.cached(this.requestText, this.figureNote, this.images, saved);
+      const blocks = decodeBlocks(cached?.question ?? null);
+      if (blocks && Transcriptions.isUsable({ blocks })) return;
+    }
+    const controller = new AbortController();
+    this.fastController = controller;
+    const part = this.fastTranscriptionPart;
+    // The app's check is read when a reading comes: it may be set after the question opened.
+    const found = await fast.read(this.images, (reading) => {
+      const reason = Transcriptions.rejection(reading, part, null);
+      return reason ?? this.rejectsFastTranscription(reading);
+    });
+    if (controller.signal.aborted) return;
+    if (found && this.offerFastTranscription(found)) return;
+    this.onFastTranscriptionMissed?.();
+  }
+
+  /** False when the reading is not shown (unusable, or it fails the check); true once a transcription is settled. */
+  offerFastTranscription(found: QuestionTranscription): boolean {
+    if (this.transcriptionSettled) return true;
+    if (!Transcriptions.isUsable(found) || this.rejectsFastTranscription(found) !== null) return false;
+    this.settleTranscription(found);
+    return true;
+  }
+
+  /** The "question" blocks once the reply has moved on to the next field (so they are whole). */
+  static streamedQuestion(content: string): QuestionTranscription | null {
+    if (!content.includes('"question"') || !content.includes('"subject"')) return null;
+    const object = PartialJSON.value(content);
+    if (typeof object !== "object" || object === null || Array.isArray(object)) return null;
+    const record = object as Record<string, unknown>;
+    if (record["subject"] === undefined) return null;
+    const blocks = decodeBlocks(record["question"]);
+    return blocks ? { blocks } : null;
   }
 
   private solveOnFirstChoice(): void {
@@ -510,6 +608,7 @@ export class QuestionSession {
       this.changed();
     }, QuestionSession.slowStartDelay);
     this.changed();
+    void this.startFastTranscription();
 
     const provider = this.services.provider;
     const requestText = this.requestText;
@@ -630,6 +729,10 @@ export class QuestionSession {
     const now = this.now();
     if (this.state.kind !== "loading" || now - this.lastParse <= 0.1) return;
     this.lastParse = now;
+    if (!this.transcriptionSettled && this.transcribes === true) {
+      const found = QuestionSession.streamedQuestion(content);
+      if (found) this.settleTranscription(found);
+    }
     const labels = this.partLabels;
     const label = labels.includes(this.question.label) ? this.question.label : (labels[0] ?? null);
     const part = streamedPart(content, label);
@@ -644,6 +747,7 @@ export class QuestionSession {
 
   cancel(): void {
     this.controller?.abort();
+    this.fastController?.abort();
     this.variantController?.abort();
     this.stopSlowStart?.();
   }
@@ -656,6 +760,8 @@ export class QuestionSession {
     // A language, philosophy or text question does not depend on an unread diagram.
     if (solution.needsFigure && ignoresMissingFigure(solution, this.question.groupText)) solution.needsFigure = false;
     this.solution = solution;
+    const blocks = decodeBlocks(solution.question);
+    this.settleTranscription(blocks ? { blocks } : null);
     this.evidenceCache = null;
     // Confirmed unless a check fails; a missing check is no reason to pay the stronger model.
     this.isConfirmed = solution.checks.every((check) => Verifier.outcome(check) !== "failed");

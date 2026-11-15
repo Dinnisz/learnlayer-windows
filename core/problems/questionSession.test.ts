@@ -292,16 +292,30 @@ describe("QuestionSession solving", () => {
   it("does not confirm an answer whose check fails, and does when the checks pass", async () => {
     const failing = () =>
       answered([["1", "x = 3"]], "Matemática A", { checks: [{ kind: "equal", left: "2 + 2", right: "5" }] });
-    const { session: wrong } = session(question("1", "1. Quanto é 2 + 2?", ["1"]), failing, "Matemática A");
+    const { session: wrong, calls: wrongCalls } = session(
+      question("1", "1. Quanto é 2 + 2?", ["1"]),
+      failing,
+      "Matemática A",
+    );
+    // The first answer is not confirmed: the failed check sends the question to the stronger model, and only its
+    // answer counts as confirmed. (Waiting for that second answer keeps the test from racing it.)
     wrong.choose("hint");
-    await until(() => wrong.state.kind === "ready");
-    expect(wrong.isConfirmed).toBe(false);
+    await until(() => wrong.state.kind === "ready" && wrongCalls.solves >= 2 && !wrong.isConfirming);
+    expect(wrongCalls.solves).toBe(2);
+    expect(wrong.solvedByStrongerModel).toBe(true);
     const passing = () =>
       answered([["1", "4"]], "Matemática A", { checks: [{ kind: "equal", left: "2 + 2", right: "4" }] });
-    const { session: right } = session(question("1", "1. Quanto é 2 + 2?", ["1"]), passing, "Matemática A");
+    const { session: right, calls: rightCalls } = session(
+      question("1", "1. Quanto é 2 + 2?", ["1"]),
+      passing,
+      "Matemática A",
+    );
     right.choose("hint");
     await until(() => right.state.kind === "ready");
+    await new Promise((resolve) => setTimeout(resolve, 30));
     expect(right.isConfirmed).toBe(true);
+    expect(right.solvedByStrongerModel).toBe(false);
+    expect(rightCalls.solves).toBe(1);
   });
 
   it("checks the student's attempt numerically, and waits for confirmation before saying it differs", async () => {
