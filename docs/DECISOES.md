@@ -77,3 +77,18 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** a secção 3.3 põe o explicador de fórmulas soltas (clicar numa equação → «Explain it / Show the graph / Let me try», `ExplanationPrompt` v14) no leitor da fase 3, mas metade dele é o gráfico com parâmetro arrastável e as curvas que se desenham, que são da fase 6.
 - **Escolha:** a fase 3 fica com as perguntas de exame (detetor, palco, pista, tentar, resolução, pergunta livre, variante). O explicador de fórmulas (deteção de equações `EquationDetector`, prompt v14, menu e curva) entra na fase 6, com os gráficos.
 - **Porquê:** sem os gráficos, o explicador ficaria com um terço do comportamento do Mac; assim chega completo e testado de uma vez.
+
+## 2026-11-15 — Alt-clique num PDF: a pergunta mostra-se como a própria página
+- **Dúvida:** no Mac, uma pergunta lida do PDF aberto noutra app é tipografada a partir do texto do PDF e as figuras são redesenhadas a partir dos traços da página (`VectorPage`); quando o texto perdeu a forma das fórmulas, o modelo lê a imagem (transcrição rápida) e o PDF é lido antecipadamente para isso (`DocumentPreread`, com teto de gasto).
+- **Escolha:** no Windows, uma pergunta encontrada no PDF por caminho abre o mesmo palco do leitor da fase 3: o recorte da página desenhado pelo pdf.js (nunca do ecrã). O texto do PDF continua a ir para o modelo como no Mac. A leitura antecipada (`core/anywhere/preread.ts`) faz o plano do Mac (`PrereadPlan`, os mesmos testes) mas lê só o texto das páginas e as perguntas, de graça; o passo pago fica como gancho, com o mesmo teto. O redesenho das figuras a partir dos traços entra na fase 6.
+- **Porquê:** o recorte do pdf.js é exato e sem custo, e é o que o leitor já mostra. Uma leitura paga antecipada só servia para tipografar texto que o recorte já mostra bem.
+
+## 2026-11-15 — Sem leitor local de fórmulas no Windows
+- **Dúvida:** o Mac lê a imagem da pergunta primeiro com um modelo local de fórmulas (`LocalQuestionReader`, Pix2Text em CoreML) e só depois pergunta à nuvem.
+- **Escolha:** no Windows, o OCR local (`Windows.Media.Ocr`) dá só as linhas de texto: servem para encontrar a região da pergunta, o rascunho enquanto se espera e a verificação dos números. A leitura em LaTeX é sempre a transcrição rápida da nuvem (`core/problems/fastTranscription.ts`).
+- **Porquê:** não há um modelo de fórmulas equivalente no Windows sem descarregar e correr um modelo próprio. Fica como melhoria possível.
+
+## 2026-11-15 — Teste da confirmação tornado determinístico
+- **Dúvida:** o teste «does not confirm an answer whose check fails» verificava `isConfirmed` no momento em que a resposta ficava pronta. A confirmação pelo modelo forte corre logo a seguir, por isso o teste dependia do tempo e falhou depois de a transcrição rápida acrescentar um passo assíncrono.
+- **Escolha:** o teste espera pela confirmação e verifica que a resposta com a verificação falhada foi refeita pelo modelo forte (duas resoluções, `solvedByStrongerModel`), e que a resposta certa ficou confirmada sem segunda chamada.
+- **Porquê:** verifica o mesmo comportamento, sem depender do tempo, e verifica mais do que antes.
