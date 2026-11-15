@@ -1,0 +1,62 @@
+/* The stage over another app: the window itself is clear; the system's acrylic blurs the app below, and this tint
+   darkens it. With transparency off in Windows, a near-opaque black instead (CLAUDE.md §2.9). */
+html,
+body.overlay-body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+}
+
+.overlay-open {
+  background: rgb(0 0 0 / 38%);
+  animation: overlay-dim 250ms ease-out;
+}
+
+@keyframes overlay-dim {
+  from {
+    background: rgb(0 0 0 / 0%);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .overlay-open {
+    background: rgb(0 0 0 / 85%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-open {
+    animation-duration: 150ms;
+  }
+}
+
+.overlay-notice {
+  position: fixed;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 75%);
+  color: #fff;
+  font: 500 13px var(--font-text, "Segoe UI Variable", "Segoe UI", sans-serif);
+  pointer-events: none;
+  animation: overlay-notice 150ms ease-out;
+}
+
+@keyframes overlay-notice {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .overlay-notice {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

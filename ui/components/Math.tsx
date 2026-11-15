@@ -31,6 +31,24 @@ export function typeset(latex: string, display = false): string | null {
   }
 }
 
+/** The first piece of maths in a question's reading that KaTeX can't draw; null when everything typesets. A reading
+ * with such a piece is never shown: it would come out as stripped LaTeX (`RenderedQuestion.untypesetMath`). */
+export function untypesetMath(blocks: readonly { type: string; text: string | null }[]): string | null {
+  for (const block of blocks) {
+    const text = block.text ?? "";
+    if (block.type === "formula") {
+      if (text.trim() !== "" && typeset(text, true) === null) return text;
+      continue;
+    }
+    if (block.type !== "text") continue;
+    for (const match of text.matchAll(/\$\$([^$]+)\$\$|\$([^$\n]+)\$/g)) {
+      const latex = match[1] ?? match[2] ?? "";
+      if (typeset(latex) === null) return latex;
+    }
+  }
+  return null;
+}
+
 export const MathView = memo(function MathView({
   latex,
   display = false,

@@ -481,6 +481,29 @@ export class QuestionSession {
 
   // MARK: The question read from its picture
 
+  /**
+   * The stage's side of the hand-over (`AnywhereController.awaitTranscription`): the check a reading must pass, who
+   * hears that the fast reading missed, and who gets the reading. Returns the way to stop listening.
+   */
+  awaitTranscription(options: {
+    rejects: (found: QuestionTranscription) => string | null;
+    missed: () => void;
+    settled: (found: QuestionTranscription | null) => void;
+  }): () => void {
+    this.rejectsFastTranscription = options.rejects;
+    this.onFastTranscriptionMissed = options.missed;
+    this.onTranscription = options.settled;
+    return () => {
+      if (this.transcriptionListener === options.settled) this.transcriptionListener = null;
+      if (this.onFastTranscriptionMissed === options.missed) this.onFastTranscriptionMissed = null;
+    };
+  }
+
+  /** The question is shown typeset from `text`: the quotes are checked against it. */
+  showStatement(text: string | null): void {
+    this.shownStatement = text;
+  }
+
   /** Called once with the question as a model read it from the picture (null when none did): the fast reading, or
    * the solve's from the stream as soon as that field is complete, else from the solution. */
   get onTranscription(): ((found: QuestionTranscription | null) => void) | null {

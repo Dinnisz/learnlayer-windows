@@ -20,6 +20,7 @@ export default defineConfig({
         main: here("./ui/index.html"),
         pill: here("./ui/pill.html"),
         reader: here("./ui/reader.html"),
+        overlay: here("./ui/overlay.html"),
       },
     },
   },

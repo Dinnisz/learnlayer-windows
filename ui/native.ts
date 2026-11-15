@@ -212,3 +212,76 @@ export async function openReader(): Promise<void> {
     dragDropEnabled: false,
   });
 }
+
+// MARK: Alt-click in any app (src-tauri/src/platform/windows/anywhere.rs)
+
+/** A rectangle as the native side sends it: physical pixels, global (the virtual screen's top-left). */
+export interface PixelRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** What the native side read at an Alt-click, in physical pixels; the interface divides by `scale`. */
+export interface NativeClickRead {
+  /** Grows with each click: only the latest one's reading is opened. */
+  id: number;
+  point: { x: number; y: number };
+  /** The monitor of the click and its scale (1.5 at 150 %). */
+  monitor: PixelRect;
+  scale: number;
+  appName: string;
+  /** UI Automation's reading under the point, when the app exposes one. */
+  found: { text: string; frame: PixelRect; hasImage: boolean; method: string; focus: string } | null;
+  /** The text selected in the app, when the click fell on it. */
+  selection: { text: string; frame: PixelRect; context: string } | null;
+  /** The window under the point, when a picture of it was taken (`anywhere_picture` gives its pixels). */
+  window: (PixelRect & { pixelWidth: number; pixelHeight: number }) | null;
+  /** The text the OCR read on that picture, in pixels from the picture's top-left. */
+  lines: { text: string; rect: PixelRect }[];
+  /** The PDF the window shows, when its file could be found (`anywhere_pdf` gives its bytes). */
+  pdfPath: string | null;
+}
+
+export interface AnywhereHandlers {
+  /** The click, at once: the stage may say «Reading…» if reading takes a while. */
+  click(point: { x: number; y: number }, scale: number, monitor: PixelRect): void;
+  read(read: NativeClickRead): void;
+  /** Esc, even when the app below has the keyboard. */
+  escape(): void;
+}
+
+export async function onAnywhere(handlers: AnywhereHandlers): Promise<() => void> {
+  if (!isTauri) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  const stops = await Promise.all([
+    listen<{ point: { x: number; y: number }; scale: number; monitor: PixelRect }>("anywhere-click", (event) =>
+      handlers.click(event.payload.point, event.payload.scale, event.payload.monitor),
+    ),
+    listen<NativeClickRead>("anywhere-read", (event) => handlers.read(event.payload)),
+    listen("anywhere-escape", () => handlers.escape()),
+  ]);
+  return () => stops.forEach((stop) => stop());
+}
+
+/** The pixels of the window picture taken at click `id`: 4 bytes a pixel, blue first. */
+export async function anywherePicture(id: number): Promise<Uint8Array> {
+  const bytes = await invoke<ArrayBuffer>("anywhere_picture", { id });
+  return new Uint8Array(bytes);
+}
+
+/** The bytes of the PDF found behind the window at click `id`; it never leaves the computer. */
+export async function anywherePDF(id: number): Promise<ArrayBuffer> {
+  return invoke<ArrayBuffer>("anywhere_pdf", { id });
+}
+
+/** Hides the stage over the other app and gives the keyboard back to it. */
+export async function closeOverlay(): Promise<void> {
+  if (isTauri) await invoke<void>("anywhere_close");
+}
+
+/** The stage takes mouse clicks (a question is open) or lets them through (only a word near the cursor). */
+export async function setOverlayInteractive(interactive: boolean): Promise<void> {
+  if (isTauri) await invoke<void>("anywhere_interactive", { interactive });
+}

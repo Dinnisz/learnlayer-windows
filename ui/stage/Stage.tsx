@@ -9,19 +9,61 @@ import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
 import { Variant } from "@core/problems/problemVariant";
+import { FastTranscriptionReader } from "@core/problems/fastTranscription";
+import type { ExamQuestion } from "@core/problems/questionDetector";
 import { QuestionPages } from "@core/problems/questionPages";
+import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
 import { QuestionSession, type Mode } from "@core/problems/questionSession";
 import { StatementQuotes } from "@core/problems/statementQuotes";
 import { describePart, TextHelpContext } from "@core/problems/textHelp";
-import { solutionProvider, textHelpProvider } from "../ai/solver";
+import { fastReader, solutionProvider, textHelpProvider, transcriptionRequests } from "../ai/solver";
 import { Icon } from "../components/Icon";
-import { MathText, MathView } from "../components/Math";
+import { MathText, MathView, untypesetMath } from "../components/Math";
 import { useT } from "../i18n";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
 
 const base64Bytes = (text: string) => Uint8Array.from(atob(text), (character) => character.charCodeAt(0));
+
+/** A question read from the screen (an Alt-click in another app): its picture, and the session made for it. */
+export interface PictureQuestion {
+  kind: "picture";
+  question: ExamQuestion;
+  /** The region's picture (a JPEG's object URL) and its size on screen, in points; null when there is none. */
+  picture: { url: string; width: number; height: number } | null;
+  /** Where the figures are in the picture, as shares (for a typeset reading's figure blocks). */
+  figureBoxes: readonly Rect[];
+  /** What the stage shows until the model's reading comes: the computer's own reading, typeset; null for bars. */
+  draft: string | null;
+  /** The model reads the picture and the stage shows that reading typeset; false: the question's text as it is. */
+  transcribes: boolean;
+  /** The numbers the computer read, a reading must keep them to be shown. */
+  ocrText: string;
+  session(): QuestionSession;
+}
+
+/** Where the stage's question comes from: a page of the reader's PDF, or a picture of the screen. */
+export type StageSource = { kind: "pdf"; document: ReaderDocument; opened: OpenedQuestion } | PictureQuestion;
+
+/** The services every session gets: the solver, the routing, the follow-up questions, the fast reading. */
+export function sessionServices() {
+  return {
+    provider: solutionProvider(),
+    config: () => solutionProvider().services.config(),
+    help: async ({ passage, context, image }: { passage: string; context: string; image: Uint8Array | null }) =>
+      (await textHelpProvider().help(passage, context, image)).explanation,
+    fast: fastReader(),
+    transcribing: (images: readonly Uint8Array[]) => transcriptionRequests.isRequested(images),
+  };
+}
+
+async function prepareSource(source: StageSource): Promise<{ session: QuestionSession; page: PageText | null }> {
+  if (source.kind === "pdf") return prepare(source.document, source.opened);
+  const session = source.session();
+  void session.openQuietly();
+  return { session, page: null };
+}
 
 /** The pages, pictures and source lines that go with the clicked question, then its session (no call yet). */
 async function prepare(
@@ -48,11 +90,7 @@ async function prepare(
       passageLines: passageLinesOfPages(pages),
       sendsMaterial: QuestionPages.sendsMaterial(pages, question),
     },
-    {
-      provider: solutionProvider(),
-      config: () => solutionProvider().services.config(),
-      help: async ({ passage, context, image }) => (await textHelpProvider().help(passage, context, image)).explanation,
-    },
+    sessionServices(),
   );
   void session.openQuietly();
   return { session, page };
@@ -67,17 +105,9 @@ function useSession(session: QuestionSession | null): number {
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function Stage({
-  document,
-  opened,
-  close,
-}: {
-  document: ReaderDocument;
-  opened: OpenedQuestion;
-  close: () => void;
-}) {
+export function Stage({ source, close }: { source: StageSource; close: () => void }) {
   const t = useT();
-  const [prepared, setPrepared] = useState<{ session: QuestionSession; page: PageText } | null>(null);
+  const [prepared, setPrepared] = useState<{ session: QuestionSession; page: PageText | null } | null>(null);
   const pendingChoice = useRef<Mode | null>(null);
   const session = prepared?.session ?? null;
   useSession(session);
@@ -85,7 +115,7 @@ export function Stage({
   useEffect(() => {
     let cancelled = false;
     let made: QuestionSession | null = null;
-    void prepare(document, opened).then((ready) => {
+    void prepareSource(source).then((ready) => {
       if (cancelled) return;
       made = ready.session;
       setPrepared(ready);
@@ -96,7 +126,7 @@ export function Stage({
       cancelled = true;
       made?.cancel();
     };
-  }, [document, opened]);
+  }, [source]);
 
   const choose = useCallback(
     (mode: Mode) => {
@@ -150,13 +180,17 @@ export function Stage({
       onMouseDown={(event) => event.target === event.currentTarget && close()}
     >
       <div className={`stage-column${compact ? " stage-compact" : ""}`}>
-        <QuestionCrop
-          document={document}
-          opened={opened}
-          page={prepared?.page ?? null}
-          session={session}
-          compact={compact}
-        />
+        {source.kind === "pdf" ? (
+          <QuestionCrop
+            document={source.document}
+            opened={source.opened}
+            page={prepared?.page ?? null}
+            session={session}
+            compact={compact}
+          />
+        ) : (
+          <ScreenQuestionView source={source} session={session} compact={compact} />
+        )}
         {session === null || mode === null ? (
           <Menu
             explains={session?.explains ?? false}
@@ -909,5 +943,155 @@ function Actions({ session }: { session: QuestionSession }) {
           ))}
       </div>
     </footer>
+  );
+}
+
+type Shown = { kind: "waiting" } | { kind: "crop" } | { kind: "typeset"; transcription: QuestionTranscription };
+
+/**
+ * A question read from the screen (`AnywhereController.opened`): its text typeset when it can be trusted; while the
+ * model reads the picture, the computer's own reading (or soft bars), then the model's reading typeset. If that
+ * reading fails, drops the numbers the computer read, or takes longer than `placeholderLimit`, the crop itself is
+ * shown; a reading accepted later still replaces it.
+ */
+function ScreenQuestionView({
+  source,
+  session,
+  compact,
+}: {
+  source: PictureQuestion;
+  session: QuestionSession | null;
+  compact: boolean;
+}) {
+  const t = useT();
+  const [shown, setShown] = useState<Shown>(() => {
+    if (source.transcribes) return { kind: "waiting" };
+    const plain = Transcriptions.fromPlainText(source.question.text);
+    if (Transcriptions.isUsable(plain) && untypesetMath(plain.blocks) === null)
+      return { kind: "typeset", transcription: plain };
+    return source.picture ? { kind: "crop" } : { kind: "typeset", transcription: plain };
+  });
+
+  useEffect(() => {
+    if (!session) return;
+    if (shown.kind === "typeset") session.showStatement(Transcriptions.plainText(shown.transcription));
+  }, [session, shown]);
+
+  useEffect(() => {
+    if (!session || !source.transcribes) return;
+    const settle = (found: QuestionTranscription | null) => {
+      const usable =
+        found &&
+        Transcriptions.isUsable(found) &&
+        Transcriptions.agrees(found, source.ocrText) &&
+        untypesetMath(found.blocks) === null;
+      // The crop is shown once; after that only a typeset reading replaces what is there.
+      setShown((now) =>
+        usable ? { kind: "typeset", transcription: found } : now.kind === "waiting" ? { kind: "crop" } : now,
+      );
+    };
+    // The fast reading is shown only if it keeps the numbers the computer read; else the crop, until the solve's.
+    const stop = session.awaitTranscription({
+      rejects: (found) => Transcriptions.rejection(found, null, source.ocrText),
+      missed: () => settle(null),
+      settled: settle,
+    });
+    // A reply that never comes (no key, offline), or a stream that is slow or stuck: the crop, not bars for ever.
+    const start = performance.now();
+    const timer = window.setInterval(() => {
+      const ended = session.state.kind === "failed" || session.state.kind === "needsKey";
+      if (FastTranscriptionReader.placeholderGivesWay((performance.now() - start) / 1000, ended)) {
+        window.clearInterval(timer);
+        setShown((now) => (now.kind === "waiting" ? { kind: "crop" } : now));
+      }
+    }, 250);
+    return () => {
+      window.clearInterval(timer);
+      stop();
+    };
+  }, [session, source]);
+
+  const picture = source.picture;
+  const scale = compact ? 0.85 : 1;
+  return (
+    <div className="stage-question stage-screen-question" aria-live="polite">
+      {shown.kind === "typeset" ? (
+        <TypesetQuestion transcription={shown.transcription} source={source} />
+      ) : shown.kind === "crop" && picture ? (
+        <img
+          className="stage-screen-crop"
+          src={picture.url}
+          alt={source.question.text}
+          style={{ width: picture.width * scale, height: picture.height * scale }}
+        />
+      ) : source.draft ? (
+        <div className="stage-typeset stage-draft">
+          {source.draft.split("\n").map((line, index) => (
+            <p key={index}>{line}</p>
+          ))}
+        </div>
+      ) : (
+        <div
+          className="stage-placeholder"
+          role="img"
+          aria-label={t("Reading…")}
+          style={
+            picture
+              ? { width: Math.min(picture.width, 640), height: Math.max(48, Math.min(picture.height, 260)) }
+              : undefined
+          }
+        >
+          <span />
+          <span />
+          <span />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
+ * cut from the picture where the reading says they are. */
+function TypesetQuestion({ transcription, source }: { transcription: QuestionTranscription; source: PictureQuestion }) {
+  const picture = source.picture;
+  // The i-th figure block without a box of its own takes the i-th figure found on the picture.
+  const figureOrder = transcription.blocks.map(
+    (_, index) => transcription.blocks.slice(0, index).filter((block) => block.type === "figure").length,
+  );
+  return (
+    <div className="stage-typeset">
+      {transcription.blocks.map((block, index) => {
+        if (block.type === "figure") {
+          const box = Transcriptions.rect(block) ?? source.figureBoxes[figureOrder[index]!] ?? null;
+          if (!picture || !box) return null;
+          const width = box.width * picture.width;
+          const height = box.height * picture.height;
+          return (
+            <figure key={index} className="stage-figure">
+              <div
+                role="img"
+                aria-label={block.caption ?? ""}
+                style={{
+                  width,
+                  height,
+                  backgroundImage: `url(${picture.url})`,
+                  backgroundSize: `${picture.width}px ${picture.height}px`,
+                  backgroundPosition: `${-box.x * picture.width}px ${-box.y * picture.height}px`,
+                }}
+              />
+              {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+            </figure>
+          );
+        }
+        const text = block.text ?? "";
+        if (text.trim() === "") return null;
+        if (block.type === "formula") return <MathView key={index} latex={text} display className="stage-formula" />;
+        return (
+          <p key={index}>
+            <MathText text={text} />
+          </p>
+        );
+      })}
+    </div>
   );
 }
