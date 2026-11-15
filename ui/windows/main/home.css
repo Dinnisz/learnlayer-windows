@@ -119,3 +119,82 @@
     opacity: 1;
   }
 }
+
+/* Memory: the concepts met, as a map or a list by document. */
+.memory-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.memory-search {
+  flex: 1;
+  font: inherit;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--separator, rgb(128 128 128 / 30%));
+  background: var(--control-background, transparent);
+  color: inherit;
+}
+
+.memory-switch {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--separator, rgb(128 128 128 / 30%));
+}
+
+.memory-switch button {
+  font: inherit;
+  padding: 5px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.memory-switch button[aria-selected="true"] {
+  background: var(--accent, #0a84ff);
+  color: #fff;
+}
+
+.memory-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.memory-node {
+  cursor: pointer;
+}
+
+.memory-node circle {
+  fill: var(--accent, #0a84ff);
+  fill-opacity: 0.22;
+  stroke: var(--accent, #0a84ff);
+  stroke-width: 1.5;
+  transition: fill-opacity 160ms ease;
+}
+
+.memory-node:hover circle,
+.memory-node:focus-visible circle,
+.memory-node.selected circle {
+  fill-opacity: 0.55;
+}
+
+.memory-node:focus {
+  outline: none;
+}
+
+.memory-node text {
+  font-size: 11px;
+  fill: currentColor;
+  opacity: 0.8;
+}
+
+.memory-legend {
+  font-size: 12px;
+  opacity: 0.6;
+  margin: 4px 0 14px;
+}

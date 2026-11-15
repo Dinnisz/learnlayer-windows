@@ -21,6 +21,7 @@ import { appConfig, onDeepLink, onNavigate, setTrayLabels } from "../../native";
 import { AccountPane } from "./panes/AccountPane";
 import { DocumentsPane } from "./panes/DocumentsPane";
 import { PlanPane } from "./panes/PlanPane";
+import { MemoryPane } from "./panes/MemoryPane";
 import { ConsentSheet, SignInSheet } from "./sheets/SignInSheet";
 
 const routeKey = "homeRoute";
@@ -143,6 +144,7 @@ function HomePane({ route, onNavigate }: { route: HomeRoute; onNavigate: (route:
   if (route === "account") return <AccountPane onNavigate={onNavigate} />;
   if (route === "plan") return <PlanPane />;
   if (route === "documents") return <DocumentsPane />;
+  if (route === "memory") return <MemoryPane />;
   return (
     <SettingsPage title={t(titleKey(route))} subtitle="" data-group={groupOf(route)}>
       {null}
