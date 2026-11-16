@@ -28,5 +28,7 @@
   "Reading other apps": "Ler outras apps",
   "Text is read through Windows UI Automation; never from password fields, secure exam browsers or banking apps.": "O texto é lido pela UI Automation do Windows; nunca de campos de palavra-passe, navegadores de exame seguro ou apps de banco.",
   "Start with Windows": "Abrir com o Windows",
-  "Opens LearnLayer in the background when you sign in to Windows.": "Abre o LearnLayer em segundo plano quando inicias sessão no Windows."
+  "Opens LearnLayer in the background when you sign in to Windows.": "Abre o LearnLayer em segundo plano quando inicias sessão no Windows.",
+  "A new version of LearnLayer is ready.": "Está pronta uma nova versão do LearnLayer.",
+  "Restart to update": "Reiniciar para atualizar"
 }

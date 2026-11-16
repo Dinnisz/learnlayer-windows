@@ -2,7 +2,7 @@
 // the language, the introduction, and how to use the app. On Windows also the talk key and Alt-click (CLAUDE.md 3.1,
 // 4.3), which the Mac keeps in AI & usage and Permissions.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { mascotColorKey, mascotColors, storedMascotColor, type MascotColor } from "../../../components/Mascot";
 import {
   SettingsButton,
@@ -13,7 +13,16 @@ import {
   SettingsToggle,
 } from "../../../components/settings/SettingsKit";
 import { useT } from "../../../i18n";
-import { anywhereEnabled, setAnywhereEnabled, setTalkKey, talkKeyChoice, type TalkKeyChoice } from "../../../native";
+import {
+  anywhereEnabled,
+  isTauri,
+  setAnywhereEnabled,
+  setStartsWithSystem,
+  setTalkKey,
+  startsWithSystem,
+  talkKeyChoice,
+  type TalkKeyChoice,
+} from "../../../native";
 import { premiumVoiceKey } from "../../../voice/speaker";
 
 export const examSubjects = [
@@ -85,6 +94,10 @@ export function GeneralPane({ onRestartIntroduction }: { onRestartIntroduction?:
   const [language, setLanguage] = useState(shownLanguage);
   const [talk, setTalk] = useState<TalkKeyChoice>(talkKeyChoice());
   const [anywhere, setAnywhere] = useState(anywhereEnabled());
+  const [startsWithWindows, setStartsWithWindows] = useState(false);
+  useEffect(() => {
+    void startsWithSystem().then(setStartsWithWindows);
+  }, []);
 
   const applySubject = (choice: string, text: string) => {
     write(preferences.subject, choice === "" ? null : choice === "other" ? text.trim() || null : choice);
@@ -217,6 +230,24 @@ export function GeneralPane({ onRestartIntroduction }: { onRestartIntroduction?:
           />
         </SettingsRow>
       </SettingsGroup>
+
+      {isTauri && (
+        <SettingsGroup>
+          <SettingsRow
+            title={t("Start with Windows")}
+            detail={t("Opens LearnLayer in the background when you sign in to Windows.")}
+          >
+            <SettingsToggle
+              label={t("Start with Windows")}
+              checked={startsWithWindows}
+              onChange={(on) => {
+                setStartsWithWindows(on);
+                void setStartsWithSystem(on).catch(() => setStartsWithWindows(!on));
+              }}
+            />
+          </SettingsRow>
+        </SettingsGroup>
+      )}
 
       <SettingsGroup>
         <SettingsRow title={t("Language")}>

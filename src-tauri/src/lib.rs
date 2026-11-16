@@ -7,6 +7,7 @@ pub mod data_files;
 mod platform;
 pub mod session;
 mod tray;
+mod updates;
 
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_dialog::DialogExt;
@@ -15,6 +16,8 @@ use config::AppConfig;
 use session::{AuthTokens, Handoff, ProfileFile, SecretStore, Session, SessionStatus};
 
 const MAIN: &str = "main";
+/// What Windows passes when it starts LearnLayer at sign-in: then only the pill and the tray icon appear.
+const AUTOSTART_FLAG: &str = "--autostart";
 
 struct AppState {
     config: AppConfig,
@@ -165,7 +168,9 @@ async fn save_text_file(app: AppHandle, default_name: String, contents: String) 
 }
 
 pub fn run() {
-    tauri::Builder::default()
+    let context = tauri::generate_context!();
+    let updates_on = updates::configured(&context);
+    let builder = tauri::Builder::default()
         // First, so a second launch (a click on a `learnlayer://` link) hands its link to this one and exits.
         .plugin(tauri_plugin_single_instance::init(|app, _arguments, _directory| {
             show_main_window(app, None);
@@ -174,7 +179,19 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
+        // "Start with Windows" (Settings › General), off until the student turns it on.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![AUTOSTART_FLAG]),
+        ));
+    let builder = if updates_on {
+        builder.plugin(tauri_plugin_updater::Builder::new().build())
+    } else {
+        builder
+    };
+    builder
         .manage(AppState::new())
+        .manage(updates::PendingUpdate::default())
         .invoke_handler(tauri::generate_handler![
             app_config,
             show_main,
@@ -201,8 +218,10 @@ pub fn run() {
             tray::set_tray_labels,
             data_files::data_file_read,
             data_files::data_file_write,
+            updates::update_install,
+            updates::update_ready,
         ])
-        .setup(|app| {
+        .setup(move |app| {
             // The installer registers `learnlayer://`; a debug build registers it for this user itself.
             #[cfg(debug_assertions)]
             {
@@ -215,6 +234,13 @@ pub fn run() {
             if let Err(error) = platform::current().start_anywhere(app.handle(), true) {
                 eprintln!("Alt-click is unavailable: {error}");
             }
+            // The window starts hidden (tauri.conf.json): it shows unless Windows started the app at sign-in.
+            if !std::env::args().any(|argument| argument == AUTOSTART_FLAG) {
+                show_main_window(app.handle(), None);
+            }
+            if updates_on {
+                updates::start(app.handle());
+            }
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -226,6 +252,6 @@ pub fn run() {
                 }
             }
         })
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running LearnLayer");
 }

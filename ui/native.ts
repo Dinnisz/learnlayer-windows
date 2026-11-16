@@ -363,3 +363,35 @@ export async function openMicrophoneSettings(): Promise<void> {
   const { openUrl } = await import("@tauri-apps/plugin-opener");
   await openUrl("ms-settings:privacy-microphone");
 }
+
+// MARK: Start with Windows and updates (src-tauri/src/updates.rs)
+
+/** Whether Windows starts LearnLayer at sign-in (the Run key the autostart plugin writes). Off by default. */
+export async function startsWithSystem(): Promise<boolean> {
+  if (!isTauri) return false;
+  const { isEnabled } = await import("@tauri-apps/plugin-autostart");
+  return isEnabled().catch(() => false);
+}
+
+export async function setStartsWithSystem(on: boolean): Promise<void> {
+  if (!isTauri) return;
+  const { enable, disable } = await import("@tauri-apps/plugin-autostart");
+  await (on ? enable() : disable());
+}
+
+/** The version downloaded and waiting for "Restart to update", or null. */
+export async function readyUpdate(): Promise<string | null> {
+  if (!isTauri) return null;
+  return invoke<string | null>("update_ready").catch(() => null);
+}
+
+export async function onUpdateReady(handler: (version: string) => void): Promise<() => void> {
+  if (!isTauri) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<string>("update-ready", (event) => handler(event.payload));
+}
+
+/** Installs the downloaded version; the app closes and starts again. */
+export async function installUpdate(): Promise<void> {
+  if (isTauri) await invoke<void>("update_install");
+}

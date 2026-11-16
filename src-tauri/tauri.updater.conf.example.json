@@ -1,0 +1,15 @@
+{
+  "bundle": {
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "PASTE HERE THE CONTENTS OF THE .pub FILE MADE BY `npx tauri signer generate`",
+      "endpoints": ["https://EXAMPLE-DOWNLOAD-HOST/windows/latest.json"],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

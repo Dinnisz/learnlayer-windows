@@ -17,7 +17,15 @@ import { Icon } from "../../components/Icon";
 import { SettingsPage } from "../../components/settings/SettingsKit";
 import { accountModel } from "../../account/accountStore";
 import { usePlatform, usePlatformName, useT } from "../../i18n";
-import { appConfig, onDeepLink, onNavigate, setTrayLabels } from "../../native";
+import {
+  appConfig,
+  installUpdate,
+  onDeepLink,
+  onNavigate,
+  onUpdateReady,
+  readyUpdate,
+  setTrayLabels,
+} from "../../native";
 import { AccountPane } from "./panes/AccountPane";
 import { DocumentsPane } from "./panes/DocumentsPane";
 import { PlanPane } from "./panes/PlanPane";
@@ -53,6 +61,33 @@ function useMemoryUpkeep() {
     void memorySync().then((sync) => sync.start());
     return () => window.removeEventListener("focus", reload);
   }, []);
+}
+
+/** A new version downloaded in the background, offered once it is ready ("Restart to update"). */
+function UpdateBanner() {
+  const t = useT();
+  const [version, setVersion] = useState<string | null>(null);
+  useEffect(() => {
+    void readyUpdate().then(setVersion);
+    let stop = () => {};
+    let cancelled = false;
+    void onUpdateReady(setVersion).then((unlisten) => (cancelled ? unlisten() : (stop = unlisten)));
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, []);
+  if (!version) return null;
+  return (
+    <div className="home-update" role="status">
+      <span>
+        {t("A new version of LearnLayer is ready.")} <span className="home-update-version">{version}</span>
+      </span>
+      <button type="button" onClick={() => void installUpdate()}>
+        {t("Restart to update")}
+      </button>
+    </div>
+  );
 }
 
 /** The first-run card: decided once at launch, started again from Settings › General. */
@@ -132,6 +167,7 @@ export function HomeWindow() {
   return (
     <div className="home">
       <HomeSidebar selection={route} onSelect={select} />
+      <UpdateBanner />
       <main className="home-detail" key={route}>
         <HomePane route={route} onNavigate={select} onRestartIntroduction={() => onboarding.coordinator.begin()} />
       </main>
