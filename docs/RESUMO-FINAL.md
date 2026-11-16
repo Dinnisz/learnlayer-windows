@@ -4,7 +4,7 @@ As fases 0 a 8 estão feitas no código. O que falta depende de ti (`PARA-O-DINI
 
 ## Em números
 
-- 80 commits no `main`, nenhum push.
+- 79 commits no `main`, nenhum push.
 - ~51 000 linhas de TypeScript (`core/` e `ui/`) e ~3 200 de Rust (`src-tauri/src/`).
 - 763 testes a passar no Vitest. A maioria são os testes do Mac portados com os mesmos casos. O lint e a verificação de tipos estão limpos.
 - Custo da API paga: **0,00 USD**. Nenhuma chamada real: tudo foi desenvolvido com as respostas falsas do Mac.
