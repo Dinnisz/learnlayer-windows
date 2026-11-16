@@ -4,8 +4,8 @@
 
 ## Estado atual
 
-- **Fase atual:** 8 (Distribuição)
-- **Próximo passo:** fase 8. (1) Arranque com o Windows (`tauri-plugin-autostart`, desligado por defeito, em Definições › Geral); (2) atualização automática (`tauri-plugin-updater`, URL e chave pública em configuração, PARA-O-DINIS ponto 5); (3) instalador NSIS em `dist/` (`npm run tauri build`; se o SAC impedir, deixar o comando e a configuração prontos); (4) sincronização cifrada da memória igual à do Mac (`Brain/BrainSync*.swift`, `Memory/MemorySync.swift`, `BrainMerge`), com os testes do Mac e o formato da cifra idêntico; (5) `docs/RESUMO-FINAL.md`. Pendentes das fases 5–7: 3D com three.js, figuras pré-feitas animadas, marcas da voz/lição na figura, menu de estudo, clipes do onboarding para o Windows.
+- **Fase atual:** 8 fechada (fases 0–8 feitas; o que falta depende do Dinis: `PARA-O-DINIS.md`)
+- **Próximo passo:** quando houver uma máquina que compile (PARA-O-DINIS, ponto 1): `cargo fmt`, `clippy` e `cargo test`, corrigir o que o compilador apontar no Rust escrito à mão, gerar o instalador (`scripts/build-installer.ps1`) e fazer as verificações dos pontos 6–10. Sem isso, os pendentes que não dependem dele: 3D com three.js, figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador.
 - **Última atualização:** 2026-11-16
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
@@ -72,7 +72,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 | 5 | Voz e mascote (TTS, STT, push-to-talk, «Explica-me») | ✅ feito no browser; voz pt-PT, microfone e latência por verificar — `fase-5.md` |
 | 6 | Figuras (templates, 3D, quadros de sinais, diagramas temporais, código) | ✅ feito no browser, salvo 3D e figuras animadas — `fase-6.md` |
 | 7 | Onboarding, Memória, Definições completas | ✅ feito no browser; caminho completo com a app compilada por verificar — `fase-7.md` |
-| 8 | Distribuição (instalador, assinatura, atualização, sincronização cifrada) | por fazer |
+| 8 | Distribuição (instalador, assinatura, atualização, sincronização cifrada) | ✅ sincronização cifrada (testada), arranque com o Windows, atualizações, script do instalador e CI; instalador por gerar (SAC) — `fase-8.md` |
 
 ## O que ainda falta portar, por fase
 
@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-16 — Fase 8 fechada: sincronização cifrada da memória no formato do Mac (WebCrypto, testes do Mac e o vetor do RFC 7748), memória fundida entre janelas, «Abrir com o Windows», atualizações com «Reiniciar para atualizar», `scripts/build-installer.ps1` e trabalho do CI. O instalador não sai nesta máquina (o SAC bloqueia a compilação e agora também o `rustfmt`). 759 testes.
 - 2026-11-16 — Fase 7 fechada: memória local com o plano pedagógico, páginas Memória e Documentos com dados reais, Definições completas, onboarding de oito ecrãs com a pergunta de exemplo a abrir o palco. 740 testes.
 - 2026-11-14 — Pacote extraído; ferramentas instaladas; Fase 0 (esqueleto, traduções, CI) e Fase 1 (conta, plano, pílula, tray, sessão nativa). O SAC bloqueia o `cargo build`.
 - 2026-11-14 — Pedido do Dinis (num fork): código do sistema operativo atrás do trait `Platform`; textos, nome do dispositivo e atalhos dependentes da plataforma. Feito.

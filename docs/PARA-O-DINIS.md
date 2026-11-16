@@ -15,6 +15,8 @@ error: failed to run custom build command for `typeid v1.0.3`
 
 Repeti a build e o bloqueio é o mesmo. O registo `Microsoft-Windows-CodeIntegrity/Operational` (eventos 3077/3033) confirma que foi o SAC.
 
+**Atualização 2026-11-16:** o SAC passou a bloquear também o `rustfmt` (o formatador do Rust). Por isso o código Rust das fases 7–8 (comandos das chaves da memória, arranque com o Windows, atualizações) foi escrito e revisto à mão, sem verificação de formatação nem compilação. O CI (`cargo fmt --check`, `clippy`, `cargo test`) é o primeiro sítio onde vai ser verificado.
+
 **O que isto trava.** Tudo o que é Rust: `cargo test`, `npm run tauri dev`, a janela real da app, a pílula, o tray, o Credential Manager, o deep link `learnlayer://`, o Alt-clique (hook, UI Automation, OCR), a voz do sistema e o instalador. A app compilada (`LearnLayer.exe`, sem assinatura) seria muito provavelmente bloqueada também.
 
 **O que não trava.** O `core/` em TypeScript (lógica, prompts, verificação, testes) e a interface em React, que corre no browser com `npm run dev`. É nisso que continuo.
@@ -38,10 +40,25 @@ A página `/download` lê `DOWNLOAD_URL`, que hoje é o do Mac. Para o Windows �
 `qwen/qwen3.8-flash` não está na lista de modelos permitidos do Worker, por isso pelo backend sai Haiku. Para a transcrição rápida funcionar como no Mac em Debug, acrescenta o modelo à lista do plano em `backend/src/routing.ts`.
 
 ### 4. Conta de assinatura de código (Azure Trusted Signing)
-Até existir, as builds não são assinadas e o SmartScreen avisa. Quando tiveres a conta, preciso de: endpoint, nome da conta, nome do perfil de certificado. Ficam em variáveis de ambiente do CI, nunca no repositório.
+Até existir, as builds não são assinadas e o SmartScreen avisa. Quando tiveres a conta:
+1. Instala a ferramenta de assinatura: `cargo install trusted-signing-cli`.
+2. Antes de correr `scripts\build-installer.ps1`, define estas variáveis na consola (nunca num ficheiro do repositório):
+   - `AZURE_SIGNING_ENDPOINT` (por exemplo `https://weu.codesigning.azure.net`), `AZURE_SIGNING_ACCOUNT` e `AZURE_SIGNING_PROFILE`;
+   - a identidade do Azure: `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` e `AZURE_TENANT_ID`.
+3. O script assina o `LearnLayer.exe` e o instalador. Sem estas variáveis, a build sai sem assinatura (só para testes).
 
 ### 5. URL de atualização automática
-O `updater` do Tauri precisa de um URL HTTPS com o `latest.json` e de um par de chaves de assinatura das atualizações (a chave privada fica contigo).
+O código está pronto (`src-tauri/src/updates.rs`). A app procura uma versão nova ao arrancar e de 6 em 6 horas, descarrega-a e confirma a assinatura. Depois mostra «Reiniciar para atualizar» na janela principal. Sem configuração, não faz nenhum pedido. Para a ligar:
+1. Gera o par de chaves das atualizações (uma vez): `npx tauri signer generate -w %USERPROFILE%\.tauri\learnlayer-updates.key`.
+   Guarda a chave privada e a palavra-passe num sítio seguro: sem elas não podes publicar mais atualizações para quem já instalou.
+2. Copia `src-tauri\tauri.updater.conf.example.json` para `src-tauri\tauri.updater.conf.json`. Nesse ficheiro:
+   - em `pubkey`, cola o conteúdo do ficheiro `.pub`;
+   - em `endpoints`, põe o URL HTTPS onde vais pôr o `latest.json` (por exemplo um bucket R2 da Cloudflare).
+3. Antes da build, carrega a chave e a palavra-passe na consola:
+   - `$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content $env:USERPROFILE\.tauri\learnlayer-updates.key -Raw`
+   - `$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "…"`
+4. Sobe o número da versão em `src-tauri\tauri.conf.json` e em `package.json`. Corre `scripts\build-installer.ps1`.
+5. Põe no servidor o `*-setup.exe` e o `latest.json` que ficam em `dist\`. O instalador vai para a mesma pasta do `latest.json`, ou define `LEARNLAYER_DOWNLOAD_BASE` com outro sítio.
 
 ### 6. Entrar na conta no Worker de teste
 Para verificar a Fase 1 ao vivo: abrir a app, «Sign in or create an account», entrar no browser. Os critérios que dependem disto ficam marcados «falta verificação do Dinis».
@@ -71,3 +88,17 @@ Os clipes `onboarding_talk_*` e `onboarding_tryIt_*` do Mac falam de Control + O
 - tryIt, en: «Hold Alt and click the question below. I’ll explain it step by step.»
 
 Depois disso basta mudar `onboardingClip` em `core/onboarding/onboarding.ts` para os usar.
+
+### 10. Gerar o instalador (quando houver uma máquina que compile, ponto 1)
+Não consegui pôr um instalador em `dist\`: o SAC bloqueia a compilação. Há duas formas de o gerar:
+- numa máquina que compile, com `powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1`;
+- no CI, que guarda o instalador sem assinatura como artefacto «learnlayer-windows-installer».
+
+O instalador fica em `dist\LearnLayer_<versão>_x64-setup.exe`. Para ARM64:
+1. `rustup target add aarch64-pc-windows-msvc`
+2. `npx tauri build --bundles nsis --target aarch64-pc-windows-msvc`
+
+Depois, num Windows limpo:
+1. Instala e abre a app: deve aparecer o cartão de boas-vindas.
+2. Segue a introdução até à pergunta de exemplo resolvida.
+3. Liga «Abrir com o Windows» e reinicia: só devem aparecer a pílula e o ícone na área de notificação.
