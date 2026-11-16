@@ -146,6 +146,6 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Capturar uma área:** o Mac usa o `screencapture -i` do sistema. No Windows o lado nativo congela o monitor do ponteiro (`BitBlt`) e o palco mostra-o com uma cruz para arrastar o retângulo. Não se usou o recorte do sistema (`ms-screenclip:`), porque esse deixa a imagem na área de transferência do aluno e é preciso adivinhar quando acabou. O recorte vai ao modelo como imagem, com o OCR do Windows feito só nesse recorte, como no Mac. Com o Alt-clique ligado, «Capturar o ecrã» faz o mesmo (no Mac esse botão volta a ligar o Alt-clique, que aí já está ligado).
 - **Explicar texto selecionado:** a seleção da app que está à frente é lida pela UI Automation (a pílula nunca fica com o teclado), e nada é lido nos browsers de exame. Sem seleção, aparece «Select some text first.».
 - **Texto selecionado como passagem:** esta entrada substitui a de 2026-11-15 sobre o texto selecionado. Um Alt-clique em texto selecionado, ou «Explicar texto selecionado», abre agora uma passagem própria, como a `SelectionSession` do Mac: explica-o, o que pede, ou uma pista, num só pedido TextHelp v5.
-  - Ainda não há o gráfico que o TextHelp pode trazer.
+  - O gráfico que o TextHelp pode trazer aparece por baixo da resposta («Gráfico»), com o parâmetro para arrastar, como no Mac.
   - O contexto à volta da seleção vai vazio, porque a UI Automation não o dá como o `AccessibilityReader` do Mac.
   - A seleção no leitor de PDF da própria app ainda não acende a ação da pílula (`hasReaderSelection`).

@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 8 fechada (fases 0–8 feitas; o que falta depende do Dinis: `PARA-O-DINIS.md`)
-- **Próximo passo:** quando houver uma máquina que compile (PARA-O-DINIS, ponto 1): `cargo fmt`, `clippy` e `cargo test`, corrigir o que o compilador apontar no Rust escrito à mão, gerar o instalador (`scripts/build-installer.ps1`) e fazer as verificações dos pontos 6–10. Sem isso, os pendentes que não dependem dele: 3D com three.js, figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, a seleção no leitor a acender «Explicar texto selecionado» na pílula, e o gráfico do TextHelp na passagem.
+- **Próximo passo:** quando houver uma máquina que compile (PARA-O-DINIS, ponto 1): `cargo fmt`, `clippy` e `cargo test`, corrigir o que o compilador apontar no Rust escrito à mão, gerar o instalador (`scripts/build-installer.ps1`) e fazer as verificações dos pontos 6–10. Sem isso, os pendentes que não dependem dele: 3D com three.js, figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, e a seleção no leitor (o leitor desenha as páginas em canvas, sem camada de texto) a acender «Explicar o texto selecionado» na pílula.
 - **Última atualização:** 2026-11-16
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 

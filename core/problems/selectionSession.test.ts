@@ -70,4 +70,35 @@ describe("SelectionSession", () => {
     expect(session.state).toEqual({ kind: "loading" });
     expect(session.help).toBeNull();
   });
+
+  it("draws the curve TextHelp sends, with its parameter kept inside its range", async () => {
+    const withGraph: TextHelp = {
+      ...help,
+      graph: {
+        xLabel: "t",
+        yLabel: "x",
+        variable: "t",
+        expression: "a*t^2/2",
+        xMin: 0,
+        xMax: 5,
+        parameters: [{ name: "a", value: 2, min: 1, max: 4 }],
+        draggable: "a",
+        area: null,
+        showsCar: false,
+      },
+    };
+    const session = new SelectionSession("passagem", "", { help: async () => withGraph, isSignedOut: () => false });
+    session.choose("explain");
+    await settle();
+    expect(session.graph).not.toBeNull();
+    expect(session.parameterValue).toBe(2);
+    session.setParameterValue(10);
+    expect(session.parameterValue).toBe(4);
+    session.toggleGraph();
+    expect(session.showsGraph).toBe(true);
+    const without = new SelectionSession("passagem", "", { help: async () => help, isSignedOut: () => false });
+    without.choose("explain");
+    await settle();
+    expect(without.graph).toBeNull();
+  });
 });

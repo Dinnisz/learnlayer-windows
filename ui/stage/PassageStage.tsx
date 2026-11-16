@@ -1,12 +1,13 @@
 // Port of LearnLayer/Problems/SelectionPanel.swift @ ref 2026-11-04: a selected passage on the stage, white on the
 // dimmed screen, with the choices (explain it, what it asks, a hint), then the answer and the other two as links.
-// 1–3 choose, Esc closes.
+// 1–3 choose, Esc closes. The curve TextHelp may send is under the answer ("Graph").
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { isSignedOut } from "@core/ai/modelClient";
 import { SelectionSession, type SelectionMode } from "@core/problems/selectionSession";
 import { textHelpProvider } from "../ai/solver";
 import { MathText } from "../components/Math";
+import { CurveGraph } from "../figures/CurveGraph";
 import { useT } from "../i18n";
 import { showMain } from "../native";
 
@@ -115,6 +116,7 @@ export function PassageStage({ source, close }: { source: PassageSource; close: 
             <MathText text={paragraph} />
           </p>
         ))}
+        {session.showsGraph && session.graph && <CurveGraph graph={session.graph} session={session} height={240} />}
         <div className="stage-action-row">
           {links
             .filter(([mode]) => mode !== session.mode)
@@ -123,6 +125,11 @@ export function PassageStage({ source, close }: { source: PassageSource; close: 
                 {t(label)}
               </button>
             ))}
+          {session.graph && (
+            <button type="button" className="stage-link quiet" onClick={() => session.toggleGraph()}>
+              {session.showsGraph ? t("Hide Graph") : t("Graph")}
+            </button>
+          )}
         </div>
       </div>
     );
