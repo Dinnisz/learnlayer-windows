@@ -31,6 +31,8 @@ import {
 } from "../../native";
 import { ReaderDocument } from "../../reader/readerDocument";
 import { sessionServices, Stage, type StageSource } from "../../stage/Stage";
+import { PassageStage, type PassageSource } from "../../stage/PassageStage";
+import { normalizeText } from "@core/problems/textNormalizer";
 import { CaptureArea, questionFromArea, type FrozenScreen } from "./CaptureArea";
 import { demoClick } from "./demo";
 
@@ -97,8 +99,11 @@ const nativeSources: ClickSources = {
   pdf: anywherePDF,
 };
 
+/** What the stage over the other app shows: a question, or a selected passage. */
+type OverlaySource = StageSource | PassageSource;
+
 /** What a click opens: the stage's source, or nothing (with the app's name for the log). */
-async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<StageSource | null> {
+async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<OverlaySource | null> {
   const scale = read.scale || 1;
   const point = { x: read.point.x / scale, y: read.point.y / scale };
   if (read.refused) return null;
@@ -112,17 +117,8 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
       method: "selection",
     });
     void appendLog(selected, read.appName);
-    const question = examQuestionFromScreen(selected);
-    return {
-      kind: "picture",
-      question,
-      picture: null,
-      figureBoxes: [],
-      draft: null,
-      transcribes: false,
-      ocrText: "",
-      session: () => new QuestionSession({ question }, sessionServices()),
-    };
+    // A passage of its own (SelectionSession on the Mac): explain it, what it asks, or a hint.
+    return { kind: "passage", text: normalizeText(read.selection.text), context: "" };
   }
   const uia = read.found;
   const found = uia
@@ -210,7 +206,7 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
 export function OverlayWindow() {
   const t = useT();
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [source, setSource] = useState<StageSource | null>(null);
+  const [source, setSource] = useState<OverlaySource | null>(null);
   const [frozen, setFrozen] = useState<FrozenScreen | null>(null);
   const latest = useRef(0);
   const monitor = useRef<{ rect: PixelRect; scale: number } | null>(null);
@@ -325,6 +321,29 @@ export function OverlayWindow() {
       );
       return;
     }
+    // `?demo=selection`: an Alt-click on a selected passage in a made-up browser window.
+    if (demoKind === "selection") {
+      void open(
+        {
+          id: 1,
+          point: { x: 300, y: 180 },
+          monitor: { x: 0, y: 0, width: 1280, height: 800 },
+          scale: 1,
+          appName: "msedge.exe",
+          refused: null,
+          found: null,
+          selection: {
+            text: "«Ó mar salgado, quanto do teu sal / São lágrimas de Portugal!» Explica o sentido destes versos.",
+            frame: { x: 120, y: 160, width: 520, height: 48 },
+          },
+          window: null,
+          lines: [],
+          pdfPath: null,
+        },
+        { picture: async () => null, pdf: async () => new ArrayBuffer(0) },
+      );
+      return;
+    }
     const demo = demoKind === "anywhere";
     if (demo) {
       void demoClick().then(({ read, picture }) =>
@@ -362,7 +381,11 @@ export function OverlayWindow() {
 
   return (
     <div className={`overlay${source ? " overlay-open" : ""}`}>
-      {source ? <Stage source={source} close={hide} /> : null}
+      {source?.kind === "passage" ? (
+        <PassageStage source={source} close={hide} />
+      ) : source ? (
+        <Stage source={source} close={hide} />
+      ) : null}
       {frozen && !source ? (
         <CaptureArea frozen={frozen} onPick={(pixels, area) => void pick(pixels, area)} onCancel={hide} />
       ) : null}
