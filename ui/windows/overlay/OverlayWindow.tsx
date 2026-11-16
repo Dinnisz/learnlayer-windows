@@ -323,24 +323,27 @@ export function OverlayWindow() {
     }
     // `?demo=selection`: an Alt-click on a selected passage in a made-up browser window.
     if (demoKind === "selection") {
-      void open(
-        {
-          id: 1,
-          point: { x: 300, y: 180 },
-          monitor: { x: 0, y: 0, width: 1280, height: 800 },
-          scale: 1,
-          appName: "msedge.exe",
-          refused: null,
-          found: null,
-          selection: {
-            text: "«Ó mar salgado, quanto do teu sal / São lágrimas de Portugal!» Explica o sentido destes versos.",
-            frame: { x: 120, y: 160, width: 520, height: 48 },
+      // After this render, as a real reading arrives.
+      void Promise.resolve().then(() =>
+        open(
+          {
+            id: 1,
+            point: { x: 300, y: 180 },
+            monitor: { x: 0, y: 0, width: 1280, height: 800 },
+            scale: 1,
+            appName: "msedge.exe",
+            refused: null,
+            found: null,
+            selection: {
+              text: "«Ó mar salgado, quanto do teu sal / São lágrimas de Portugal!» Explica o sentido destes versos.",
+              frame: { x: 120, y: 160, width: 520, height: 48 },
+            },
+            window: null,
+            lines: [],
+            pdfPath: null,
           },
-          window: null,
-          lines: [],
-          pdfPath: null,
-        },
-        { picture: async () => null, pdf: async () => new ArrayBuffer(0) },
+          { picture: async () => null, pdf: async () => new ArrayBuffer(0) },
+        ),
       );
       return;
     }
