@@ -50,5 +50,41 @@
   "Offline. Your memory stays on this Mac and syncs later.": "Sem ligação. A tua memória fica neste computador e sincroniza mais tarde.",
   "Couldn’t sync. Your memory on this Mac is unchanged.": "Não foi possível sincronizar. A tua memória neste computador não foi alterada.",
   "After you allow one, restart LearnLayer so macOS applies it.": "Depois de permitires uma, reinicia o LearnLayer para o Windows a aplicar.",
-  "Restart LearnLayer so macOS applies it.": "Reinicia o LearnLayer para o Windows aplicar a permissão."
+  "Restart LearnLayer so macOS applies it.": "Reinicia o LearnLayer para o Windows aplicar a permissão.",
+  "%lld questions": {
+    "value": "%#@questions@",
+    "substitutions": {
+      "questions": {
+        "argNum": 1,
+        "plural": {
+          "one": "%arg pergunta",
+          "other": "%arg perguntas"
+        }
+      }
+    }
+  },
+  "%lld documents": {
+    "value": "%#@documents@",
+    "substitutions": {
+      "documents": {
+        "argNum": 1,
+        "plural": {
+          "one": "%arg documento",
+          "other": "%arg documentos"
+        }
+      }
+    }
+  },
+  "%lld questions asked": {
+    "value": "%#@questions@",
+    "substitutions": {
+      "questions": {
+        "argNum": 1,
+        "plural": {
+          "one": "%arg pergunta feita",
+          "other": "%arg perguntas feitas"
+        }
+      }
+    }
+  }
 }

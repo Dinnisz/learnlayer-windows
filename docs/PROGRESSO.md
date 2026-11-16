@@ -4,9 +4,9 @@
 
 ## Estado atual
 
-- **Fase atual:** 7 (Onboarding, Memória, Definições)
-- **Próximo passo:** fase 7. Ler `referencia-mac/LearnLayer/Onboarding/*` (`OnboardingFlow.swift`), `Memory/*` (`MemoryStore.swift`, `ExplanationPlanner.swift`), `Brain/*` (mapa), `Settings/*`, `Home/*`. Plano: (1) `MemoryStore` em `memory.json` com os testes do Mac; (2) página Memória (mapa e lista com dados reais); (3) Definições completas (voz premium, cor da mascote, tecla de falar, Alt-clique, língua, exportar/apagar dados, consentimentos); (4) onboarding com os clipes; (5) plano pedagógico no prompt do explicador. Pendentes da fase 6: 3D com three.js, figuras pré-feitas animadas, marcas da voz/lição na figura, menu de estudo.
-- **Última atualização:** 2026-11-15
+- **Fase atual:** 8 (Distribuição)
+- **Próximo passo:** fase 8. (1) Arranque com o Windows (`tauri-plugin-autostart`, desligado por defeito, em Definições › Geral); (2) atualização automática (`tauri-plugin-updater`, URL e chave pública em configuração, PARA-O-DINIS ponto 5); (3) instalador NSIS em `dist/` (`npm run tauri build`; se o SAC impedir, deixar o comando e a configuração prontos); (4) sincronização cifrada da memória igual à do Mac (`Brain/BrainSync*.swift`, `Memory/MemorySync.swift`, `BrainMerge`), com os testes do Mac e o formato da cifra idêntico; (5) `docs/RESUMO-FINAL.md`. Pendentes das fases 5–7: 3D com three.js, figuras pré-feitas animadas, marcas da voz/lição na figura, menu de estudo, clipes do onboarding para o Windows.
+- **Última atualização:** 2026-11-16
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
 ## Ambiente (máquina do Dinis, Windows 11 Home x64)
@@ -71,7 +71,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 | 4 | Alt-clique em qualquer app (hook, UIA, PDF por caminho, captura + OCR, transcrição rápida) | ✅ núcleo, palco e nativo escritos; nativo por compilar e medir (SAC) — `fase-4.md` |
 | 5 | Voz e mascote (TTS, STT, push-to-talk, «Explica-me») | ✅ feito no browser; voz pt-PT, microfone e latência por verificar — `fase-5.md` |
 | 6 | Figuras (templates, 3D, quadros de sinais, diagramas temporais, código) | ✅ feito no browser, salvo 3D e figuras animadas — `fase-6.md` |
-| 7 | Onboarding, Memória, Definições completas | por fazer |
+| 7 | Onboarding, Memória, Definições completas | ✅ feito no browser; caminho completo com a app compilada por verificar — `fase-7.md` |
 | 8 | Distribuição (instalador, assinatura, atualização, sincronização cifrada) | por fazer |
 
 ## O que ainda falta portar, por fase
@@ -80,7 +80,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 - **Fase 4 (feito, salvo):** ler antecipadamente o PDF à frente antes do primeiro clique; `SelectionSession` (fase 7, com a pílula).
 - **Fase 5 (feito, salvo):** STT nativo do Windows; `holdingTheSymbol`, `namingTheFormula` e `VoiceTutorGuard` (com as figuras); gestos da mascote; `SpeechActivity` e os testes de `NotchGlyphTests` que ficaram.
 - **Fase 6:** `IllustrationPrompt` (v22), `ComplexFigure`, templates, 3D.
-- **Fase 7:** `ExplanationPlanner`, `MemoryStore`, `BrainSync*`.
+- **Fase 7 (feito, salvo):** clipes de voz do onboarding com as teclas do Windows (PARA-O-DINIS, ponto 9). `BrainSync*` passou para a fase 8.
 
 ## Deteção nos exames de `exames/` (relatório, `EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts`)
 
@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-16 — Fase 7 fechada: memória local com o plano pedagógico, páginas Memória e Documentos com dados reais, Definições completas, onboarding de oito ecrãs com a pergunta de exemplo a abrir o palco. 740 testes.
 - 2026-11-14 — Pacote extraído; ferramentas instaladas; Fase 0 (esqueleto, traduções, CI) e Fase 1 (conta, plano, pílula, tray, sessão nativa). O SAC bloqueia o `cargo build`.
 - 2026-11-14 — Pedido do Dinis (num fork): código do sistema operativo atrás do trait `Platform`; textos, nome do dispositivo e atalhos dependentes da plataforma. Feito.
 - 2026-11-15 — Fase 2: núcleo portado (279 testes), prompts e esquemas extraídos do Swift palavra a palavra, cliente SSE, cache em disco.
