@@ -38,6 +38,12 @@ pub trait Platform: Send + Sync + 'static {
     fn close_overlay(&self, app: &AppHandle);
     /// The stage takes the mouse and keyboard (a question is open), or lets every click through (only a word shows).
     fn overlay_interactive(&self, app: &AppHandle, interactive: bool);
+    /// "Explain selected text" in the pill: the text selected in the app in front opens in the stage.
+    fn explain_selection(&self, app: &AppHandle);
+    /// "Capture an area" in the pill: the monitor under the pointer is frozen for the student to drag a rectangle on.
+    fn capture_area(&self, app: &AppHandle);
+    /// The OCR lines (`[{text, rect}]`) of a dragged part of a capture's picture, in its pixels.
+    fn capture_text(&self, id: u64, x: i32, y: i32, width: i32, height: i32) -> serde_json::Value;
     /// Which keys talk to the tutor: "controlWindows" (default), "copilot" or "rightControl" (CLAUDE.md §4.3).
     fn set_talk_key(&self, key: &str);
     /// Development only: the OpenRouter key kept by the system for direct calls (CLAUDE.md §5.5). Never in release.
@@ -87,6 +93,21 @@ pub fn anywhere_close(app: AppHandle) {
 #[tauri::command]
 pub fn anywhere_interactive(app: AppHandle, interactive: bool) {
     current().overlay_interactive(&app, interactive);
+}
+
+#[tauri::command]
+pub fn anywhere_explain_selection(app: AppHandle) {
+    current().explain_selection(&app);
+}
+
+#[tauri::command]
+pub fn anywhere_capture_area(app: AppHandle) {
+    current().capture_area(&app);
+}
+
+#[tauri::command]
+pub fn anywhere_capture_text(id: u64, x: i32, y: i32, width: i32, height: i32) -> serde_json::Value {
+    current().capture_text(id, x, y, width, height)
 }
 
 #[tauri::command]

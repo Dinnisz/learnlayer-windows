@@ -65,6 +65,18 @@ impl super::Platform for WindowsPlatform {
         anywhere::overlay::set_interactive(app, interactive);
     }
 
+    fn explain_selection(&self, app: &AppHandle) {
+        anywhere::explain_selection(app);
+    }
+
+    fn capture_area(&self, app: &AppHandle) {
+        anywhere::capture_area(app);
+    }
+
+    fn capture_text(&self, id: u64, x: i32, y: i32, width: i32, height: i32) -> serde_json::Value {
+        serde_json::to_value(anywhere::capture_text(id, x, y, width, height)).unwrap_or_default()
+    }
+
     fn set_talk_key(&self, key: &str) {
         anywhere::hook::set_talk_key(match key {
             "copilot" => anywhere::hook::TalkKey::Copilot,

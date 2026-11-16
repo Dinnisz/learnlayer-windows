@@ -25,11 +25,13 @@ import {
   dataFiles,
   onAnywhere,
   setOverlayInteractive,
+  type NativeCapture,
   type NativeClickRead,
   type PixelRect,
 } from "../../native";
 import { ReaderDocument } from "../../reader/readerDocument";
 import { sessionServices, Stage, type StageSource } from "../../stage/Stage";
+import { CaptureArea, questionFromArea, type FrozenScreen } from "./CaptureArea";
 import { demoClick } from "./demo";
 
 interface Notice {
@@ -209,6 +211,7 @@ export function OverlayWindow() {
   const t = useT();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [source, setSource] = useState<StageSource | null>(null);
+  const [frozen, setFrozen] = useState<FrozenScreen | null>(null);
   const latest = useRef(0);
   const monitor = useRef<{ rect: PixelRect; scale: number } | null>(null);
   const noticeTimer = useRef<number | null>(null);
@@ -222,6 +225,10 @@ export function OverlayWindow() {
   const hide = useCallback(() => {
     setSource(null);
     setNotice(null);
+    setFrozen((shown) => {
+      if (shown) URL.revokeObjectURL(shown.url);
+      return null;
+    });
     void closeOverlay();
   }, []);
 
@@ -245,6 +252,11 @@ export function OverlayWindow() {
     async (read: NativeClickRead, sources: ClickSources) => {
       latest.current = read.id;
       monitor.current = { rect: read.monitor, scale: read.scale || 1 };
+      // "Explain selected text" with nothing selected: the word, and nothing opens.
+      if (read.notice) {
+        say(read.notice, local(read.point), 2);
+        return;
+      }
       const made = await sourceFor(read, sources);
       // A second click meanwhile: only the latest one's reading is opened.
       if (read.id !== latest.current) return;
@@ -260,9 +272,60 @@ export function OverlayWindow() {
     [local, say],
   );
 
+  /** "Capture an area": the frozen monitor, shown for the student to drag the question's rectangle on. */
+  const freeze = useCallback(async (capture: NativeCapture, given?: Uint8Array) => {
+    monitor.current = { rect: capture.monitor, scale: capture.scale || 1 };
+    setSource(null);
+    setNotice(null);
+    const bgra = given ?? (await anywherePicture(capture.id).catch(() => null));
+    if (!bgra) return void closeOverlay();
+    const bitmap = await bitmapOf({ width: capture.pixelWidth, height: capture.pixelHeight, bgra });
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+    if (!blob) return void closeOverlay();
+    setFrozen({ capture, url: URL.createObjectURL(blob), bitmap });
+  }, []);
+
+  const pick = useCallback(
+    async (pixels: Rect, area: Rect) => {
+      const shown = frozen;
+      if (!shown) return;
+      const made = await questionFromArea(shown, pixels, area).catch(() => null);
+      URL.revokeObjectURL(shown.url);
+      setFrozen(null);
+      if (!made) {
+        say("Couldn’t read this here.", { x: area.x, y: area.y }, 2);
+        return;
+      }
+      void setOverlayInteractive(true);
+      setSource(made);
+    },
+    [frozen, say],
+  );
+
   useEffect(() => {
     // In a browser, `?demo=anywhere` opens a made-up click on a made-up window (no native side, no cost).
-    const demo = new URLSearchParams(window.location.search).get("demo") === "anywhere";
+    // `?demo=capture`: the same made-up window, frozen for a rectangle to be dragged on it.
+    const demoKind = new URLSearchParams(window.location.search).get("demo");
+    if (demoKind === "capture") {
+      void demoClick().then(({ picture }) =>
+        freeze(
+          {
+            id: 0,
+            monitor: { x: 0, y: 0, width: picture.width, height: picture.height },
+            scale: 1,
+            pixelWidth: picture.width,
+            pixelHeight: picture.height,
+          },
+          picture.bgra,
+        ),
+      );
+      return;
+    }
+    const demo = demoKind === "anywhere";
     if (demo) {
       void demoClick().then(({ read, picture }) =>
         open(read, { picture: async () => picture, pdf: async () => new ArrayBuffer(0) }),
@@ -284,21 +347,25 @@ export function OverlayWindow() {
       escape() {
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       },
+      capture: (capture) => void freeze(capture),
     });
     return () => void stop.then((unlisten) => unlisten());
-  }, [open, say, local]);
+  }, [open, say, local, freeze]);
 
-  // Esc with only a word showing: close.
+  // Esc with only a word showing: close (the capture handles its own Esc).
   useEffect(() => {
-    if (source) return;
+    if (source || frozen) return;
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && hide();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [source, hide]);
+  }, [source, frozen, hide]);
 
   return (
     <div className={`overlay${source ? " overlay-open" : ""}`}>
       {source ? <Stage source={source} close={hide} /> : null}
+      {frozen && !source ? (
+        <CaptureArea frozen={frozen} onPick={(pixels, area) => void pick(pixels, area)} onCancel={hide} />
+      ) : null}
       {notice ? (
         <div className="overlay-notice" role="status" style={{ left: notice.at.x + 40, top: notice.at.y - 18 }}>
           {t(notice.key)}

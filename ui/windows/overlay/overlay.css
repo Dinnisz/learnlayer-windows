@@ -60,3 +60,59 @@ body.overlay-body {
     color: CanvasText;
   }
 }
+
+/* "Capture an area": the monitor frozen under a light dim; the dragged rectangle is clear, outlined in the one blue. */
+.capture-area {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+}
+
+.capture-area-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.capture-area-dim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 30%);
+}
+
+.capture-area-rect {
+  position: absolute;
+  outline: 2px solid #0a84ff;
+  /* Everything outside the rectangle is dimmed. */
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 30%);
+}
+
+.capture-area-hint {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 75%);
+  color: #fff;
+  font: 500 13px var(--font-text, "Segoe UI Variable", "Segoe UI", sans-serif);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (forced-colors: active) {
+  .capture-area-rect {
+    outline-color: Highlight;
+  }
+  .capture-area-hint {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

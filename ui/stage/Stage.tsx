@@ -54,6 +54,7 @@ import {
 } from "../lesson/LessonUI";
 import type { LessonShow } from "@core/lesson/mascotLesson";
 import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
+import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
@@ -215,6 +216,37 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
       made?.cancel();
     };
   }, [source]);
+
+  // The pill (IslandState on the Mac): an exercise is open, with its suggested questions and subject, and what the
+  // pill asks for happens here.
+  const followUps = JSON.stringify(session?.followUps ?? []);
+  const subject = session?.solution?.subject ?? null;
+  useEffect(() => {
+    if (!session) return;
+    void publishIsland({ exerciseOpen: true, followUps: JSON.parse(followUps) as string[], subject });
+  }, [session, followUps, subject]);
+  useEffect(() => () => void publishIsland({ exerciseOpen: false, followUps: [], subject: null }), []);
+  useEffect(() => {
+    if (!session) return;
+    const stop = onIslandCommand((command) => {
+      if (command.kind === "askAboutExercise") {
+        window.focus();
+        session.startAsking();
+      } else if (command.kind === "ask") {
+        window.focus();
+        session.ask(command.question, followUpContext(session, command.question));
+      } else if (command.kind === "stopSpeaking") {
+        stopLesson();
+        stopVoice();
+      } else if (command.kind === "toggleMute") {
+        // Settings › General › Voice, as the Mac's SpeechActivity.toggleMute: muted, the next lines are shown, not said.
+        const muted = readVoiceEnabled();
+        writeVoiceEnabled(!muted);
+        void publishIsland({ muted });
+      }
+    });
+    return () => void stop.then((unlisten) => unlisten());
+  }, [session, stopLesson, stopVoice]);
 
   const choose = useCallback(
     (mode: Mode) => {
@@ -970,6 +1002,23 @@ function FollowUpView({ session }: { session: QuestionSession }) {
 }
 
 /** The context a question about the exercise goes with: this exercise, its open part and its written solution. */
+/** Settings › General › Voice: on unless set to "0". */
+function readVoiceEnabled(): boolean {
+  try {
+    return localStorage.getItem("voiceEnabled") !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function writeVoiceEnabled(on: boolean): void {
+  try {
+    localStorage.setItem("voiceEnabled", on ? "1" : "0");
+  } catch {
+    // Kept for this launch only.
+  }
+}
+
 function followUpContext(session: QuestionSession, asked: string): string {
   const part = session.part;
   return TextHelpContext.followUp({

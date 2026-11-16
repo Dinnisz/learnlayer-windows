@@ -256,6 +256,17 @@ export interface NativeClickRead {
   lines: { text: string; rect: PixelRect }[];
   /** The PDF the window shows, when its file could be found (`anywhere_pdf` gives its bytes). */
   pdfPath: string | null;
+  /** A word to show instead of a question (a locale key), e.g. "Select some text first.". */
+  notice?: string | null;
+}
+
+/** "Capture an area": the monitor under the pointer, frozen (`anywhere_picture` gives its pixels). */
+export interface NativeCapture {
+  id: number;
+  monitor: PixelRect;
+  scale: number;
+  pixelWidth: number;
+  pixelHeight: number;
 }
 
 export interface AnywhereHandlers {
@@ -264,6 +275,8 @@ export interface AnywhereHandlers {
   read(read: NativeClickRead): void;
   /** Esc, even when the app below has the keyboard. */
   escape(): void;
+  /** "Capture an area": the frozen monitor is ready for the student to drag a rectangle on. */
+  capture?(capture: NativeCapture): void;
 }
 
 export async function onAnywhere(handlers: AnywhereHandlers): Promise<() => void> {
@@ -275,6 +288,7 @@ export async function onAnywhere(handlers: AnywhereHandlers): Promise<() => void
     ),
     listen<NativeClickRead>("anywhere-read", (event) => handlers.read(event.payload)),
     listen("anywhere-escape", () => handlers.escape()),
+    listen<NativeCapture>("anywhere-capture", (event) => handlers.capture?.(event.payload)),
   ]);
   return () => stops.forEach((stop) => stop());
 }
@@ -288,6 +302,28 @@ export async function anywherePicture(id: number): Promise<Uint8Array> {
 /** The bytes of the PDF found behind the window at click `id`; it never leaves the computer. */
 export async function anywherePDF(id: number): Promise<ArrayBuffer> {
   return invoke<ArrayBuffer>("anywhere_pdf", { id });
+}
+
+/** "Explain selected text" in the pill: the text selected in the app in front opens in the stage. */
+export async function explainSelectionInFront(): Promise<void> {
+  if (isTauri) await invoke<void>("anywhere_explain_selection");
+}
+
+/** "Capture an area" in the pill: the monitor under the pointer is frozen for a rectangle to be dragged on it. */
+export async function captureArea(): Promise<void> {
+  if (isTauri) await invoke<void>("anywhere_capture_area");
+}
+
+/** What the OCR reads in a part of capture `id` (pixels of its picture); rects from that part's top-left. */
+export async function captureText(id: number, rect: PixelRect): Promise<{ text: string; rect: PixelRect }[]> {
+  if (!isTauri) return [];
+  return invoke<{ text: string; rect: PixelRect }[]>("anywhere_capture_text", {
+    id,
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  }).catch(() => []);
 }
 
 /** Hides the stage over the other app and gives the keyboard back to it. */

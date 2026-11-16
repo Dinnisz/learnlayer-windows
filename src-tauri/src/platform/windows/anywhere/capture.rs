@@ -130,6 +130,46 @@ pub fn picture(window: &TargetWindow) -> Option<Picture> {
     })
 }
 
+/// The screen's pixels inside `area` (physical pixels, global): "Capture an area" freezes a monitor with it.
+pub fn screen_area(area: RECT) -> Option<Picture> {
+    let width = area.right - area.left;
+    let height = area.bottom - area.top;
+    if width <= 0 || height <= 0 || width > 16_384 || height > 16_384 {
+        return None;
+    }
+    draw(width, height, |memory| {
+        // SAFETY: copies the screen's pixels; the screen DC is released at once.
+        unsafe {
+            let screen = GetDC(None);
+            let copied = BitBlt(memory, 0, 0, width, height, Some(screen), area.left, area.top, SRCCOPY).is_ok();
+            ReleaseDC(None, screen);
+            copied
+        }
+    })
+}
+
+/// The part of `picture` at (`x`, `y`) of `width` × `height` pixels, clamped to the picture; None when empty.
+pub fn crop(picture: &Picture, x: i32, y: i32, width: i32, height: i32) -> Option<Picture> {
+    let left = x.clamp(0, picture.width);
+    let top = y.clamp(0, picture.height);
+    let right = x.saturating_add(width).clamp(left, picture.width);
+    let bottom = y.saturating_add(height).clamp(top, picture.height);
+    if right - left < 2 || bottom - top < 2 {
+        return None;
+    }
+    let row = (picture.width * 4) as usize;
+    let mut bgra = Vec::with_capacity(((right - left) * (bottom - top) * 4) as usize);
+    for line in top..bottom {
+        let start = line as usize * row + left as usize * 4;
+        bgra.extend_from_slice(&picture.bgra[start..start + (right - left) as usize * 4]);
+    }
+    Some(Picture {
+        width: right - left,
+        height: bottom - top,
+        bgra,
+    })
+}
+
 /// A top-down 32-bit DIB of `width` × `height`, filled by `fill` through a memory DC, as bytes.
 fn draw(width: i32, height: i32, fill: impl FnOnce(windows::Win32::Graphics::Gdi::HDC) -> bool) -> Option<Picture> {
     // SAFETY: every GDI object made here is selected out and deleted before returning; `bits` is read only while the
@@ -198,5 +238,22 @@ mod tests {
             *byte = 255;
         }
         assert!(!is_blank(&picture));
+    }
+
+    #[test]
+    fn a_crop_keeps_its_rows_and_stays_inside_the_picture() {
+        let picture = Picture {
+            width: 4,
+            height: 3,
+            bgra: (0..4 * 3 * 4).map(|byte| byte as u8).collect(),
+        };
+        let part = crop(&picture, 1, 1, 2, 2).expect("a 2 × 2 crop");
+        assert_eq!((part.width, part.height), (2, 2));
+        // Row 1 starts at byte 16; column 1 is 4 bytes in.
+        assert_eq!(&part.bgra[..4], &[20, 21, 22, 23]);
+        assert_eq!(&part.bgra[8..12], &[36, 37, 38, 39]);
+        let clamped = crop(&picture, 3, 2, 10, 10);
+        assert!(clamped.is_none(), "a 1 × 1 crop is too small");
+        assert_eq!(crop(&picture, -5, -5, 100, 100).map(|whole| whole.bgra.len()), Some(48));
     }
 }

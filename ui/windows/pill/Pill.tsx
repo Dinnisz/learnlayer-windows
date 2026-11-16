@@ -10,6 +10,8 @@ import { useT } from "../../i18n";
 import { emptyIsland, onIsland, sendIslandCommand, type IslandSnapshot } from "../../island";
 import {
   anywhereEnabled,
+  captureArea,
+  explainSelectionInFront,
   onAnywhereHookRemoved,
   resizePill,
   setAnywhereEnabled,
@@ -18,6 +20,15 @@ import {
   talkKeyChoice,
 } from "../../native";
 
+/** Settings › General › Voice off: the pill shows the speaker struck through. */
+function voiceMuted(): boolean {
+  try {
+    return localStorage.getItem("voiceEnabled") === "0";
+  } catch {
+    return false;
+  }
+}
+
 /** At rest (CLAUDE.md §7). The window is this size plus a small gap above, so it reads as a pill. */
 export const pillMetrics = { width: 180, height: 32, topGap: 4, openWidth: 264 };
 
@@ -25,7 +36,11 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
 
 export function Pill() {
   const t = useT();
-  const [island, setIsland] = useState<IslandSnapshot>(() => ({ ...emptyIsland, offersAnywhere: !anywhereEnabled() }));
+  const [island, setIsland] = useState<IslandSnapshot>(() => ({
+    ...emptyIsland,
+    offersAnywhere: !anywhereEnabled(),
+    muted: voiceMuted(),
+  }));
   const [isExpanded, setExpanded] = useState(false);
   const collapse = useRef<number | undefined>(undefined);
 
@@ -98,13 +113,18 @@ export function Pill() {
         },
         {
           captureScreen: () => {
-            if (!island.offersAnywhere) return void sendIslandCommand({ kind: "captureScreen" });
+            // With Alt-click on, «Capture the screen» freezes the screen to drag the question's area on.
+            if (!island.offersAnywhere) return void captureArea();
             // «Turn on Alt-click in any app»: the student asked for it, so a switch left off goes back on.
             void setAnywhereEnabled(true);
             setIsland((current) => ({ ...current, offersAnywhere: false }));
           },
-          captureArea: () => void sendIslandCommand({ kind: "captureArea" }),
-          explainSelection: () => void sendIslandCommand({ kind: "explainSelection" }),
+          captureArea: () => void captureArea(),
+          // The reader's own selection when it has one (it answers the command), else the app in front's.
+          explainSelection: () =>
+            void (island.hasReaderSelection
+              ? sendIslandCommand({ kind: "explainSelection" })
+              : explainSelectionInFront()),
           openWindow: () => void showMain(null),
           openDocuments: () => void showMain("documents"),
           openMemory: () => void showMain("memory"),

@@ -21,7 +21,8 @@ use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Monitor};
-use windows::Win32::Foundation::POINT;
+use windows::Win32::Foundation::{POINT, RECT};
+use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, GetForegroundWindow, GetWindowThreadProcessId};
 
 use capture::Picture;
 
@@ -102,6 +103,18 @@ struct ReadPayload {
     window: Option<WindowPayload>,
     lines: Vec<ocr::Line>,
     pdf_path: Option<String>,
+    /// A word for the stage to show instead of a question (a locale key): "Select some text first.".
+    notice: Option<&'static str>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct CapturePayload {
+    id: u64,
+    monitor: PixelRect,
+    scale: f64,
+    pixel_width: i32,
+    pixel_height: i32,
 }
 
 fn monitor_rect(monitor: &Monitor) -> PixelRect {
@@ -188,6 +201,7 @@ fn read_click(app: &AppHandle, x: i32, y: i32) {
         window: None,
         lines: Vec::new(),
         pdf_path: None,
+        notice: None,
     };
     // «Reading…» if it takes a while: the stage shows, letting clicks through, while UI Automation answers.
     let shown = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -250,6 +264,131 @@ fn read_click(app: &AppHandle, x: i32, y: i32) {
         overlay::show_on(app, &monitor);
     }
     let _ = app.emit_to(overlay::LABEL, "anywhere-read", payload);
+}
+
+/// "Explain selected text" from the pill: the text selected in the app in front, opened like an Alt-click on it
+/// (`AnywhereController.explainSelection` on the Mac). The pill never takes the keyboard, so the app in front is still
+/// the student's.
+pub fn explain_selection(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || read_selection(&app));
+}
+
+fn read_selection(app: &AppHandle) {
+    let id = NEXT_ID.fetch_add(1, Ordering::SeqCst) + 1;
+    let mut cursor = POINT::default();
+    // SAFETY: reads the pointer's position and the window in front; both only fail harmlessly.
+    let (front_app, cursor) = unsafe {
+        let _ = GetCursorPos(&mut cursor);
+        let mut process_id = 0u32;
+        GetWindowThreadProcessId(GetForegroundWindow(), Some(&mut process_id as *mut u32));
+        (capture::executable_name(process_id).unwrap_or_default(), cursor)
+    };
+    let Ok(Some(pointer_monitor)) = app.monitor_from_point(f64::from(cursor.x), f64::from(cursor.y)) else {
+        return;
+    };
+    let mut selection = None;
+    let refused = is_protected(&front_app);
+    if !refused {
+        if let Some(reader) = uia::Reader::new(f64::from(pointer_monitor.size().height)) {
+            selection = reader.selection();
+        }
+    }
+    // The stage opens where the selection is (its monitor), else under the pointer.
+    let centre = selection.as_ref().map_or(
+        PixelPoint {
+            x: f64::from(cursor.x),
+            y: f64::from(cursor.y),
+        },
+        |selection: &uia::Selection| PixelPoint {
+            x: selection.frame.x + selection.frame.width / 2.0,
+            y: selection.frame.y + selection.frame.height / 2.0,
+        },
+    );
+    let monitor = app
+        .monitor_from_point(centre.x, centre.y)
+        .ok()
+        .flatten()
+        .unwrap_or(pointer_monitor);
+    let notice = if refused || selection.is_some() {
+        None
+    } else {
+        Some("Select some text first.")
+    };
+    let payload = ReadPayload {
+        id,
+        point: centre,
+        monitor: monitor_rect(&monitor),
+        scale: monitor.scale_factor(),
+        app_name: front_app,
+        refused: refused.then_some("protected"),
+        found: None,
+        selection,
+        window: None,
+        lines: Vec::new(),
+        pdf_path: None,
+        notice,
+    };
+    overlay::show_on(app, &monitor);
+    let _ = app.emit_to(overlay::LABEL, "anywhere-read", payload);
+}
+
+/// "Capture an area" from the pill: the monitor under the pointer, frozen in a picture the stage shows; the student
+/// drags a rectangle on it (`screencapture -i` on the Mac). Esc cancels.
+pub fn capture_area(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let mut cursor = POINT::default();
+        // SAFETY: reads the pointer's position.
+        unsafe {
+            let _ = GetCursorPos(&mut cursor);
+        }
+        let Ok(Some(monitor)) = app.monitor_from_point(f64::from(cursor.x), f64::from(cursor.y)) else {
+            return;
+        };
+        overlay::hide_for_reading(&app);
+        // The pill closes first, so the picture is of what the student sees.
+        std::thread::sleep(Duration::from_millis(150));
+        let area = RECT {
+            left: monitor.position().x,
+            top: monitor.position().y,
+            right: monitor.position().x + monitor.size().width as i32,
+            bottom: monitor.position().y + monitor.size().height as i32,
+        };
+        let Some(picture) = capture::screen_area(area) else {
+            return;
+        };
+        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst) + 1;
+        let payload = CapturePayload {
+            id,
+            monitor: monitor_rect(&monitor),
+            scale: monitor.scale_factor(),
+            pixel_width: picture.width,
+            pixel_height: picture.height,
+        };
+        keep(Kept {
+            id,
+            picture: Some(picture),
+            pdf: None,
+        });
+        overlay::show_on(&app, &monitor);
+        overlay::set_interactive(&app, true);
+        let _ = app.emit_to(overlay::LABEL, "anywhere-capture", payload);
+    });
+}
+
+/// The OCR lines of the dragged part of capture `id` (pixels of its picture), in pixels from that part's top-left.
+pub fn capture_text(id: u64, x: i32, y: i32, width: i32, height: i32) -> Vec<ocr::Line> {
+    let part = {
+        let Ok(all) = KEPT.lock() else {
+            return Vec::new();
+        };
+        all.iter()
+            .find(|kept| kept.id == id)
+            .and_then(|kept| kept.picture.as_ref())
+            .and_then(|picture| capture::crop(picture, x, y, width, height))
+    };
+    part.map(|part| ocr::lines(&part)).unwrap_or_default()
 }
 
 fn overlay_handle(app: &AppHandle) -> isize {
