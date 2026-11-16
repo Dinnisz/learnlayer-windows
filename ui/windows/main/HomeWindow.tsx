@@ -1,6 +1,6 @@
 // Port of LearnLayer/Home/HomeWindowView.swift @ ref 2026-11-04
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   groupOf,
   groupTitleKey,
@@ -16,7 +16,7 @@ import {
 import { Icon } from "../../components/Icon";
 import { SettingsPage } from "../../components/settings/SettingsKit";
 import { accountModel } from "../../account/accountStore";
-import { usePlatform, useT } from "../../i18n";
+import { usePlatform, usePlatformName, useT } from "../../i18n";
 import { appConfig, onDeepLink, onNavigate, setTrayLabels } from "../../native";
 import { AccountPane } from "./panes/AccountPane";
 import { DocumentsPane } from "./panes/DocumentsPane";
@@ -27,6 +27,9 @@ import { PermissionsPane } from "./panes/PermissionsPane";
 import { AIPane } from "./panes/AIPane";
 import { DataPane } from "./panes/DataPane";
 import { ConsentSheet, SignInSheet } from "./sheets/SignInSheet";
+import { memoryStore } from "../../memory/memory";
+import { OnboardingCard } from "../../onboarding/OnboardingCard";
+import { existingUser, onboardingCoordinator } from "../../onboarding/onboarding";
 
 const routeKey = "homeRoute";
 
@@ -40,10 +43,32 @@ function useHomeRoute(): [HomeRoute, (route: HomeRoute) => void] {
   return [route, select];
 }
 
+/** The first-run card: decided once at launch, started again from Settings › General. */
+function useOnboarding() {
+  const coordinator = onboardingCoordinator(usePlatformName());
+  const active = useSyncExternalStore(
+    (listener) => coordinator.subscribe(listener),
+    () => coordinator.isActive,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([memoryStore(), accountModel()]).then(([memory, account]) => {
+      if (cancelled) return;
+      const hasQuestions = memory.liveNodes.some((node) => node.kind === "question");
+      coordinator.start(existingUser(hasQuestions, account.getState().isSignedIn));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [coordinator]);
+  return { coordinator, active };
+}
+
 /** The LearnLayer window: a sidebar of eight sections in three groups and one pane. */
 export function HomeWindow() {
   const [route, select] = useHomeRoute();
   const t = useT();
+  const onboarding = useOnboarding();
   const { shortcutModifier } = usePlatform();
 
   // The first eight digits jump to a section in sidebar order, with the platform's modifier.
@@ -95,10 +120,11 @@ export function HomeWindow() {
     <div className="home">
       <HomeSidebar selection={route} onSelect={select} />
       <main className="home-detail" key={route}>
-        <HomePane route={route} onNavigate={select} />
+        <HomePane route={route} onNavigate={select} onRestartIntroduction={() => onboarding.coordinator.begin()} />
       </main>
       <SignInSheet />
       <ConsentSheet />
+      {onboarding.active && <OnboardingCard coordinator={onboarding.coordinator} />}
     </div>
   );
 }

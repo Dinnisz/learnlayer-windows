@@ -263,6 +263,18 @@ export async function playOpener(fileName: string, options: SpeakOptions = {}): 
   }
 }
 
+/** A recorded line of the app (an onboarding screen's), played as it is: nothing is bought. */
+export async function playClip(path: string, options: SpeakOptions = {}): Promise<boolean> {
+  try {
+    const response = await fetch(`/${path}`);
+    if (!response.ok) return false;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return playAudio(bytes, () => {}, options.onLevel, options.signal);
+  } catch {
+    return false;
+  }
+}
+
 /** Stops whatever the system voice is saying. */
 export function stopSpeaking(): void {
   if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();

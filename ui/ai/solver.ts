@@ -3,6 +3,7 @@
 // MockSolution.json, so the stage can be worked on without spending anything (CLAUDE.md: mocks first).
 
 import mockSolution from "@core/mocks/MockSolution.json";
+import sampleSolution from "@core/mocks/SampleQuestionSolution.json";
 import mockTextHelp from "@core/mocks/MockTextHelp.json";
 import mockIllustrations from "@core/mocks/MockIllustrations.json";
 import { decodeIllustration, type Illustration } from "@core/illustrations/illustration";
@@ -111,7 +112,11 @@ export function solutionProvider(): SolutionProvider {
     plan: () => ModelRouting.plan(read(ModelRouting.planKey)),
     language: () =>
       TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages)),
-    mockSolution: mock ? () => decodeProblemSolution(mockSolution) : undefined,
+    // A question read from the screen (labelled "Q", as the onboarding's sample) has a mock of its own: the exam's parts
+    // would never match it.
+    mockSolution: mock
+      ? (request) => decodeProblemSolution(request.labels.includes("Q") ? sampleSolution : mockSolution)
+      : undefined,
     transcribing: (images) => transcriptionRequests.isRequested(images),
   });
   return provider;

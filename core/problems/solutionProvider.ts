@@ -43,8 +43,9 @@ export interface SolverServices {
   language(): string;
   /** The figure model from Settings; the strong model when empty. */
   figureModel?(): string;
-  /** Development without the API: every solve answers with `MockSolution.json` after half a second. */
-  mockSolution?: () => ProblemSolution;
+  /** Development without the API: every solve answers with `MockSolution.json` after half a second (the request
+   * lets a sample question have its own answer). */
+  mockSolution?: (request: SolveRequest) => ProblemSolution;
   /** A small JPEG (512 px, quality 0.45) for the classifier; null when it can't be made. */
   thumbnail?(image: Uint8Array): Promise<Uint8Array | null>;
   /** `CostFlags.skipsClassifierForKnownSubject` (off by default). */
@@ -363,7 +364,7 @@ export class SolutionProvider {
     const mock = this.services.mockSolution;
     if (mock) {
       await (this.services.sleep ?? wait)(0.5);
-      return decodeProblemSolution(JSON.parse(JSON.stringify(mock())));
+      return decodeProblemSolution(JSON.parse(JSON.stringify(mock(request))));
     }
     const transcribing = (await this.services.transcribing?.(request.images)) ?? false;
     const reply = await plainSolution(

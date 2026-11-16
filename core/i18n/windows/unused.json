@@ -7,5 +7,10 @@
   "Hold Fn to talk to the tutor",
   "Hold Option to talk to the tutor",
   "Fn",
-  "Option"
+  "Option",
+  "Three permissions",
+  "One at a time. Each one is optional, and you can change it later in Settings.",
+  "This lets me read the question you’re looking at.",
+  "This lets me see the part of the screen you choose.",
+  "Needs Accessibility. If you skipped it, this works only inside LearnLayer’s own reader."
 ]

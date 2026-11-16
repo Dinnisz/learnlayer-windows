@@ -1,0 +1,43 @@
+{
+  "subject": "Physics",
+  "parts": [
+    {
+      "label": "Q",
+      "topic": "Uniformly accelerated motion",
+      "asks": "The car's acceleration.",
+      "hint": "Acceleration is how much the velocity changes in each second.",
+      "steps": [
+        "The velocity goes from 0 m/s to 20 m/s, so Δv = 20 m/s.",
+        "It takes Δt = 5 s.",
+        "a = Δv / Δt = 20 / 5 = 4 m/s²."
+      ],
+      "cards": [
+        {
+          "title": "Change in velocity",
+          "latex": "\\Delta v = 20 - 0 = 20\\ \\text{m/s}",
+          "note": "It starts at rest and reaches 20 m/s.",
+          "quotes": ["from 0 to 20 m/s"]
+        },
+        {
+          "title": "Time taken",
+          "latex": "\\Delta t = 5\\ \\text{s}",
+          "note": "The change happens over 5 seconds.",
+          "quotes": ["in 5 s"]
+        },
+        {
+          "title": "Acceleration",
+          "latex": "a = \\frac{\\Delta v}{\\Delta t} = \\frac{20}{5} = 4\\ \\text{m/s}^2",
+          "note": "Every second the car goes 4 m/s faster."
+        }
+      ],
+      "answer": { "text": "a = 4 m/s²", "expression": "20/5" },
+      "answerLatex": "a = 4\\ \\text{m/s}^2",
+      "uses": [],
+      "followUps": ["What if it took 10 s instead?", "Why is the unit m/s²?"]
+    }
+  ],
+  "checks": [],
+  "needsFigure": false,
+  "drawing": false,
+  "formulas": [{ "name": "Mean acceleration", "latex": "a = \\frac{\\Delta v}{\\Delta t}" }]
+}

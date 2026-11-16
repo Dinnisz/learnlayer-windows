@@ -45,3 +45,8 @@ export function useLanguage(): Language {
 export function usePlatform(): PlatformTraits {
   return platforms[useContext(LocalizationContext).platform];
 }
+
+/** The platform's name, for core functions that take it (the onboarding path, its clips). */
+export function usePlatformName(): PlatformName {
+  return useContext(LocalizationContext).platform;
+}
