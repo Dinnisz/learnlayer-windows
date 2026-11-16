@@ -4,9 +4,9 @@ As fases 0 a 8 estão feitas no código. O que falta depende de ti (`PARA-O-DINI
 
 ## Em números
 
-- 72 commits no `main`, nenhum push.
+- 77 commits no `main`, nenhum push.
 - ~51 000 linhas de TypeScript (`core/` e `ui/`) e ~3 200 de Rust (`src-tauri/src/`).
-- 759 testes a passar no Vitest. A maioria são os testes do Mac portados com os mesmos casos. O lint e a verificação de tipos estão limpos.
+- 762 testes a passar no Vitest. A maioria são os testes do Mac portados com os mesmos casos. O lint e a verificação de tipos estão limpos.
 - Custo da API paga: **0,00 USD**. Nenhuma chamada real: tudo foi desenvolvido com as respostas falsas do Mac.
 
 ## O que está feito, por fase
@@ -22,6 +22,7 @@ As fases 0 a 8 estão feitas no código. O que falta depende de ti (`PARA-O-DINI
 | 6 Figuras | Templates, renderizador SVG com rótulos que não se tapam, curva arrastável, quadro de sinais, plano complexo, espaço Oxyz, diagramas temporais, código com as cores do VS Code, explicador de fórmulas. |
 | 7 Onboarding, Memória, Definições | Memória local com o plano pedagógico; páginas Memória e Documentos com dados reais; todas as Definições; introdução de oito ecrãs em que a pergunta de exemplo abre o palco. |
 | 8 Distribuição | Sincronização cifrada no formato do Mac; «Abrir com o Windows»; atualizações com «Reiniciar para atualizar»; script do instalador com assinatura Azure; trabalho do CI. |
+| Depois da fase 8 | As ações da pílula passaram a funcionar: perguntar sobre o exercício, sugestões, silenciar, «Capturar uma área» e «Explicar o texto selecionado». O texto selecionado abre uma passagem própria, como no Mac. |
 
 ## O que só tu podes fazer (por ordem)
 

@@ -139,3 +139,13 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Atualizações:** o plugin só se regista quando a build traz o `tauri.updater.conf.json`, porque a configuração dele exige a chave pública. A atualização é descarregada em segundo plano e instalada com um clique («Reiniciar para atualizar»), nunca sozinha: o instalador fecha a app e o aluno pode estar a meio de uma pergunta. Está ligado o `requireSignedVersion`, que impede que um `latest.json` falso faça a app voltar a uma versão antiga.
 - **Assinatura:** o `signCommand` do Tauri chama o `trusted-signing-cli` só quando há as variáveis do Azure. O ficheiro de configuração temporário é escrito sem BOM, porque o Tauri não o leria com BOM.
 - **O plugin `process` foi retirado:** reiniciar é o `app.restart()` do próprio Tauri.
+
+## 2026-11-16 — Ações da pílula e texto selecionado
+- **Encontrado ao rever:** os comandos da pílula («Perguntar sobre este exercício», as perguntas sugeridas, silenciar, parar a fala, «Capturar uma área», «Explicar texto selecionado») não chegavam a nenhuma janela. A pílula também nunca sabia que havia um exercício aberto. Agora o palco publica o exercício aberto (com as perguntas sugeridas e a disciplina) e responde aos comandos.
+- **Silenciar:** como o `SpeechActivity.toggleMute` do Mac, liga e desliga Definições › Geral › Voz. A frase que está a ser dita acaba; as seguintes aparecem escritas.
+- **Capturar uma área:** o Mac usa o `screencapture -i` do sistema. No Windows o lado nativo congela o monitor do ponteiro (`BitBlt`) e o palco mostra-o com uma cruz para arrastar o retângulo. Não se usou o recorte do sistema (`ms-screenclip:`), porque esse deixa a imagem na área de transferência do aluno e é preciso adivinhar quando acabou. O recorte vai ao modelo como imagem, com o OCR do Windows feito só nesse recorte, como no Mac. Com o Alt-clique ligado, «Capturar o ecrã» faz o mesmo (no Mac esse botão volta a ligar o Alt-clique, que aí já está ligado).
+- **Explicar texto selecionado:** a seleção da app que está à frente é lida pela UI Automation (a pílula nunca fica com o teclado), e nada é lido nos browsers de exame. Sem seleção, aparece «Select some text first.».
+- **Texto selecionado como passagem:** esta entrada substitui a de 2026-11-15 sobre o texto selecionado. Um Alt-clique em texto selecionado, ou «Explicar texto selecionado», abre agora uma passagem própria, como a `SelectionSession` do Mac: explica-o, o que pede, ou uma pista, num só pedido TextHelp v5.
+  - Ainda não há o gráfico que o TextHelp pode trazer.
+  - O contexto à volta da seleção vai vazio, porque a UI Automation não o dá como o `AccessibilityReader` do Mac.
+  - A seleção no leitor de PDF da própria app ainda não acende a ação da pílula (`hasReaderSelection`).

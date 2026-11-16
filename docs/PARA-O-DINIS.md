@@ -69,7 +69,11 @@ Depende do ponto 1. Com a app aberta (`npm run tauri dev`):
 2. Faz o mesmo num PDF de `exames/` aberto no Edge, no Acrobat Reader e no Word (um `.docx` qualquer com perguntas numeradas).
 3. Em cada caso, preenche uma linha em `docs/anywhere-medicao.md`: o texto saiu completo? De onde veio («pdf», «text-range», «block», «region»: aparece em `%APPDATA%\LearnLayer\anywhere-log.jsonl`)? Quanto tempo demorou?
 4. Com o palco aberto e o foco noutra app, **Esc** tem de o fechar.
-5. Para a transcrição rápida em Debug (como no Mac): guarda a tua chave da OpenRouter no Gestor de Credenciais com
+5. **Ações da pílula:** passa o rato pela pílula no topo do ecrã.
+   - «Capturar uma área»: o ecrã fica parado; arrasta um retângulo sobre uma pergunta e o palco abre-a. Esc cancela.
+   - «Explicar o texto selecionado»: com texto selecionado no Edge ou no Word, abre a passagem com «Explicar / O que é pedido? / Dá-me uma dica». Sem nada selecionado, aparece «Seleciona primeiro algum texto.».
+   - Com uma pergunta aberta, a pílula mostra só «Perguntar sobre este exercício».
+6. Para a transcrição rápida em Debug (como no Mac): guarda a tua chave da OpenRouter no Gestor de Credenciais com
    `cmdkey /generic:LearnLayer.OpenRouter /user:openrouter /pass:<a chave>`.
    Numa build de release isto não é usado nunca. Cada chamada real fica em `docs/CUSTOS.md`.
 
