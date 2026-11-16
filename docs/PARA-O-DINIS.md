@@ -30,6 +30,14 @@ Repeti a build e o bloqueio é o mesmo. O registo `Microsoft-Windows-CodeIntegri
 
 Quando uma destas estiver feita, diz «continua» e eu retomo a parte nativa a partir de `docs/PROGRESSO.md`.
 
+**Atualização 2026-11-16 (tarde):**
+- O repositório privado [Dinnisz/learnlayer-windows](https://github.com/Dinnisz/learnlayer-windows) já existe e tem o `main`. Criei-o com o GitHub CLI depois de entrares na conta e de autorizares o push.
+- O CI não arrancou. O GitHub recusou os trabalhos com «recent account payments have failed or your spending limit needs to be increased».
+- Para desbloquear, em https://github.com/settings/billing:
+  1. Resolve o pagamento em falta, se houver.
+  2. Põe um limite de gastos acima de zero para o Actions. Uns 5–10 USD chegam; os minutos em Windows contam a dobrar nas contas privadas.
+- Depois diz «continua»: volto a correr o CI (`gh run rerun`), corrijo o Rust e trago o instalador para `dist/`.
+
 ### 1b. Identidade dos commits
 Os commits estão com `Dinis Santos <dinis@learnlayer.invalid>` (só na configuração local deste repositório), para não pôr um e-mail verdadeiro no histórico sem tu decidires. Antes do primeiro push: `git config user.email "o-teu@email"` e, se quiseres corrigir os commits antigos, `git rebase -r --root --exec "git commit --amend --no-edit --reset-author"`.
 
