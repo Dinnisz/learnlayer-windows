@@ -305,4 +305,51 @@ describe("Graph", () => {
     expect(reopened.liveNodes.filter((node) => node.kind === "question").length).toBe(1);
     expect(reopened.liveNodes.some((node) => node.kind === "document")).toBe(true);
   });
+
+  test("two windows writing memory.json keep each other's questions, and a reset stays a reset", async () => {
+    const files = new Map<string, string>();
+    const disk = {
+      read: async (name: string) => files.get(name) ?? null,
+      write: async (name: string, text: string) => void files.set(name, text),
+    };
+    const question = (text: string) => ({
+      text,
+      documentName: "exame.pdf",
+      page: 0,
+      concepts: ["local/" + text],
+      kind: "exercise" as const,
+      language: "pt-PT",
+      explanationJSON: null,
+      area: "math",
+    });
+    let now = 1_000;
+    const clock = () => now;
+    const main = await MemoryStore.open(disk, clock);
+    const reader = await MemoryStore.open(disk, clock);
+    reader.record(question("2.1"));
+    await reader.flushed();
+    // The main window never saw 2.1; its own write keeps it.
+    main.record(question("3.2"));
+    await main.flushed();
+    const texts = async () =>
+      (await MemoryStore.open(disk)).liveNodes
+        .filter((node) => node.kind === "question")
+        .map((node) => JSON.parse(node.data).text)
+        .sort();
+    expect(await texts()).toEqual(["2.1", "3.2"]);
+    // The main window reads what the reader wrote.
+    await main.reload();
+    expect(main.liveNodes.filter((node) => node.kind === "question").length).toBe(2);
+    // Forgetting is a tombstone, so the other window's copy doesn't bring it back.
+    const id = main.liveNodes.find((node) => node.kind === "question" && JSON.parse(node.data).text === "2.1")!.id;
+    now += 5;
+    main.delete(id);
+    await main.flushed();
+    reader.record(question("4"));
+    await reader.flushed();
+    expect(await texts()).toEqual(["3.2", "4"]);
+    main.resetMemory();
+    await main.flushed();
+    expect(await texts()).toEqual([]);
+  });
 });

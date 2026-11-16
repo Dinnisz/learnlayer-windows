@@ -122,6 +122,37 @@ fn session_clear_handoff(state: State<'_, AppState>) {
     state.session.clear_handoff();
 }
 
+/// The memory-sync keys of one account (`device.<user>`, `memory.<user>`), base64, in the system's secret store
+/// under `memory-sync.<name>` (the Mac keeps them in the Keychain). Only these names: the page can never reach the
+/// session tokens through here.
+fn memory_secret_account(name: &str) -> Option<String> {
+    let allowed = (name.starts_with("device.") || name.starts_with("memory."))
+        && name.len() <= 120
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'));
+    allowed.then(|| format!("memory-sync.{name}"))
+}
+
+#[tauri::command]
+fn memory_secret_read(name: String) -> Option<String> {
+    let account = memory_secret_account(&name)?;
+    platform::current().secret_store().read(&account)
+}
+
+#[tauri::command]
+fn memory_secret_write(name: String, value: Option<String>) -> bool {
+    let Some(account) = memory_secret_account(&name) else {
+        return false;
+    };
+    let store = platform::current().secret_store();
+    match value {
+        Some(value) => store.write(&account, &value),
+        None => {
+            store.delete(&account);
+            true
+        }
+    }
+}
+
 /// Asks where to save, then writes the text there. `false` when the student cancelled.
 #[tauri::command]
 async fn save_text_file(app: AppHandle, default_name: String, contents: String) -> Result<bool, String> {
@@ -157,6 +188,8 @@ pub fn run() {
             session_load_handoff,
             session_clear_handoff,
             save_text_file,
+            memory_secret_read,
+            memory_secret_write,
             platform::pill_resize,
             platform::anywhere_set_enabled,
             platform::anywhere_picture,

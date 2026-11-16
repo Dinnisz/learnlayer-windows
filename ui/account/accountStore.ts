@@ -18,6 +18,9 @@ export function accountModel(): Promise<AccountModel> {
         environment: { ...config.environment, LEARNLAYER_SITE_BASE: config.siteBase },
         open: (url) => void openExternal(url),
         deviceName: () => deviceNameFor(config.computerName, config.platform),
+        // The account is gone: its memory-sync keys on this computer go too.
+        forgetSyncKeys: (userID) =>
+          void import("../memory/sync").then(({ memorySync }) => memorySync().then((sync) => sync.forget(userID))),
       }),
   );
   return shared;

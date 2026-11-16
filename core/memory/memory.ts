@@ -6,6 +6,7 @@
 // as Swift's JSONEncoder writes them), so the nodes and edges sync as they are.
 
 import { swiftText } from "../prompts/swiftText";
+import { BrainMerge } from "./brainSync";
 
 // MARK: Beliefs
 
@@ -765,13 +766,54 @@ export class MemoryStore {
     return Math.trunc(this.clock());
   }
 
-  private save() {
+  /**
+   * Writes `memory.json`. Each window (main, reader, stage) has its own store, so what another window wrote since is
+   * merged in first (`BrainMerge`: the newer change wins, deletions are tombstones). `replace` writes this snapshot as
+   * it is: the reset, which must not bring the old questions back. (The Mac has one store for the whole app.)
+   */
+  private save(replace = false) {
     this.version += 1;
     for (const listener of [...this.listeners]) listener();
     const files = this.files;
     if (!files) return;
-    const text = JSON.stringify(this.snapshot);
-    this.saving = this.saving.then(() => files.write("memory.json", text)).catch(() => {});
+    this.saving = this.saving
+      .then(async () => {
+        if (!replace) await this.mergeFromDisk(files);
+        await files.write("memory.json", JSON.stringify(this.snapshot));
+      })
+      .catch(() => {});
+  }
+
+  /** Merges the graph another window wrote into this one; returns how many records changed here. */
+  private async mergeFromDisk(files: MemoryFiles): Promise<number> {
+    const text = await files.read("memory.json").catch(() => null);
+    const saved = (text ? parse(text) : null) as Partial<MemorySnapshot> | null;
+    if (!saved || !Array.isArray(saved.nodes) || !Array.isArray(saved.edges)) return 0;
+    const merged = BrainMerge.merge(
+      { nodes: this.snapshot.nodes, edges: this.snapshot.edges },
+      { nodes: saved.nodes, edges: saved.edges },
+    );
+    if (merged.changed > 0) {
+      this.snapshot.nodes = merged.graph.nodes;
+      this.snapshot.edges = merged.graph.edges;
+    }
+    return merged.changed;
+  }
+
+  /** Reads what the other windows wrote (a question opened in the reader shows in the Memory page). */
+  async reload(): Promise<void> {
+    const files = this.files;
+    if (!files) return;
+    let changed = 0;
+    this.saving = this.saving
+      .then(async () => {
+        changed = await this.mergeFromDisk(files);
+      })
+      .catch(() => {});
+    await this.saving;
+    if (changed === 0) return;
+    this.version += 1;
+    for (const listener of [...this.listeners]) listener();
   }
 
   /** Waits for the writes already started (tests and quitting). */
@@ -1049,7 +1091,7 @@ export class MemoryStore {
   resetMemory(): void {
     const consent = this.snapshot.consent;
     this.snapshot = { ...emptySnapshot(this.clock()), consent };
-    this.save();
+    this.save(true);
   }
 
   /** Every node and edge, tombstones included, so a deletion reaches the other computers. */
@@ -1058,6 +1100,16 @@ export class MemoryStore {
       nodes: this.snapshot.nodes.map((node) => ({ ...node })),
       edges: this.snapshot.edges.map((edge) => ({ ...edge })),
     };
+  }
+
+  /** Takes what another computer sent. The newer change wins per node and per edge. Returns how many records changed
+   * here (`MemoryStore.mergeSynced`). */
+  mergeSynced(remote: { nodes: MemoryNode[]; edges: MemoryEdge[] }): number {
+    const merged = BrainMerge.merge({ nodes: this.snapshot.nodes, edges: this.snapshot.edges }, remote);
+    this.snapshot.nodes = merged.graph.nodes;
+    this.snapshot.edges = merged.graph.edges;
+    this.save();
+    return merged.changed;
   }
 
   /** Replaces the graph with a merged one (`BrainMerge`), keeping beliefs and habits. */

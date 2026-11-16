@@ -13,6 +13,8 @@ import {
 } from "../../../components/settings/SettingsKit";
 import { useT } from "../../../i18n";
 import { memoryStore } from "../../../memory/memory";
+import { memorySync } from "../../../memory/sync";
+import type { BrainSyncController } from "@core/memory/brainSync";
 import { appConfig } from "../../../native";
 
 /** Saves `text` as a file the student picks (the browser's save, the WebView2 download prompt in the app). */
@@ -80,9 +82,13 @@ export function DataPane() {
           <SettingsToggle
             label={t("Sync memory across my devices")}
             checked={consent.memorySync}
-            onChange={(on) => write({ memorySync: on })}
+            onChange={(on) => {
+              write({ memorySync: on });
+              if (on) void memorySync().then((sync) => sync.syncNow());
+            }}
           />
         </SettingsRow>
+        {consent.memorySync && <SyncStatusRow />}
         <SettingsRow
           title={t("Adapt explanations to my habits")}
           detail={t("Length and examples follow what you do. You can turn this off.")}
@@ -135,5 +141,49 @@ export function DataPane() {
         </SettingsRow>
       </SettingsGroup>
     </SettingsPage>
+  );
+}
+
+/** Where the encrypted copy stands, and a button to sync now (BrainSyncStatusRow). */
+function SyncStatusRow() {
+  const t = useT();
+  const [sync, setSync] = useState<BrainSyncController | null>(null);
+  useEffect(() => {
+    void memorySync().then(setSync);
+  }, []);
+  const status = useSyncExternalStore(
+    (listener) => sync?.subscribe(listener) ?? (() => {}),
+    () => sync?.status ?? null,
+  );
+  const detail = (() => {
+    switch (status?.kind ?? "off") {
+      case "syncing":
+        return t("Syncing…");
+      case "synced":
+        return t(
+          "Synced %@.",
+          new Date((status && status.kind === "synced" ? status.at : 0) * 1000).toLocaleString(undefined, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        );
+      case "waitingForKey":
+        return t("Waiting for another of your Macs to share the key. Open LearnLayer there.");
+      case "offline":
+        return t("Offline. Your memory stays on this Mac and syncs later.");
+      case "signedOut":
+        return t("Sign in to sync your memory.");
+      case "failed":
+        return t("Couldn’t sync. Your memory on this Mac is unchanged.");
+      default:
+        return t("Not synced yet.");
+    }
+  })();
+  return (
+    <SettingsRow title={t("Sync status")} detail={detail} symbol="arrow.triangle.2.circlepath">
+      <SettingsButton disabled={status?.kind === "syncing"} onClick={() => void sync?.syncNow()}>
+        {t("Sync now")}
+      </SettingsButton>
+    </SettingsRow>
   );
 }

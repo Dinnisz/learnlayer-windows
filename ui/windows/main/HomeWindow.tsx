@@ -28,6 +28,7 @@ import { AIPane } from "./panes/AIPane";
 import { DataPane } from "./panes/DataPane";
 import { ConsentSheet, SignInSheet } from "./sheets/SignInSheet";
 import { memoryStore } from "../../memory/memory";
+import { memorySync } from "../../memory/sync";
 import { OnboardingCard } from "../../onboarding/OnboardingCard";
 import { existingUser, onboardingCoordinator } from "../../onboarding/onboarding";
 
@@ -41,6 +42,17 @@ function useHomeRoute(): [HomeRoute, (route: HomeRoute) => void] {
     setRoute(next);
   };
   return [route, select];
+}
+
+/** The memory: what the reader and the stage wrote is read again when this window comes forward, and the encrypted
+ * sync runs here (every 15 minutes while it is on). */
+function useMemoryUpkeep() {
+  useEffect(() => {
+    const reload = () => void memoryStore().then((memory) => memory.reload());
+    window.addEventListener("focus", reload);
+    void memorySync().then((sync) => sync.start());
+    return () => window.removeEventListener("focus", reload);
+  }, []);
 }
 
 /** The first-run card: decided once at launch, started again from Settings › General. */
@@ -69,6 +81,7 @@ export function HomeWindow() {
   const [route, select] = useHomeRoute();
   const t = useT();
   const onboarding = useOnboarding();
+  useMemoryUpkeep();
   const { shortcutModifier } = usePlatform();
 
   // The first eight digits jump to a section in sidebar order, with the platform's modifier.

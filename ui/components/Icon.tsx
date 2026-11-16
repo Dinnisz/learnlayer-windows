@@ -32,6 +32,10 @@ const glyphs: Record<string, string> = {
   "arrow.up.left.and.arrow.down.right": "\uE9A6", // FitPage
   doc: "\uE8E5", // OpenFile
   checkmark: "\uE73E", // CheckMark
+  "arrow.triangle.2.circlepath": "\uE895", // Sync
+  network: "\uE774", // Globe
+  waveform: "\uE767", // Volume
+  "lock.doc": "\uE72E", // Lock
 };
 
 export const knownSymbols = Object.keys(glyphs);
