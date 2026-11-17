@@ -181,7 +181,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-17 — Mais figuras animadas
 - **Portado do Mac, com os testes:** várias variáveis, algoritmos e estruturas de dados, curva de aquecimento, ótica (Batch 2), programação (ciclo, recursão, fluxograma com interpretador), lógica (fórmulas, tabela de verdade), mapa de argumentos e silogismos (Batch 4), os controlos de passos (`IllustrationStepControls`) e as regras dos sliders (`mergingParameters`, `adjustingBatch4`, `mergeBatch4Parameter`).
 - **Dúvida:** o teste genérico «params inválidos voltam para trás» do Mac só percorre `AnimatedKind`. **Escolha:** o porte usa a mesma lista explícita. **Porquê:** as famílias Batch têm valores por defeito para todos os parâmetros (a ótica, por exemplo), por isso o teste não se lhes aplica no Mac.
-- **Ainda não:** a matemática de Batch 3. Os passos para portar cada família estão em PROGRESSO.md.
+- **Feito depois:** a matemática de Batch 3 (todas as famílias pré-feitas do Mac estão portadas).
 
 ## 2026-11-17 — Arredondamento dos números nas figuras e tempos dos testes
 - **Dúvida:** `formatG`/`formatF` (porte do `String(format:)`) usavam `toFixed`/`toExponential`, que num empate exato (1086,5 com 4 algarismos) arredondam para cima; o C do Mac arredonda para o par («1086»). Apareceu ao portar as tendências periódicas. **Escolha:** os empates exatos (vistos na expansão decimal exata do double) vão para o algarismo par, como no C; o resto não muda. **Porquê:** os rótulos e as chaves de cache têm de ser iguais aos do Mac. Testes novos em `core/math/printf.test.ts`.

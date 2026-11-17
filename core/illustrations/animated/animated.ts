@@ -26,6 +26,7 @@ import { opticsFigures } from "./optics";
 import { physicsFigures } from "./physics";
 import { probabilityFigures } from "./probability";
 import { seriesFigures } from "./series";
+import { spaceFigures } from "./space";
 import { squareFigures } from "./square";
 import { structureFigures } from "./structures";
 import { syllogismFigures } from "./syllogism";
@@ -44,6 +45,7 @@ const compilers = {
   ...chemistryFigures,
   ...analysisFigures,
   ...probabilityFigures,
+  ...spaceFigures,
   ...electromagnetismFigures,
   ...opticsFigures,
   ...loopFigures,
@@ -249,6 +251,16 @@ export const animatedGallery: PremadeFigure[] = [
   sample("argandPlane", '{"operation": "add", "re": 3, "im": 1, "re2": -1, "im2": 2}'),
   sample("argandPlane", '{"operation": "multiply", "re": 1, "im": 1, "re2": 0, "im2": 2}'),
   sample("argandPlane", '{"operation": "multiply", "re": -2, "im": 1, "re2": -1, "im2": -1}'),
+  sample("space3D", '{"mode": "vectors", "operation": "cross", "u": [2, 0, 0], "v": [0, 3, 1]}'),
+  sample("space3D", '{"mode": "vectors", "operation": "sum", "u": [2, 1, 0], "v": [-1, 2, 2]}'),
+  sample("space3D", '{"mode": "vectors", "operation": "dot", "u": [2, 2, 0], "v": [0, 2, 2]}'),
+  sample("space3D", '{"mode": "plane", "a": 2, "b": 1, "c": -1, "d": 6}'),
+  sample("space3D", '{"mode": "plane", "a": 1, "b": 1, "c": 1, "d": 0}'),
+  sample("solids", '{"kind": "prism", "a": 3, "b": 2, "h": 4}'),
+  sample("solids", '{"kind": "pyramid", "a": 4, "h": 3}'),
+  sample("solids", '{"kind": "cylinder", "r": 2, "h": 5}'),
+  sample("solids", '{"kind": "cone", "r": 3, "h": 4}'),
+  sample("solids", '{"kind": "sphere", "r": 3}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
