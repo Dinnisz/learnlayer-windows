@@ -478,8 +478,8 @@ const linkedList: Compiler = (params, title, language) => {
   const nullID = -2;
   // Frames: where each node is, and which links exist, step by step.
   const nodePositions = new Map<number, (Point | null)[]>();
-  let links: { from: number; to: number }[][] = [];
-  let frameCount = 0;
+  let links: { from: number; to: number }[][];
+  let frameCount: number;
   const chain = (ids: number[]) => {
     const sequence = [headID, ...ids, nullID];
     return sequence.slice(0, -1).map((from, i) => ({ from, to: sequence[i + 1]! }));
