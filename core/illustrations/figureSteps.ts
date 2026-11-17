@@ -1,10 +1,13 @@
 // Port of Figure3DSteps.solidPart and CircuitReduction in LearnLayer/Explanation/Figure3DSteps.swift @ ref
 // 2026-11-04: the figure following the written solution, from the steps' own numbers and words (no script from a
 // model). A circuit is reduced as its steps reduce it (the resistors joined so far into the latest block); a solid's
-// step lights the part it works with. Not yet here: the slice sent along [a, b] on the step that writes the volume's
-// integral (LatexIntegral) and the parts of a space figure.
+// step lights the part it works with, and the step that writes the volume's integral (LatexIntegral, worked out to the
+// drawn solid's volume) sends the slice along [a, b]. Not yet here: the parts of a space figure.
 
 import { CircuitMerges, type CircuitSpec } from "./circuit";
+import { LatexIntegrals } from "./latexIntegral";
+import { SolidCheck, type GenericSolid } from "./solid";
+import { GenericSolidBuilder } from "./solidBuilder";
 
 export const Figure3DSteps = {
   /** The solid's part a step works with, from its words: the disc or washer (the radii), the axis, the curves, the
@@ -153,7 +156,26 @@ export function circuitStepPlan(spec: CircuitSpec, steps: readonly PlanStep[]): 
   );
 }
 
-/** For each step (from 0), the solid's part it lights, among the parts drawn. */
-export function solidStepPlan(parts: readonly string[], steps: readonly PlanStep[]): (string | null)[] {
-  return steps.map((step) => Figure3DSteps.solidPart(`${step.formula} ${step.words}`, parts));
+/** The kinds whose slices the app can show travelling: discs, washers, shells and sections. */
+export function sweeps(solid: GenericSolid): boolean {
+  return solid.kind.kind === "revolution" || solid.kind.kind === "sections";
+}
+
+/** The highlight of the step that writes the volume's integral: the slice sent along, then the section. */
+export const sweepHighlight = `${GenericSolidBuilder.sweep},section`;
+
+/** For each step (from 0), the solid's part it lights, among the parts drawn; the step whose integral the app works
+ * out to the drawn solid's volume sends the slice along [a, b]. */
+export function solidStepPlan(solid: GenericSolid, steps: readonly PlanStep[]): (string | null)[] {
+  const built = GenericSolidBuilder.build(solid);
+  const order = built ? GenericSolidBuilder.order(built) : [];
+  const volume = SolidCheck.volume(solid);
+  return steps.map((step) => {
+    if (volume !== null && volume > 0 && sweeps(solid)) {
+      const integral = LatexIntegrals.read(step.formula);
+      const value = integral ? LatexIntegrals.value(integral) : null;
+      if (value !== null && Math.abs(value - volume) <= 0.005 * volume) return sweepHighlight;
+    }
+    return Figure3DSteps.solidPart(`${step.formula} ${step.words}`, order);
+  });
 }

@@ -32,7 +32,6 @@ import { IllustrationView } from "../figures/IllustrationView";
 import { CircuitView } from "../figures/CircuitView";
 import { SolidView } from "../figures/SolidView";
 import { solidOf } from "@core/illustrations/solid";
-import { GenericSolidBuilder } from "@core/illustrations/solidBuilder";
 import { circuitStepPlan, solidStepPlan } from "@core/illustrations/figureSteps";
 import { circuitOf } from "@core/illustrations/circuit";
 import { SignTableView } from "../figures/SignTableView";
@@ -838,10 +837,7 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
       }));
       const step = session.selectedStep;
       const circuitLit = circuit && step !== null ? (circuitStepPlan(circuit, steps)[step] ?? null) : null;
-      const solidParts = solid
-        ? GenericSolidBuilder.order(GenericSolidBuilder.build(solid) ?? { pieces: [], axes: [] })
-        : [];
-      const solidLit = solid && step !== null ? (solidStepPlan(solidParts, steps)[step] ?? null) : null;
+      const solidLit = solid && step !== null ? (solidStepPlan(solid, steps)[step] ?? null) : null;
       return circuit ? (
         <CircuitView spec={circuit} caption={session.illustration.title || undefined} highlight={circuitLit} />
       ) : solid ? (

@@ -45,16 +45,17 @@ function material(look: GenericPiece["look"]): THREE.Material {
   }
 }
 
-/** The three.js objects of the pieces a step shows (not the travelling slices), each named after its piece. */
+/** The three.js objects of the pieces, each named after its piece; the travelling slices start hidden (a step that
+ * writes the volume's integral sends them along [a, b]). */
 function objects(built: BuiltSolid): THREE.Object3D[] {
   const out: THREE.Object3D[] = [];
   const named = (object: THREE.Object3D, name: string) => {
     object.name = name;
     object.userData.opacity = ((object as THREE.Mesh).material as THREE.Material & { opacity: number }).opacity;
+    if (name === GenericSolidBuilder.sweep) object.visible = false;
     return object;
   };
   for (const part of built.pieces) {
-    if (part.name === GenericSolidBuilder.sweep) continue;
     if (part.mesh) {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute(
@@ -99,20 +100,8 @@ export function SolidView({
 }) {
   const holder = useRef<HTMLDivElement>(null);
   const figureRef = useRef<THREE.Group | null>(null);
-
-  // The part in focus stands out; the others dim (opacity only, the scene is not rebuilt).
-  useEffect(() => {
-    figureRef.current?.traverse((object) => {
-      if (!(object instanceof THREE.Mesh || object instanceof THREE.Line)) return;
-      const base = (object.userData.opacity as number | undefined) ?? 1;
-      const material = object.material as THREE.Material & { opacity: number };
-      material.transparent = true;
-      material.opacity =
-        !highlight || !object.name ? base : object.name === highlight ? Math.min(1, base * 1.6) : base * 0.3;
-      material.needsUpdate = true;
-    });
-  }, [highlight]);
-
+  /** When the slice started travelling along [a, b] (the step that writes the volume's integral), else null. */
+  const sweepStart = useRef<number | null>(null);
   useEffect(() => {
     const element = holder.current;
     const built = GenericSolidBuilder.build(solid);
@@ -142,7 +131,22 @@ export function SolidView({
     let last = { x: 0, y: 0 };
     let frame = 0;
     let idle = 0;
+    const slices = figure.children.filter((object) => object.name === GenericSolidBuilder.sweep);
+    const sweepMs = 2400;
     const draw = () => {
+      // The slice travels from a to b, then rests at b; with reduced motion it stands halfway.
+      const started = sweepStart.current;
+      if (slices.length > 0) {
+        const shown =
+          started === null
+            ? -1
+            : reduced
+              ? Math.floor(slices.length / 2)
+              : Math.min(slices.length - 1, Math.floor(((performance.now() - started) / sweepMs) * slices.length));
+        slices.forEach((slice, index) => {
+          slice.visible = index === shown;
+        });
+      }
       figure.rotation.set(pitch, yaw, 0);
       renderer.render(sceneRoot, camera);
     };
@@ -186,6 +190,22 @@ export function SolidView({
       element.removeChild(renderer.domElement);
     };
   }, [solid, height]);
+
+  // The parts in focus stand out; the others dim (opacity only, the scene is not rebuilt).
+  useEffect(() => {
+    const lit = new Set(highlight ? highlight.split(",") : []);
+    sweepStart.current = lit.has(GenericSolidBuilder.sweep) ? performance.now() : null;
+    figureRef.current?.traverse((object) => {
+      if (!(object instanceof THREE.Mesh || object instanceof THREE.Line)) return;
+      const base = (object.userData.opacity as number | undefined) ?? 1;
+      const material = object.material as THREE.Material & { opacity: number };
+      material.transparent = true;
+      material.opacity =
+        lit.size === 0 || !object.name ? base : lit.has(object.name) ? Math.min(1, base * 1.6) : base * 0.3;
+      material.needsUpdate = true;
+      if (object.name === GenericSolidBuilder.sweep) object.visible = false;
+    });
+  }, [highlight, solid, height]);
 
   return (
     <figure className="solid-figure">

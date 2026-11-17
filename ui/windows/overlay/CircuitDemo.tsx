@@ -4,6 +4,8 @@ import { CircuitSpecs, type CircuitSpec } from "@core/illustrations/circuit";
 import { CircuitView } from "../../figures/CircuitView";
 import { SolidView } from "../../figures/SolidView";
 import { GenericSolids } from "@core/illustrations/solid";
+import { sweepHighlight } from "@core/illustrations/figureSteps";
+import { useState } from "react";
 
 /** The round 10 solids of the Mac's tests: a washer about y = −1, a shell about Oy, semicircular sections. */
 const solids: [string, object][] = [
@@ -56,6 +58,7 @@ const netlists: [string, object][] = [
 ];
 
 export function CircuitDemo() {
+  const [sweep, setSweep] = useState(0);
   const specs = netlists.flatMap(([name, params]): [string, CircuitSpec][] => {
     const spec = CircuitSpecs.fromPremade({ type: CircuitSpecs.generic, params: params as never });
     return spec ? [[name, spec]] : [];
@@ -65,11 +68,22 @@ export function CircuitDemo() {
       {specs.map(([name, spec]) => (
         <CircuitView key={name} spec={spec} caption={name} highlight={name === "ICSE Q1" ? ["R1", "R2"] : null} />
       ))}
-      {solids.map(([name, params]) => {
+      {solids.map(([name, params], index) => {
         const solid = GenericSolids.fromParams(params as never);
+        // The first solid as on the step that writes its volume's integral: the slice sent along [a, b].
         return solid ? (
           <div key={name} style={{ width: 460 }}>
-            <SolidView solid={solid} caption={name} height={280} />
+            <SolidView
+              solid={solid}
+              caption={name}
+              height={280}
+              highlight={index === 0 ? (sweep % 2 === 0 ? sweepHighlight : null) : null}
+            />
+            {index === 0 ? (
+              <button type="button" onClick={() => setSweep((n) => n + 1)}>
+                sweep
+              </button>
+            ) : null}
           </div>
         ) : null;
       })}

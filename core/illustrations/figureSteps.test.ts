@@ -3,7 +3,9 @@
 
 import { describe, expect, it } from "vitest";
 import { CircuitSpecs, type CircuitSpec } from "./circuit";
-import { CircuitReduction, Figure3DSteps } from "./figureSteps";
+import { CircuitReduction, Figure3DSteps, solidStepPlan } from "./figureSteps";
+import { LatexIntegrals } from "./latexIntegral";
+import { GenericSolids, solidOf } from "./solid";
 
 function circuit(json: string): CircuitSpec {
   const spec = CircuitSpecs.fromPremade({ type: CircuitSpecs.generic, params: JSON.parse(json) });
@@ -66,5 +68,37 @@ describe("Figure3DSteps", () => {
     expect(Figure3DSteps.solidPart("Raio de cada disco: r = √x", parts)).toBe("section");
     expect(Figure3DSteps.solidPart("Rotação em torno do eixo Ox", parts)).toBe("axis");
     expect(Figure3DSteps.solidPart("V = 8π", parts)).toBeNull();
+  });
+
+  it("integrals are read from LaTeX and worked out", () => {
+    const value = (latex: string) => {
+      const integral = LatexIntegrals.read(latex);
+      if (!integral) throw new Error(`not read: ${latex}`);
+      return LatexIntegrals.value(integral) ?? 0;
+    };
+    expect(
+      Math.abs(value(String.raw`V = \pi \int_{0}^{4} \left(\sqrt{x}\right)^2 \, dx = 8\pi`) - 8 * Math.PI),
+    ).toBeLessThan(1e-6);
+    expect(
+      Math.abs(value(String.raw`V = \pi\int_0^1 \left[(x+1)^2 - (x^2+1)^2\right] dx`) - (7 * Math.PI) / 15),
+    ).toBeLessThan(1e-6);
+    expect(Math.abs(value(String.raw`V = 2\pi \int_{0}^{2} x \cdot x^{2} \, dx`) - 8 * Math.PI)).toBeLessThan(1e-6);
+    expect(Math.abs(value(String.raw`V = \int_0^4 \frac{\pi}{2} x \, dx`) - 4 * Math.PI)).toBeLessThan(1e-6);
+    expect(LatexIntegrals.read("x = 2")).toBeNull();
+  });
+
+  it("the step that writes the volume sends the slice along", () => {
+    const solid = solidOf({
+      premade: { type: GenericSolids.premadeType, params: { kind: "revolution", f: "x^2", axis: "y", a: 0, b: 2 } },
+    });
+    if (!solid) throw new Error("no solid");
+    const plan = solidStepPlan(solid, [
+      { formula: String.raw`\text{Método das cascas}`, words: "Escolha do método: cascas cilíndricas" },
+      { formula: String.raw`V = 2\pi \int_{0}^{2} x \cdot x^{2} \, dx`, words: "Montar a integral" },
+      { formula: String.raw`V = 2\pi \int_{0}^{2} x^{2} \, dx`, words: "Um integral errado não move nada" },
+    ]);
+    expect(plan[0]).toBe("section");
+    expect(plan[1]).toBe("sweep,section");
+    expect(plan[2]).not.toBe("sweep,section");
   });
 });
