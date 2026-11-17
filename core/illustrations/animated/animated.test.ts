@@ -286,6 +286,87 @@ describe("animated premade figures", () => {
     }
   });
 
+  // batch2FiguresExposeLocalParameterSliders, batch2SliderValuesRecompileDrawably and
+  // batch2InteractiveLabelsAvoidOverlapAtSliderExtremes (PremadeFigureInteractiveTests.swift).
+  it("batch 2 figures expose local parameter sliders", () => {
+    for (const [type, json, names] of [
+      ["lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}', ["objectDistance"]],
+      ["mirrorRays", '{"kind": "concave", "focal": 2, "objectDistance": 5}', ["objectDistance"]],
+      ["refraction", '{"n1": 1, "n2": 1.5, "angle": 40}', ["angle", "n2"]],
+      ["prismDispersion", '{"incidence": 60}', ["incidence"]],
+      ["doubleSlit", '{"wavelength": 600, "separation": 0.5, "screenDistance": 2}', ["wavelength", "separation"]],
+      ["parallelPlates", '{"voltage": 100, "distance": 0.02}', ["voltage", "distance"]],
+      ["lorentzForce", '{"charge": "positive", "field": "into"}', ["v", "B"]],
+      ["rcCircuitCurve", '{"mode": "both"}', ["R", "C"]],
+      ["acSignal", '{"peak": 325, "frequency": 50}', ["peak", "frequency"]],
+    ] as const) {
+      const built = compile(sample(type, json), "English");
+      expect(built, type).not.toBeNull();
+      for (const name of names)
+        expect(
+          built?.parameters?.some((p) => p.name === name),
+          `${type} missing ${name}`,
+        ).toBe(true);
+      expect(built?.premade?.type).toBe(type);
+    }
+  });
+
+  it("batch 2 slider values recompile drawably", () => {
+    const premade = sample("refraction", '{"n1": 1.5, "n2": 1, "angle": 30}');
+    const merged = compile(new PremadeFigures(premade).mergingParameters({ angle: 60, n2: 1 }), "English");
+    expect(merged).not.toBeNull();
+    expect(new CompiledIllustration(merged!).isDrawable).toBe(true);
+    expect(merged!.duration ?? 0).toBeGreaterThan(0);
+    expect(merged!.parameters?.find((p) => p.name === "angle")?.value).toBe(60);
+    expect(
+      labels(merged!, 0.95 * (merged!.duration ?? 0)).some(
+        (l) => l.includes("reflexão total") || l.toLowerCase().includes("total internal"),
+      ),
+    ).toBe(true);
+
+    const rc = sample("rcCircuitCurve", '{"mode": "charge", "tau": 2, "V0": 10}');
+    const tuned = new PremadeFigures(rc).mergingParameters({ R: 20, C: 100 });
+    const rcScene = compile(tuned, "English");
+    expect(rcScene).not.toBeNull();
+    expect(labels(rcScene!, 0.95 * (rcScene!.duration ?? 0)).some((l) => l.includes("τ = RC"))).toBe(true);
+    const tunedParams = new Params(tuned);
+    expect(Math.abs((tunedParams.number("R") ?? 0) * (tunedParams.number("C") ?? 0) * 1e-3 - 2)).toBeLessThan(0.01);
+
+    const lorentz = sample("lorentzForce", '{"charge": "positive", "field": "into"}');
+    expect(compile(new PremadeFigures(lorentz).mergingParameters({ v: 2.5, B: 0.5 }), "English")).not.toBeNull();
+  });
+
+  it("batch 2 interactive labels avoid overlap at the slider extremes", () => {
+    for (const figure of [
+      sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
+      sample("mirrorRays", '{"kind": "plane", "objectDistance": 3}'),
+      sample("refraction", '{"n1": 1.5, "n2": 1, "angle": 45}'),
+      sample("parallelPlates", '{"voltage": 100, "distance": 0.02}'),
+      sample("lorentzForce", '{"charge": "positive", "field": "into"}'),
+      sample("rcCircuitCurve", '{"mode": "both"}'),
+      sample("acSignal", '{"peak": 230, "frequency": 50}'),
+      sample("doubleSlit", '{"wavelength": 550, "separation": 0.8, "screenDistance": 2}'),
+      sample("prismDispersion", '{"incidence": 62}'),
+    ]) {
+      const sliders = compile(figure)?.parameters ?? [];
+      expect(sliders.length, `${figure.type} did not expose sliders`).toBeGreaterThan(0);
+      const settings = [
+        Object.fromEntries(sliders.map((s) => [s.name, s.min])),
+        Object.fromEntries(sliders.map((s) => [s.name, s.max])),
+        Object.fromEntries(sliders.map((s) => [s.name, s.value])),
+      ];
+      for (const values of settings) {
+        const built = compile(new PremadeFigures(figure).mergingParameters(values));
+        const name = `${figure.type} ${JSON.stringify(values)}`;
+        expect(built, name).not.toBeNull();
+        if (!built) continue;
+        expect(new CompiledIllustration(built).isDrawable, name).toBe(true);
+        for (const time of times(built))
+          expect(overlapProblems(built, time).slice(0, 2), `${name} t=${time}`).toEqual([]);
+      }
+    }
+  });
+
   it("English figures keep their decimal point", () => {
     const text = finalLabels(scene("riemannSums", '{"f": "x^2", "a": 0, "b": 2, "n": 6}', "English")).join(" ");
     expect(text).toContain("2.04");

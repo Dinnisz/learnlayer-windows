@@ -12,6 +12,7 @@ import { Syllogism } from "./syllogism";
 import { algorithmFigures } from "./algorithms";
 import { argumentFigures } from "./argument";
 import { calculusFigures } from "./calculus";
+import { electromagnetismFigures } from "./electromagnetism";
 import { fallacyFigures } from "./fallacies";
 import { flowchartFigures } from "./flowchart";
 import { heatingFigures } from "./heating";
@@ -35,6 +36,7 @@ const compilers = {
   ...structureFigures,
   ...physicsFigures,
   ...heatingFigures,
+  ...electromagnetismFigures,
   ...opticsFigures,
   ...loopFigures,
   ...flowchartFigures,
@@ -135,6 +137,29 @@ export const animatedGallery: PremadeFigure[] = [
   sample("mirrorRays", '{"kind": "concave", "focal": 2, "objectDistance": 5}'),
   sample("mirrorRays", '{"kind": "concave", "focal": 2, "objectDistance": 1}'),
   sample("mirrorRays", '{"kind": "convex", "focal": 2, "objectDistance": 4}'),
+  sample("electricFieldLines", '{"kind": "positive"}'),
+  sample("electricFieldLines", '{"kind": "negative"}'),
+  sample("electricFieldLines", '{"kind": "dipole"}'),
+  sample("electricFieldLines", '{"kind": "dipole", "q": 2, "q2": 1}'),
+  sample("electricFieldLines", '{"kind": "like"}'),
+  sample("equipotentials", '{"kind": "positive"}'),
+  sample("equipotentials", '{"kind": "dipole"}'),
+  sample("equipotentials", '{"kind": "like"}'),
+  sample("parallelPlates", '{"voltage": 100, "distance": 0.02}'),
+  sample("parallelPlates", '{"voltage": 200, "distance": 0.04, "charge": "negative", "positivePlate": "bottom"}'),
+  sample("magneticField", '{"kind": "wire", "current": "out"}'),
+  sample("magneticField", '{"kind": "wire", "current": "in"}'),
+  sample("magneticField", '{"kind": "loop"}'),
+  sample("magneticField", '{"kind": "solenoid", "turns": 9}'),
+  sample("lorentzForce", '{"charge": "positive", "field": "into"}'),
+  sample("lorentzForce", '{"charge": "negative", "field": "into"}'),
+  sample("lorentzForce", '{"charge": "positive", "field": "out"}'),
+  sample("faradayLenz", '{"pole": "N", "motion": "approach"}'),
+  sample("faradayLenz", '{"pole": "N", "motion": "recede"}'),
+  sample("faradayLenz", '{"pole": "S", "motion": "approach"}'),
+  sample("rcCircuitCurve", '{"mode": "both"}'),
+  sample("rcCircuitCurve", '{"mode": "charge", "tau": 2, "V0": 10}'),
+  sample("acSignal", '{"peak": 325, "frequency": 50}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
@@ -281,6 +306,15 @@ export function mergingAnimatedParameters(
         break;
       case "prismDispersion.incidence":
         next["incidence"] = clamp(value, 56, 75);
+        break;
+      case "rcCircuitCurve.R":
+      case "rcCircuitCurve.C":
+        next[key] = value;
+        delete next["tau"];
+        break;
+      case "acSignal.frequency":
+        next["frequency"] = Math.max(1, value);
+        delete next["period"];
         break;
       default:
         next[key] = value;

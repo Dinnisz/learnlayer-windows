@@ -141,7 +141,10 @@ export function CircuitDemo() {
 /** `overlay.html?demo=animated`: every animated premade drawn here, as the stage shows it. */
 export function AnimatedDemo() {
   return (
-    <div className="stage" style={{ flexDirection: "column", alignItems: "center", gap: 24, overflow: "auto" }}>
+    <div
+      className="stage"
+      style={{ flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 24, overflow: "auto" }}
+    >
       {animatedGallery.map((figure) => {
         const scene = new PremadeFigures(figure).compile(figure.type, "Portuguese (Portugal)");
         return scene ? (
