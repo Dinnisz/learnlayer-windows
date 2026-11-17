@@ -239,11 +239,13 @@ describe("animated premade figures", () => {
     expect(new Set(animatedGallery.map((figure) => figure.type))).toEqual(new Set(animatedTypes));
   });
 
-  it("every animated figure fits, draws and moves", () => {
-    for (const figure of animatedGallery) {
+  // One test per sample of the gallery (the Mac runs them in one loop): the same checks, each with its own time budget.
+  it.each(animatedGallery.map((figure, index) => [`${index} ${figure.type}`, figure] as const))(
+    "every animated figure fits, draws and moves: %s",
+    (_, figure) => {
       const compiled = compile(figure);
       expect(compiled, `${figure.type} did not compile`).not.toBeNull();
-      if (!compiled) continue;
+      if (!compiled) return;
       expect(compiled.duration ?? 0, `${figure.type} has no duration`).toBeGreaterThan(0);
       expect(new CompiledIllustration(compiled).isDrawable, `${figure.type} is not drawable`).toBe(true);
       expect(animates(compiled), `${figure.type} does not change over its duration`).toBe(true);
@@ -252,8 +254,8 @@ describe("animated premade figures", () => {
         expect(boundsProblems(compiled, time).slice(0, 3), figure.type).toEqual([]);
         expect(overlapProblems(compiled, time).slice(0, 3), figure.type).toEqual([]);
       }
-    }
-  });
+    },
+  );
 
   it("English figures keep their decimal point", () => {
     const text = finalLabels(scene("riemannSums", '{"f": "x^2", "a": 0, "b": 2, "n": 6}', "English")).join(" ");

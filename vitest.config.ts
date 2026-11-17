@@ -12,5 +12,8 @@ export default defineConfig({
     include: ["core/**/*.test.ts", "ui/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,mjs}"],
     environment: "node",
     restoreMocks: true,
+    // The PDF and figure tests take a second or two alone; with the whole suite in parallel on a laptop they can pass
+    // 5 s. A budget for time only: no check changes.
+    testTimeout: 20_000,
   },
 });
