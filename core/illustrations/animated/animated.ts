@@ -11,6 +11,7 @@ import { algorithmFigures } from "./algorithms";
 import { calculusFigures } from "./calculus";
 import { flowchartFigures } from "./flowchart";
 import { heatingFigures } from "./heating";
+import { logicFigures } from "./logic";
 import { loopFigures } from "./loops";
 import { multivariableFigures } from "./multivariable";
 import { opticsFigures } from "./optics";
@@ -31,6 +32,7 @@ const compilers = {
   ...opticsFigures,
   ...loopFigures,
   ...flowchartFigures,
+  ...logicFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -143,4 +145,10 @@ export const animatedGallery: PremadeFigure[] = [
   sample("flowchart", '{"program": "factorial", "n": 4}'),
   sample("flowchart", '{"program": "gcd", "a": 48, "b": 18}'),
   sample("flowchart", '{"program": "parity", "n": 7}'),
+  sample("truthTable", '{"expression": "(p -> q) <-> (!q -> !p)"}'),
+  sample("truthTable", '{"expression": "p & (q | r)"}'),
+  sample("truthTable", '{"connective": "implies"}'),
+  sample("truthTable", '{"law": "deMorgan1"}'),
+  sample("truthTable", '{"law": "excludedMiddle"}'),
+  sample("truthTable", '{"law": "contradiction"}'),
 ];
