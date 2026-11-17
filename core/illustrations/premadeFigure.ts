@@ -90,6 +90,7 @@ const recompiledTypes = new Set([
   "truthTable",
   "argumentMap",
   "syllogismVenn",
+  "fallacies",
 ]);
 
 export class PremadeFigures {

@@ -12,6 +12,7 @@ import { Syllogism } from "./syllogism";
 import { algorithmFigures } from "./algorithms";
 import { argumentFigures } from "./argument";
 import { calculusFigures } from "./calculus";
+import { fallacyFigures } from "./fallacies";
 import { flowchartFigures } from "./flowchart";
 import { heatingFigures } from "./heating";
 import { logicFigures } from "./logic";
@@ -39,6 +40,7 @@ const compilers = {
   ...logicFigures,
   ...argumentFigures,
   ...syllogismFigures,
+  ...fallacyFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -164,6 +166,11 @@ export const animatedGallery: PremadeFigure[] = [
   sample("syllogismVenn", '{"mood": "EIO-1", "S": "atleta", "M": "sedentário", "P": "campeão"}'),
   sample("syllogismVenn", '{"mood": "AAA-2", "S": "gato", "M": "mamífero", "P": "animal"}'),
   sample("syllogismVenn", '{"mood": "AAI-3", "S": "gato", "M": "mamífero", "P": "animal"}'),
+  sample("fallacies", '{"fallacy": "adHominem"}'),
+  sample("fallacies", '{"fallacy": "strawMan"}'),
+  sample("fallacies", '{"fallacy": "falseDilemma"}'),
+  sample("fallacies", '{"fallacy": "hastyGeneralization"}'),
+  sample("fallacies", '{"fallacy": "affirmingConsequent"}'),
   sample(
     "argumentMap",
     '{"premises": ["p -> q", "q -> r"], "conclusion": "p -> r", "premiseTexts": ["Se estudo, aprendo.", "Se aprendo, passo."], "conclusionText": "Se estudo, passo."}',
