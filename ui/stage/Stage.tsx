@@ -34,6 +34,7 @@ import { SolidView } from "../figures/SolidView";
 import { solidOf } from "@core/illustrations/solid";
 import { circuitHighlightPlan, solidStepPlan } from "@core/illustrations/figureSteps";
 import { circuitOf, CircuitMerges } from "@core/illustrations/circuit";
+import { spaceParts } from "@core/illustrations/spaceSteps";
 import { SignTableView } from "../figures/SignTableView";
 import { SpaceFigureView } from "../figures/SpaceFigureView";
 import { StatementQuotes } from "@core/problems/statementQuotes";
@@ -798,6 +799,15 @@ function SolutionView({ session }: { session: QuestionSession }) {
   );
 }
 
+/** What the step in focus names in a space figure (Figure3DSteps.spaceParts): the card's own figureHighlight first. */
+function spaceStepHighlight(session: QuestionSession): string | null {
+  const figure = session.solutionFigure;
+  const step = session.selectedStep;
+  const card = step !== null ? session.part?.cards?.[step] : undefined;
+  if (figure?.kind !== "space" || !card) return null;
+  return card.figureHighlight ?? spaceParts(card.latex, `${card.title} ${card.note ?? ""}`, figure.figure);
+}
+
 /** The right column's figures: the one beside the steps (or the drawing on its way), and the solution's curve. */
 function SideFigures({ session }: { session: QuestionSession }) {
   const figure = session.solutionFigure;
@@ -809,7 +819,7 @@ function SideFigures({ session }: { session: QuestionSession }) {
           <SignTableView table={figure.table} />
         </div>
       ) : figure?.kind === "space" ? (
-        <SpaceFigureView figure={figure.figure} step={session.figureStep} />
+        <SpaceFigureView figure={figure.figure} step={session.figureStep} highlight={spaceStepHighlight(session)} />
       ) : figure?.kind === "drawing" ? (
         <IllustrationView scene={figure.scene} revealed={session.figureRevealed} step={session.figureStep} />
       ) : session.expectsFigure && !session.showsIllustration ? (

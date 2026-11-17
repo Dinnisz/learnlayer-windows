@@ -326,6 +326,62 @@
   fill: #fff;
 }
 
+/* The parts the step in focus names stand out in the one blue; the rest dims. */
+.space-edge.is-lit,
+.space-frame.is-lit {
+  stroke: var(--accent, #0a84ff);
+  stroke-width: 2.2;
+}
+
+.space-plane.is-lit,
+.space-line.is-lit {
+  stroke-opacity: 1;
+  stroke-width: 2.4;
+}
+
+.space-section.is-lit {
+  fill-opacity: 0.3;
+}
+
+.space-dot.is-lit {
+  fill: var(--accent, #0a84ff);
+}
+
+.space-edge.is-dim,
+.space-frame.is-dim,
+.space-plane.is-dim,
+.space-line.is-dim,
+.space-dot.is-dim,
+.space-section.is-dim {
+  opacity: 0.3;
+}
+
+.space-normal line,
+.space-normal polyline {
+  fill: none;
+  stroke: var(--accent, #0a84ff);
+  stroke-width: 2;
+}
+
+.space-meeting {
+  fill: var(--accent, #0a84ff);
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .space-edge,
+  .space-plane,
+  .space-line,
+  .space-dot,
+  .space-section {
+    transition:
+      opacity 0.35s,
+      stroke 0.35s,
+      fill 0.35s;
+  }
+}
+
 /* A circuit schematic: white lines on the stage, the one blue for the terminals the question looks in from. */
 .circuit-figure {
   margin: 0;

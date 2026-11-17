@@ -11,6 +11,7 @@ import {
   type NameRole,
   type SpaceFigure,
 } from "@core/illustrations/spaceFigure";
+import { CircuitMerges } from "@core/illustrations/circuit";
 import { useT } from "../i18n";
 import { measureText } from "./IllustrationView";
 import "./figures.css";
@@ -28,7 +29,19 @@ const fontFor = (role: NameRole, size: number) =>
         ? { size: size * 0.86, weight: 400, colour: "rgba(255,255,255,0.4)" }
         : { size: size * 0.93, weight: 600, colour: "var(--accent, #0a84ff)" };
 
-export function SpaceFigureView({ figure, step = Number.MAX_SAFE_INTEGER }: { figure: SpaceFigure; step?: number }) {
+export function SpaceFigureView({
+  figure,
+  step = Number.MAX_SAFE_INTEGER,
+  highlight = null,
+}: {
+  figure: SpaceFigure;
+  step?: number;
+  /** The parts the step in focus names (spaceParts): points, edges, "line", "plane", "normal", "intersection". They
+   * stand out and the rest dims; the normal and the meeting point show only then. */
+  highlight?: string | null;
+}) {
+  const lit = new Set(CircuitMerges.ids(highlight));
+  const look = (part: string | undefined) => (lit.size === 0 ? "" : part && lit.has(part) ? " is-lit" : " is-dim");
   const t = useT();
   const holder = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
@@ -86,7 +99,10 @@ export function SpaceFigureView({ figure, step = Number.MAX_SAFE_INTEGER }: { fi
           onPointerUp={() => (dragStart.current = null)}
         >
           {drawing.section.length >= 3 && (
-            <polygon points={drawing.section.map((p) => `${p.x},${p.y}`).join(" ")} className="space-section" />
+            <polygon
+              points={drawing.section.map((p) => `${p.x},${p.y}`).join(" ")}
+              className={`space-section${look("plane")}`}
+            />
           )}
           {drawing.strokes.map((stroke, index) => (
             <line
@@ -95,7 +111,7 @@ export function SpaceFigureView({ figure, step = Number.MAX_SAFE_INTEGER }: { fi
               y1={stroke.from.y}
               x2={stroke.to.x}
               y2={stroke.to.y}
-              className={`space-${stroke.role}`}
+              className={`space-${stroke.role}${stroke.role === "axis" ? "" : look(stroke.part)}`}
               strokeDasharray={stroke.dashed ? "4 3" : undefined}
             />
           ))}
@@ -114,8 +130,31 @@ export function SpaceFigureView({ figure, step = Number.MAX_SAFE_INTEGER }: { fi
               );
             })}
           {drawing.dots.map((dot) => (
-            <circle key={dot.name} cx={dot.at.x} cy={dot.at.y} r={3} className="space-dot" />
+            <circle
+              key={dot.name}
+              cx={dot.at.x}
+              cy={dot.at.y}
+              r={lit.has(dot.name) ? 4.5 : 3}
+              className={`space-dot${look(dot.name)}`}
+            />
           ))}
+          {lit.has("normal") && drawing.normal
+            ? (() => {
+                const { from, to } = drawing.normal;
+                const angle = Math.atan2(to.y - from.y, to.x - from.x);
+                const head = (side: number) =>
+                  `${to.x - 9 * Math.cos(angle + side * 0.4)},${to.y - 9 * Math.sin(angle + side * 0.4)}`;
+                return (
+                  <g className="space-normal">
+                    <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+                    <polyline points={`${head(-1)} ${to.x},${to.y} ${head(1)}`} />
+                  </g>
+                );
+              })()
+            : null}
+          {lit.has("intersection") && drawing.meeting ? (
+            <circle cx={drawing.meeting.x} cy={drawing.meeting.y} r={5} className="space-meeting" />
+          ) : null}
           {drawing.names.map((name, index) => {
             const font = fontFor(name.role, textSize);
             return (

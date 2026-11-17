@@ -497,10 +497,13 @@ export type StrokeRole = "axis" | "frame" | "plane" | "edge" | "line";
 export type NameRole = "axis" | "vertex" | "line" | "plane" | "origin";
 
 export interface SpaceDrawing {
-  strokes: { from: Point; to: Point; role: StrokeRole; dashed: boolean }[];
+  strokes: { from: Point; to: Point; role: StrokeRole; dashed: boolean; part?: string }[];
   /** Where the plane cuts the box, in order around it. */
   section: Point[];
   dots: { name: string; at: Point }[];
+  /** Where the line meets the plane (worked out by the app) and the plane's normal: drawn when a step names them. */
+  meeting?: Point;
+  normal?: { from: Point; to: Point };
   names: { text: string; box: Rect; role: NameRole }[];
 }
 
@@ -752,8 +755,8 @@ export function spaceDrawing(
   });
   const drawing: SpaceDrawing = { strokes: [], section: [], dots: [], names: [] };
   const forward = right.cross(up);
-  const stroke = (a: Vector3, b: Vector3, role: StrokeRole, dashed = false) =>
-    drawing.strokes.push({ from: project(a), to: project(b), role, dashed });
+  const stroke = (a: Vector3, b: Vector3, role: StrokeRole, dashed = false, part?: string) =>
+    drawing.strokes.push({ from: project(a), to: project(b), role, dashed, ...(part ? { part } : {}) });
   const text = frame.textSize;
   if (frame.axes) {
     for (let axis = 0; axis < 3; axis++) {
@@ -801,13 +804,15 @@ export function spaceDrawing(
     const polygon = sectionOf(box, planeNormal, planePoint);
     if (polygon.length >= 3) {
       drawing.section = polygon.map(project);
-      polygon.forEach((corner, index) => stroke(corner, polygon[(index + 1) % polygon.length]!, "plane"));
+      polygon.forEach((corner, index) =>
+        stroke(corner, polygon[(index + 1) % polygon.length]!, "plane", false, "plane"),
+      );
     }
   }
   const named = namedPoints(figure.points);
   for (const edge of figure.edges ?? []) {
     const found = ends(edge, named);
-    if (found) stroke(found[0], found[1], "edge", dashedEdge(found[0], found[1]));
+    if (found) stroke(found[0], found[1], "edge", dashedEdge(found[0], found[1]), edge);
   }
   let drawnLine: LineSpan | null = null;
   let lineAnchor: Point | null = null;
@@ -815,13 +820,30 @@ export function spaceDrawing(
     const span = lineSpan(figure, box, project, 1.2 * text);
     if (span) {
       drawnLine = span;
-      stroke(span.first, span.last, "line");
+      stroke(span.first, span.last, "line", false, "line");
       const held = (figure.line.through ?? [])
         .map((name) => named.get(name))
         .filter((p): p is Vector3 => p !== undefined);
       lineAnchor = project(
         held.length >= 2 ? held[0]!.plus(held[1]!).times(0.5) : span.first.plus(span.last).times(0.5),
       );
+    }
+  }
+  // Shown only on the steps that name them (Space3DController.onDemand): where the line meets the plane, worked out by
+  // the app, and the plane's normal from the middle of its cut.
+  if (plane && shows(plane.step) && planeNormal && planePoint && figure.line && shows(figure.line.step)) {
+    const meeting = lineMeetsPlane(figure.line, plane);
+    if (meeting) drawing.meeting = project(meeting);
+  }
+  if (plane && shows(plane.step) && planeNormal && planePoint && planeNormal.length > 1e-12) {
+    const polygon = sectionOf(box, planeNormal, planePoint);
+    if (polygon.length >= 3) {
+      const centre = polygon.reduce((sum, corner) => sum.plus(corner), new Vector3(0, 0, 0)).times(1 / polygon.length);
+      const span = Math.max(box.high.x - box.low.x, box.high.y - box.low.y, box.high.z - box.low.z, 1);
+      drawing.normal = {
+        from: project(centre),
+        to: project(centre.plus(planeNormal.times((0.25 * span) / planeNormal.length))),
+      };
     }
   }
   drawing.dots = figure.points.map((point) => ({ name: point.name, at: project(vector(point)) }));
@@ -919,4 +941,19 @@ export function spaceDrawing(
     name("O", "origin", placer.place(besideFor(originAt, measure("O", "origin"), away(originAt)), originAt));
   }
   return drawing;
+}
+
+/** The point of the line on the plane (Space3DScene.meet); null when parallel (or either is missing). */
+export function lineMeetsPlane(line: SpaceLine | null, plane: SpacePlane | null): Vector3 | null {
+  if (!line || !plane) return null;
+  const p = Vector3.from(line.point);
+  const d = Vector3.from(line.direction);
+  const q = Vector3.from(plane.point);
+  const n = Vector3.from(plane.normal);
+  if (!p || !d || !q || !n) return null;
+  const denominator = n.dot(d);
+  if (Math.abs(denominator) <= 1e-9 * Math.max(n.length * d.length, 1e-12)) return null;
+  const k = n.dot(q.minus(p)) / denominator;
+  const point = p.plus(d.times(k));
+  return [point.x, point.y, point.z].every(Number.isFinite) ? point : null;
 }
