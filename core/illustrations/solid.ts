@@ -1,10 +1,10 @@
 // Port of SafeFormula, GenericSolid and SolidCheck in LearnLayer/Explanation/Figure3DGeneric.swift @ ref 2026-11-04:
 // any solid, surface or region the model describes by its equations (premade `solid3d`), read safely, and its volume
 // checked against the answer, so a solid turned about the wrong axis or missing a curve is never shown.
-// Not yet here: the mesh builder (GenericSolidBuilder) and its "can't be drawn honestly, back to 2D" checks.
 
 import { evaluate, tryParseExpression, variables as expressionVariables, type Expression } from "../math/expression";
 import type { PremadeFigure, PremadeValue } from "./premadeFigure";
+import { GenericSolidBuilder } from "./solidBuilder";
 
 const allowedCharacters = /^[a-zA-Z0-9 .+\-*/^()−·×√²³π]+$/u;
 
@@ -199,7 +199,9 @@ export const GenericSolids = {
       });
     }
     if (planes.length > 3) return null;
-    return { kind, planes };
+    const solid: GenericSolid = { kind, planes };
+    // Drawn now, once: a figure that can't be built honestly falls back to 2D.
+    return GenericSolidBuilder.build(solid) ? solid : null;
   },
 
   fromPremade(premade: PremadeFigure | null | undefined): GenericSolid | null {
@@ -340,7 +342,7 @@ export const SolidCheck = {
     const named = SolidCheck.axis(statement);
     if (!named || (named.kind === kind.axis.kind && named.k === kind.axis.k)) return null;
     const turned: GenericSolid = { kind: { ...kind, axis: named }, planes: solid.planes };
-    return SolidCheck.agrees(turned, answer) === true ? turned : null;
+    return GenericSolidBuilder.build(turned) && SolidCheck.agrees(turned, answer) === true ? turned : null;
   },
 
   /** true: it matches; false: the answer gives a different volume; null: nothing to check. */

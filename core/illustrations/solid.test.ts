@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { GenericSolids, SafeFormula, SolidCheck, type GenericSolid } from "./solid";
+import { GenericSolidBuilder, type BuiltSolid } from "./solidBuilder";
 
 const solid = (json: string): GenericSolid => {
   const found = GenericSolids.fromParams(JSON.parse(json));
@@ -111,5 +112,99 @@ describe("SolidCheck", () => {
 
   it("an empty premade is no solid", () => {
     expect(GenericSolids.fromPremade({ type: GenericSolids.premadeType, params: {} })).toBeNull();
+  });
+});
+
+const tryParse = (json: string) => GenericSolids.fromParams(JSON.parse(json));
+const built = (json: string): BuiltSolid => {
+  const figure = GenericSolidBuilder.build(solid(json));
+  if (!figure) throw new Error("not built");
+  return figure;
+};
+const meshOf = (figure: BuiltSolid, name: string) => figure.pieces.find((part) => part.name === name)?.mesh ?? null;
+
+describe("GenericSolidBuilder", () => {
+  it("a revolution about Ox has the right radius", () => {
+    const figure = built(`{"kind":"revolution","f":"sqrt(x)","axis":"x","a":0,"b":4}`);
+    expect(GenericSolidBuilder.order(figure)).toEqual(["region", "curve", "axis", "surface", "ends", "section"]);
+    const surface = meshOf(figure, "surface")!;
+    expect(surface.rows).toBe(GenericSolidBuilder.curveSamples + 1);
+    expect(surface.columns).toBe(GenericSolidBuilder.turnSamples + 1);
+    // Radius 2 at x = 4 on a length of 4: as tall (−2…2) as it is long, same scale on both.
+    const xs = surface.positions.map((p) => p[0]);
+    const ys = surface.positions.map((p) => p[1]);
+    const length = Math.max(...xs) - Math.min(...xs);
+    const height = Math.max(...ys) - Math.min(...ys);
+    expect(Math.abs(height / length - 1)).toBeLessThan(0.01);
+  });
+
+  it("a washer about a line has a hole", () => {
+    const order = GenericSolidBuilder.order(
+      built(`{"kind":"revolution","f":"x","g":"x^2","axis":"x","k":-1,"a":0,"b":1}`),
+    );
+    expect(order).toContain("inner");
+    expect(order).toContain("curve2");
+  });
+
+  it("a shell about Oy is upright", () => {
+    const surface = meshOf(built(`{"kind":"revolution","f":"x^2","axis":"y","a":0,"b":2}`), "surface")!;
+    // Every ring is level (same scene y).
+    for (let i = 0; i < surface.rows; i += 1) {
+      const row = surface.positions.slice(i * surface.columns, (i + 1) * surface.columns);
+      expect(row.every((p) => Math.abs(p[1] - row[0]![1]) < 1e-4)).toBe(true);
+    }
+  });
+
+  it("a region crossing its axis falls back to 2D", () => {
+    expect(tryParse(`{"kind":"revolution","f":"sin(x)","axis":"x","a":0,"b":6.28}`)).toBeNull();
+    expect(tryParse(`{"kind":"revolution","f":"x","axis":"y","k":1,"a":0,"b":2}`)).toBeNull();
+  });
+
+  it("a surface grid is bounded and centred", () => {
+    const mesh = meshOf(built(`{"kind":"surface","z":"x^2+y^2","x":[-2,2],"y":[-2,2]}`), "surface")!;
+    expect(mesh.rows * mesh.columns).toBeLessThanOrEqual(200 * 200);
+    expect(mesh.finiteFraction).toBe(1);
+    expect(mesh.positions.every((p) => Math.max(...p.map(Math.abs)) <= 2.01)).toBe(true);
+  });
+
+  it("a pole is left out, not drawn as a spike", () => {
+    const mesh = meshOf(built(`{"kind":"surface","z":"1/(x^2+y^2)","x":[-1,1],"y":[-1,1]}`), "surface")!;
+    expect(mesh.finiteFraction).toBeLessThan(1);
+    expect(mesh.finiteFraction).toBeGreaterThanOrEqual(GenericSolidBuilder.minimumDefined);
+  });
+
+  it("a parametric torus, a bounded solid and sections", () => {
+    built(
+      `{"kind":"parametric","x":"(2+0.7cos(v))cos(u)","y":"(2+0.7cos(v))sin(u)","z":"0.7sin(v)","u":[0,6.2832],"v":[0,6.2832]}`,
+    );
+    const tetra = built(`{"kind":"bounded","top":"6-2x-3y","x":[0,3],"ylow":"0","yhigh":"2-2x/3"}`);
+    expect(GenericSolidBuilder.order(tetra)).toEqual(["region", "surface", "inner", "ends"]);
+    const sections = built(`{"kind":"sections","f":"sqrt(x)","g":"-sqrt(x)","a":0,"b":4,"section":"semicircle"}`);
+    expect(GenericSolidBuilder.order(sections)).toEqual(["region", "curve", "curve2", "surface", "section"]);
+  });
+
+  it("top under bottom falls back to 2D", () => {
+    expect(tryParse(`{"kind":"bounded","top":"x","bottom":"1","x":[0,2],"y":[0,1]}`)).toBeNull();
+  });
+
+  it("bounds and bad params fall back", () => {
+    expect(tryParse(`{"kind":"surface","z":"x","x":[0,1e9],"y":[0,1]}`)).toBeNull();
+    expect(tryParse(`{"kind":"surface","z":"x","x":[1,1],"y":[0,1]}`)).toBeNull();
+    expect(tryParse(`{"kind":"blob","z":"x"}`)).toBeNull();
+    expect(tryParse(`{"kind":"surface","z":"exec(x)","x":[0,1],"y":[0,1]}`)).toBeNull();
+    expect(tryParse(`{"kind":"revolution","f":"1/(x-x)","a":0,"b":1}`)).toBeNull();
+  });
+
+  it("planes are cut planes", () => {
+    const figure = built(
+      `{"kind":"parametric","x":"2sin(v)cos(u)","y":"2sin(v)sin(u)","z":"2cos(v)","u":[0,6.2832],"v":[0,3.1416],"planes":[{"z":1}]}`,
+    );
+    expect(GenericSolidBuilder.order(figure).at(-1)).toBe("cutPlane");
+  });
+
+  it("building is fast", () => {
+    const start = performance.now();
+    built(`{"kind":"surface","z":"sin(x)*cos(y)+sqrt(x^2+y^2)","x":[-3,3],"y":[-3,3]}`);
+    expect(performance.now() - start).toBeLessThan(300); // fromParams builds once to check, then again here
   });
 });
