@@ -6,6 +6,21 @@ As fases 0 a 8 estão feitas no código.
 
 O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado e a app instalada já abre neste PC (janela principal com a introdução e pílula no topo). Para distribuir aos alunos falta a assinatura (ponto 4).
 
+## Atualização de 2026-11-17
+
+- **A app real corre neste PC.** O Smart App Control foi desligado. O CI no GitHub (repositório público `Dinnisz/learnlayer-windows`) está verde: lint, 808 testes de TypeScript, `cargo fmt`, `clippy` e 22 testes de Rust. O instalador está em `dist/`.
+- **Testado na app real** (`docs/anywhere-medicao.md`): Alt-clique numa página web e num PDF, Esc, pílula, «Capturar uma área», «Explicar o texto selecionado» e microfone. Corrigi o que esses testes mostraram:
+  - o OCR lia «Pergunta 1» como «Pergunta I»;
+  - fórmulas de páginas web saíam um símbolo por linha;
+  - a seleção do leitor de PDF do Chromium não era lida;
+  - a pílula ficava com o teclado;
+  - aparecia o pedido de microfone «localhost».
+- **Figuras novas:**
+  - circuitos: resolvidos e verificados contra a resposta, e desenhados como esquema 2D;
+  - sólidos em 3D com three.js: revoluções, superfícies, secções e os sólidos fixos do Mac, com o volume verificado contra a resposta;
+  - o passo em foco comanda a figura: junta as resistências e acende a parte do sólido.
+- Utilitários para testar a app real sem pessoa: `scripts/desktop-test/`.
+
 ## Em números
 
 - Cerca de 80 commits no `main`, nenhum push.
