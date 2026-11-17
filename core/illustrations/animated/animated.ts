@@ -10,6 +10,7 @@ import type { PremadeFigure, PremadeValue } from "../premadeFigure";
 import { algorithmFigures } from "./algorithms";
 import { calculusFigures } from "./calculus";
 import { heatingFigures } from "./heating";
+import { loopFigures } from "./loops";
 import { multivariableFigures } from "./multivariable";
 import { opticsFigures } from "./optics";
 import { physicsFigures } from "./physics";
@@ -27,6 +28,7 @@ const compilers = {
   ...physicsFigures,
   ...heatingFigures,
   ...opticsFigures,
+  ...loopFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -129,4 +131,10 @@ export const animatedGallery: PremadeFigure[] = [
   sample("prismDispersion", '{"incidence": 60}'),
   sample("doubleSlit", '{"wavelength": 600, "separation": 0.5, "screenDistance": 2}'),
   sample("emSpectrum", "{}"),
+  sample("arrayLoop", '{"task": "sum", "values": [4, 7, 2, 9, 5]}'),
+  sample("arrayLoop", '{"task": "max", "values": [4, 7, 2, 9, 5]}'),
+  sample("arrayLoop", '{"task": "count", "values": [4, 7, 2, 9, 5, 6], "k": 5}'),
+  sample("arrayLoop", '{"task": "search", "values": [4, 7, 2, 9, 5], "target": 9}'),
+  sample("recursionTree", '{"function": "fibonacci", "n": 5}'),
+  sample("recursionTree", '{"function": "factorial", "n": 4}'),
 ];

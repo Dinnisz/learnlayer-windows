@@ -84,6 +84,8 @@ const recompiledTypes = new Set([
   "refraction",
   "prismDispersion",
   "doubleSlit",
+  "arrayLoop",
+  "recursionTree",
 ]);
 
 export class PremadeFigures {
