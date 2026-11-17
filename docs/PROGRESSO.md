@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 8 fechada (fases 0–8 feitas; o que falta depende do Dinis: `PARA-O-DINIS.md`)
-- **Próximo passo:** o Smart App Control está desligado e tudo compila e corre neste PC (`npm run tauri dev`, `cargo test`). Agora: experimentar a app real (introdução, pílula e as suas ações, Alt-clique no Edge, Chrome, Word e Acrobat, voz), registar em `docs/anywhere-medicao.md` e corrigir o que falhar. Pendentes no código: figuras 3D (three.js) e animadas, marcas da voz e da lição na figura, menu de estudo do explicador, seleção de texto no leitor.
+- **Próximo passo:** a app real está a ser testada neste PC (Smart App Control desligado). Arrancar com `LEARNLAYER_TEST_INPUT=1 npm run tauri dev` e usar `scripts/desktop-test/` (README). Já verificados: Alt-clique numa página web e num PDF no Brave, Esc, pílula, Capturar uma área, Explicar o texto selecionado, microfone sem pedido do WebView2 (`docs/anywhere-medicao.md`). Falta: tecla de falar e voz com sessão iniciada, «Explica-me». Pendentes no código, por esta ordem: resolvedor de circuitos (`Circuit3DSolve`, lógica com testes do Mac), figuras 3D (three.js), figuras animadas, marcas da voz e da lição na figura, menu de estudo, seleção de texto no leitor.
 - **Última atualização:** 2026-11-16
 - **Bloqueio que só o Dinis resolve:** nenhum para desenvolver. Para distribuir: assinatura (PARA-O-DINIS ponto 4) e URL e chave das atualizações (ponto 5).
 
@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-17 — Testes na app real: corrigidos o «Pergunta I» do OCR, o texto estragado sem região, a seleção do leitor de PDF do Chromium (copiada, área de transferência reposta), o teclado que ficava na pílula e o pedido do microfone do WebView2. Utilitários em `scripts/desktop-test/`.
 - 2026-11-17 — O Dinis desligou o Smart App Control. O instalador do CI instalou-se e a app abriu (janela principal com a introdução, pílula no topo). `cargo fmt` e `cargo test` (22) passam localmente.
 - 2026-11-17 — Instalador experimentado neste PC: o Smart App Control bloqueou-o antes de correr. Para abrir a app falta a assinatura ou outro PC.
 - 2026-11-17 — Primeira compilação do Rust (no CI). Correções: uma linha de formatação, 9 avisos do clippy, e o manifesto da app embutido pelo linker para os testes arrancarem. CI todo verde (22 testes Rust) e instalador em `dist/`.
