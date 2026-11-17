@@ -19,6 +19,7 @@ import { opticsFigures } from "./optics";
 import { physicsFigures } from "./physics";
 import { seriesFigures } from "./series";
 import { structureFigures } from "./structures";
+import { syllogismFigures } from "./syllogism";
 import { Params } from "./figureCanvas";
 
 /** The animated premade types this port compiles. */
@@ -35,6 +36,7 @@ const compilers = {
   ...flowchartFigures,
   ...logicFigures,
   ...argumentFigures,
+  ...syllogismFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -156,6 +158,10 @@ export const animatedGallery: PremadeFigure[] = [
   sample("argumentMap", '{"form": "modusPonens"}'),
   sample("argumentMap", '{"form": "affirmingConsequent"}'),
   sample("argumentMap", '{"form": "validButUnsound"}'),
+  sample("syllogismVenn", '{"mood": "AAA-1", "S": "gato", "M": "mamífero", "P": "animal"}'),
+  sample("syllogismVenn", '{"mood": "EIO-1", "S": "atleta", "M": "sedentário", "P": "campeão"}'),
+  sample("syllogismVenn", '{"mood": "AAA-2", "S": "gato", "M": "mamífero", "P": "animal"}'),
+  sample("syllogismVenn", '{"mood": "AAI-3", "S": "gato", "M": "mamífero", "P": "animal"}'),
   sample(
     "argumentMap",
     '{"premises": ["p -> q", "q -> r"], "conclusion": "p -> r", "premiseTexts": ["Se estudo, aprendo.", "Se aprendo, passo."], "conclusionText": "Se estudo, passo."}',
