@@ -116,6 +116,22 @@ export class ReaderDocument {
   }
 
   /**
+   * Lays the page's text over it in `container`, invisible but selectable (pdf.js's text layer, the PDFKit selection of
+   * the Mac), `scale` CSS pixels per point. The returned cancel stops a layer still being laid.
+   */
+  async textLayer(index: number, container: HTMLDivElement, scale: number): Promise<{ cancel: () => void }> {
+    const page = await this.page(index);
+    const viewport = page.getViewport({ scale });
+    container.replaceChildren();
+    container.style.setProperty("--total-scale-factor", String(scale));
+    container.style.setProperty("--scale-round-x", "1px");
+    container.style.setProperty("--scale-round-y", "1px");
+    const layer = new pdfjs.TextLayer({ textContentSource: page.streamTextContent(), container, viewport });
+    void layer.render().catch(() => {});
+    return { cancel: () => layer.cancel() };
+  }
+
+  /**
    * Draws `region` (PDF points) of a page into `canvas`, `scale` CSS pixels per point, on a transparent ground: the
    * question lifted off the page onto the stage.
    */

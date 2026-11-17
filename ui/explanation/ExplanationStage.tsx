@@ -77,12 +77,15 @@ export function ExplanationStage({
   pageIndex,
   match,
   close,
+  context = null,
 }: {
   document: ReaderDocument;
   page: PageText;
   pageIndex: number;
   match: EquationMatch;
   close: () => void;
+  /** What is sent with it, when not the lines around it on the page (a selected step of a worked solution). */
+  context?: string | null;
 }) {
   const t = useT();
   const session = useMemo(
@@ -90,14 +93,14 @@ export function ExplanationStage({
       new ExplanationSession(
         {
           text: match.text,
-          context: EquationDetector.context(page, match.bounds),
+          context: context ?? EquationDetector.context(page, match.bounds),
           has: (target) => EquationDetector.rectOnPage(page, match.bounds, target) !== null,
         },
         explanationProvider(),
         null,
         isSignedOut,
       ),
-    [match, page],
+    [match, page, context],
   );
   useSyncExternalStore(
     useCallback((listener: () => void) => session.subscribe(listener), [session]),
