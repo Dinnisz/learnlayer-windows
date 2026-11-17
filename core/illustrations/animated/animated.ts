@@ -18,6 +18,7 @@ import { flowchartFigures } from "./flowchart";
 import { heatingFigures } from "./heating";
 import { logicFigures } from "./logic";
 import { loopFigures } from "./loops";
+import { mechanicsFigures } from "./mechanics";
 import { multivariableFigures } from "./multivariable";
 import { opticsFigures } from "./optics";
 import { physicsFigures } from "./physics";
@@ -36,6 +37,7 @@ const compilers = {
   ...structureFigures,
   ...physicsFigures,
   ...heatingFigures,
+  ...mechanicsFigures,
   ...electromagnetismFigures,
   ...opticsFigures,
   ...loopFigures,
@@ -160,6 +162,25 @@ export const animatedGallery: PremadeFigure[] = [
   sample("rcCircuitCurve", '{"mode": "both"}'),
   sample("rcCircuitCurve", '{"mode": "charge", "tau": 2, "V0": 10}'),
   sample("acSignal", '{"peak": 325, "frequency": 50}'),
+  sample("freeBody", '{"m": 5, "F": 20, "angle": 30, "mu": 0.2}'),
+  sample("freeBody", '{"m": 4, "F": 10, "angle": 0, "mu": 0.4}'),
+  sample("freeBody", '{"m": 3, "F": 0, "angle": 0, "mu": 0.3}'),
+  sample("circularMotion", '{"r": 2, "v": 4, "m": 1.5}'),
+  sample("circularMotion", '{"r": 0.8, "T": 2}'),
+  sample("energyBars", '{"m": 2, "h": 10}'),
+  sample("energyBars", '{"m": 1, "h": 5, "v0": 8}'),
+  sample("collision", '{"m1": 2, "m2": 1, "v1": 3, "v2": 0, "kind": "elastic"}'),
+  sample("collision", '{"m1": 2, "m2": 3, "v1": 4, "v2": -1, "kind": "inelastic"}'),
+  sample("collision", '{"m1": 1, "m2": 1, "v1": 3, "v2": 1, "e": 0.5}'),
+  sample("springOscillator", '{"m": 0.5, "k": 20, "A": 0.2}'),
+  sample("springOscillator", '{"m": 2, "k": 8, "A": 0.4}'),
+  sample("resistorNetwork", '{"kind": "series", "V": 12, "R": [10, 20, 30]}'),
+  sample("resistorNetwork", '{"kind": "parallel", "V": 12, "R": [10, 20, 30]}'),
+  sample("resistorNetwork", '{"kind": "parallel", "V": 9, "R": [6, 3]}'),
+  sample("resistorNetwork", '{"kind": "series", "V": 6, "R": [4, 8]}'),
+  sample("atwood", '{"kind": "atwood", "m1": 2, "m2": 3}'),
+  sample("atwood", '{"kind": "atwood", "m1": 4, "m2": 4}'),
+  sample("atwood", '{"kind": "table", "m1": 2, "m2": 3}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
@@ -311,6 +332,14 @@ export function mergingAnimatedParameters(
       case "rcCircuitCurve.C":
         next[key] = value;
         delete next["tau"];
+        break;
+      case "circularMotion.r":
+      case "circularMotion.v":
+        // The sliders give r and v, so a period or an angular speed given before no longer applies.
+        next[key] = value;
+        delete next["T"];
+        delete next["omega"];
+        if (key === "r") delete next["radius"];
         break;
       case "acSignal.frequency":
         next["frequency"] = Math.max(1, value);
