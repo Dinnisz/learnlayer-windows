@@ -408,7 +408,11 @@ const numeric = (value: WorldValue): number | null => {
 };
 
 /** An animated figure: the scene and, for stepped playback, the times each step finishes. */
-export type AnimatedIllustration = Illustration & { stepPlayback?: { boundaries: number[] } | null };
+export type AnimatedIllustration = Illustration & {
+  stepPlayback?: { boundaries: number[] } | null;
+  /** Until this second the stage's own mascot body is out of its corner, standing in the figure. */
+  mascotHoldsUntil?: number | null;
+};
 
 /** Collects a figure's elements in the 10 × 6 world. */
 export class FigureCanvas {

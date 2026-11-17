@@ -75,6 +75,9 @@ const recompiledTypes = new Set([
   "riemannSums",
   "limitApproach",
   "seriesPartialSums",
+  "motionScene",
+  "verticalThrow",
+  "inclinedBlock",
 ]);
 
 export class PremadeFigures {

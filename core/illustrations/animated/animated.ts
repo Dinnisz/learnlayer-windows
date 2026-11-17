@@ -1,17 +1,18 @@
 // Port of PremadeFigure.compileAnimated (LearnLayer/Illustrations/PremadeFigureAnimated.swift) and the gallery of
-// PremadeFigureAnimatedGallery.swift @ ref 2026-11-04, for the animated kinds this port draws so far (Calculus 1, and
-// series, slope fields, polar and parametric curves). The other kinds the Mac offers (multivariable, algorithms, data
-// structures, physics scenes) return null here, so the provider asks for a template instead and a figure that can't be
-// drawn never appears.
+// PremadeFigureAnimatedGallery.swift @ ref 2026-11-04, for the animated kinds this port draws so far (Calculus 1;
+// series, slope fields, polar and parametric curves; the physics scenes). The other kinds the Mac offers
+// (multivariable, algorithms, data structures) return null here, so the provider asks for a template instead and a
+// figure that can't be drawn never appears.
 
 import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
 import { calculusFigures } from "./calculus";
+import { physicsFigures } from "./physics";
 import { seriesFigures } from "./series";
 import { Params } from "./figureCanvas";
 
 /** The animated premade types this port compiles. */
-const compilers = { ...calculusFigures, ...seriesFigures };
+const compilers = { ...calculusFigures, ...seriesFigures, ...physicsFigures };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
 
@@ -56,4 +57,8 @@ export const animatedGallery: PremadeFigure[] = [
   sample("slopeField", '{"f": "x-y", "solutions": [{"x": 0, "y": 1}, {"x": -2, "y": -1}]}'),
   sample("polarCurve", '{"kind": "cardioid"}'),
   sample("parametricCurve", '{"x": "sin(2*t)", "y": "sin(3*t)"}'),
+  sample("motionScene", '{"x0": 0, "v0": 3, "a": 1.2, "tMax": 4}'),
+  sample("verticalThrow", '{"v0": 12, "g": 9.8}'),
+  sample("inclinedBlock", '{"angle": 30, "mu": 0.2}'),
+  sample("inclinedBlock", '{"angle": 18, "mu": 0.75}'),
 ];
