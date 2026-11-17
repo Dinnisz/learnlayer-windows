@@ -18,6 +18,8 @@ pub const ALLOWED: &[&str] = &[
     "onboarding.json",
     "anywhere-log.jsonl",
     "cost-ledger.json",
+    // Development only: the last Alt-click's reading, written by a dev build's stage to find what went wrong.
+    "anywhere-debug.json",
 ];
 
 fn path_for(directory: &Path, name: &str) -> Result<PathBuf, String> {

@@ -129,6 +129,14 @@ const MENU_MASK_KEY: VIRTUAL_KEY = VIRTUAL_KEY(0xE8);
 const REINSTALL_EVERY: u32 = 5_000;
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
+/// Development only (`LEARNLAYER_TEST_INPUT=1` in a debug build): injected input counts too, so an automated test
+/// can Alt-click. A release build never reads it.
+static ACCEPTS_INJECTED: AtomicBool = AtomicBool::new(false);
+
+/// Whether an event counts: a real one, or an injected one while testing.
+fn counts(injected: bool) -> bool {
+    !injected || ACCEPTS_INJECTED.load(Ordering::Relaxed)
+}
 static INTERCEPTS_ESCAPE: AtomicBool = AtomicBool::new(false);
 /// The left button's up that belongs to a swallowed down: swallowed too, or the app below sees a button held.
 static SWALLOW_UP: AtomicBool = AtomicBool::new(false);
@@ -219,7 +227,7 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
         // SAFETY: for HC_ACTION, `lparam` points at the event's MSLLHOOKSTRUCT for the length of this call.
         let info = unsafe { &*(lparam.0 as *const MSLLHOOKSTRUCT) };
         let message = wparam.0 as u32;
-        if info.flags & LLMHF_INJECTED == 0 {
+        if counts(info.flags & LLMHF_INJECTED != 0) {
             if message == WM_LBUTTONDOWN && ENABLED.load(Ordering::Relaxed) && alt_alone() && !on_own_window(info.pt) {
                 SWALLOW_UP.store(true, Ordering::SeqCst);
                 mask_menu();
@@ -245,11 +253,11 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
         let message = wparam.0 as u32;
         let down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
         let up = message == WM_KEYUP || message == WM_SYSKEYUP;
-        if (down || up) && !info.flags.contains(LLKHF_INJECTED) && talk_key_event(VIRTUAL_KEY(info.vkCode as u16), down)
-        {
+        let injected = info.flags.contains(LLKHF_INJECTED);
+        if (down || up) && counts(injected) && talk_key_event(VIRTUAL_KEY(info.vkCode as u16), down) {
             return LRESULT(1);
         }
-        if down && !info.flags.contains(LLKHF_INJECTED) {
+        if down && counts(injected) {
             let key = VIRTUAL_KEY(info.vkCode as u16);
             if key == VK_ESCAPE && INTERCEPTS_ESCAPE.load(Ordering::Relaxed) {
                 send(HookEvent::Escape);
@@ -297,6 +305,9 @@ fn uninstall() -> bool {
 /// Starts the hook thread (once). Its events go to `sender`.
 pub fn start(sender: Sender<HookEvent>) -> Result<(), String> {
     *SENDER.lock().map_err(|_| "hook channel poisoned")? = Some(sender);
+    if cfg!(debug_assertions) && std::env::var("LEARNLAYER_TEST_INPUT").as_deref() == Ok("1") {
+        ACCEPTS_INJECTED.store(true, Ordering::SeqCst);
+    }
     if HOOK_THREAD.load(Ordering::SeqCst) != 0 {
         return Ok(());
     }

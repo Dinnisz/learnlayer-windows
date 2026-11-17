@@ -3,13 +3,13 @@
 // the window and its OCR lines), which question opens and how it is shown. Pure: the native side reads, the interface
 // draws.
 
-import type { PageText, Rect } from "../pdf/page";
+import { Rects, type PageText, type Rect } from "../pdf/page";
 import { looksFlattened } from "../problems/flattenedMath";
 import { transcriptionLooksGarbled } from "../problems/textChecks";
 import { normalizeText, unsafeCharacters } from "../problems/textNormalizer";
 import { PDFQuestionReading, type PDFQuestionRead } from "./pdfQuestionRead";
 import { characterCount } from "./questionBand";
-import { QuestionLocator, type GreyImage, type LocatorLine, type QuestionRegion } from "./questionRegion";
+import { intersects, QuestionLocator, type GreyImage, type LocatorLine, type QuestionRegion } from "./questionRegion";
 import { ScreenQuestions, type ScreenQuestion } from "./screenQuestion";
 
 /** What the native side read at the click, in points (physical pixels divided by the monitor's scale). */
@@ -88,6 +88,10 @@ export function readClick(read: ClickRead): ClickOutcome {
       known: found?.frame ?? null,
       wantsFigure,
     });
+    // Windows: text that came out garbled (formulas a web page draws, one symbol a line) and no region found (a page
+    // whose headings the locator doesn't know): the picture where UI Automation says the text is, for the model to
+    // read, rather than stray symbols on the stage.
+    if (!region && found && isGarbled(found.text)) region = regionAround(found.frame, read.window);
     if (region) {
       hasFigure = region.hasFigure;
       if (found) {
@@ -114,6 +118,39 @@ export function readClick(read: ClickRead): ClickOutcome {
   // The model reads the picture (a figure, or text it cannot trust), and its transcription is what is shown.
   const transcribes = sendsPicture && region !== null;
   return { kind: "screen", found, region, sendsPicture, transcribes, isPicture: hasFigure && sendsPicture };
+}
+
+/** The window's part under `frame` (global points), padded a little, as a region; null for nothing or the whole window. */
+export function regionAround(
+  frame: Rect,
+  window: { frame: Rect; lines: readonly LocatorLine[] },
+): QuestionRegion | null {
+  const bounds = { x: 0, y: 0, width: window.frame.width, height: window.frame.height };
+  const padded = {
+    x: frame.x - window.frame.x - 8,
+    y: frame.y - window.frame.y - 8,
+    width: frame.width + 16,
+    height: frame.height + 16,
+  };
+  const local = Rects.intersection(padded, bounds);
+  if (!local || local.width < 12 || local.height < 12) return null;
+  // The whole window says nothing about where the question is.
+  if (local.width * local.height > 0.8 * bounds.width * bounds.height) return null;
+  const inside = window.lines.filter((line) => intersects(line.rect, local));
+  return {
+    frame: { ...local, x: local.x + window.frame.x, y: local.y + window.frame.y },
+    label: null,
+    part: null,
+    displayFrame: null,
+    hasFigure: false,
+    text: inside.map((line) => line.text).join("\n"),
+    crops: [local],
+    figureBoxes: [],
+    lines: inside.map((line) => ({
+      text: line.text,
+      rect: { ...line.rect, x: line.rect.x + window.frame.x, y: line.rect.y + window.frame.y },
+    })),
+  };
 }
 
 /** What the stage shows while the model reads the picture: the computer's own reading, when it is readable. */

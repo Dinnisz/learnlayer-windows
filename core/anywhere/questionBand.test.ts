@@ -62,6 +62,15 @@ describe("QuestionBand", () => {
     expect(QuestionBand.label("Resposta")).toBeNull();
   });
 
+  // Windows: its OCR read "Pergunta 1" as "Pergunta I" on a web page in Times (2026-11-17).
+  it("takes the OCR's I, l or | after the word for 1", () => {
+    expect(QuestionBand.label("Pergunta I")).toBe("Pergunta 1");
+    expect(QuestionBand.label("Exercício l – Calcule")).toBe("Exercício 1");
+    expect(QuestionBand.label("Questão | ")).toBe("Questão 1");
+    expect(QuestionBand.label("Pergunta Isso")).toBeNull();
+    expect(QuestionBand.number(QuestionBand.label("Pergunta I"))).toBe(1);
+  });
+
   it("recognises options, and noisy parentheses are not labels", () => {
     expect(QuestionBand.isOption("(D)")).toBe(true);
     expect(QuestionBand.isOption("B. Rab = 21/13 kΩ")).toBe(true);

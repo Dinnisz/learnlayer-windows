@@ -44,7 +44,7 @@ const { minX, maxX, minY, maxY, midY } = Rects;
 /** "Pergunta 3", "Questão 2", "3.", "(2)", "I.2)", "Exercício 4". A table row "Questão 1 2 3 4" is not one, and
  * "2.5 m" or "1.1." are not either. */
 const labelPattern =
-  /^\s*(?:[*★✱•▪■]\s*)?((?:Questão|Questao|QUESTÃO|QUESTAO|Pergunta|PERGUNTA|Exercício|Exercicio|Problema|Question|Exercise|Problem)\s+\d{1,2}\b(?![ \t]+\d{1,2}(?:[ \t]|$))(?![.,]\d)|(?:[IVX]+|[Il1]{1,3})\.\s?\d+\)|\(?[1-9]\d?[.)](?=\s|$))/du;
+  /^\s*(?:[*★✱•▪■]\s*)?((?:Questão|Questao|QUESTÃO|QUESTAO|Pergunta|PERGUNTA|Exercício|Exercicio|Problema|Question|Exercise|Problem)\s+(?:\d{1,2}\b|[Il]\b|\|)(?![ \t]+\d{1,2}(?:[ \t]|$))(?![.,]\d)|(?:[IVX]+|[Il1]{1,3})\.\s?\d+\)|\(?[1-9]\d?[.)](?=\s|$))/du;
 
 /** A numbered part of question N: "2.1.", "★ 2.2)", or one of two alternative items, "5.(AE2018)". It needs the
  * closing dot or parenthesis, so a measure ("2.5 m") is not one. */
@@ -88,7 +88,9 @@ export const QuestionBand = {
 
   label(text: string): string | null {
     const match = labelPattern.exec(text);
-    return match ? match[1]!.trim() : null;
+    // Windows' OCR reads a "1" after the word as "I", "l" or "|" in some fonts ("Pergunta I"): it is 1 (the Mac's
+    // Vision reads it right).
+    return match ? match[1]!.trim().replace(/^(\p{L}+)\s+[Il|]$/u, "$1 1") : null;
   },
 
   /** Where the label itself starts on its line: past a mark drawn before it ("★ 3."), estimated from the

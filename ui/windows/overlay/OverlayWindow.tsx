@@ -157,6 +157,28 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
     pdf: pdf ? { pages: pdf.pages } : null,
   };
   const outcome = readClick(clickRead);
+  // Development builds: what was read and decided, to see why a click opened what it did. Never in a release build.
+  if (import.meta.env.DEV) {
+    void dataFiles.write(
+      "anywhere-debug.json",
+      JSON.stringify(
+        {
+          point,
+          scale,
+          app: read.appName,
+          found: found ? { method: found.method, frame: found.frame, text: found.text.slice(0, 300) } : null,
+          window: clickRead.window ? { frame: clickRead.window.frame, lines: clickRead.window.lines } : null,
+          pdf: Boolean(clickRead.pdf),
+          outcome:
+            outcome.kind === "screen"
+              ? { kind: outcome.kind, region: outcome.region?.frame ?? null, sendsPicture: outcome.sendsPicture }
+              : { kind: outcome.kind },
+        },
+        null,
+        2,
+      ),
+    );
+  }
   void appendLog(outcome.kind === "nothing" ? null : outcome.found, read.appName);
   if (outcome.kind === "nothing") return null;
   if (outcome.kind === "pdf" && pdf) {

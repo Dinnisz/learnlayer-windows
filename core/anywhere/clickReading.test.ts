@@ -97,4 +97,22 @@ describe("readClick", () => {
     expect(outcome.read.exam.text).toContain("Questão 2");
     expect(outcome.read.exam.text).not.toContain("Questão 3");
   });
+
+  it("sends the picture where the text is when UI Automation's text is garbled and no region is found", () => {
+    // Formulas drawn by a web page come out one symbol a line; above every labelled line the locator finds nothing.
+    const garbled = ["Determine uma solução particular da equação", "y", "‴", "+", "2", "y", "″", "=", "0"].join("\n");
+    const found = ScreenQuestions.make({
+      text: garbled,
+      frame: { x: frame.x + 40, y: frame.y + 10, width: 400, height: 30 },
+      appName: "Chrome",
+      hasImage: false,
+      method: "text-range",
+    });
+    const outcome = readClick(click({ found, point: { x: frame.x + 100, y: frame.y + 20 } }));
+    expect(outcome.kind).toBe("screen");
+    if (outcome.kind !== "screen") return;
+    expect(outcome.sendsPicture).toBe(true);
+    expect(outcome.transcribes).toBe(true);
+    expect(outcome.region?.crops).toEqual([{ x: 32, y: 2, width: 416, height: 46 }]);
+  });
 });
