@@ -32,6 +32,8 @@ import { IllustrationView } from "../figures/IllustrationView";
 import { CircuitView } from "../figures/CircuitView";
 import { SolidView } from "../figures/SolidView";
 import { solidOf } from "@core/illustrations/solid";
+import { GenericSolidBuilder } from "@core/illustrations/solidBuilder";
+import { circuitStepPlan, solidStepPlan } from "@core/illustrations/figureSteps";
 import { circuitOf } from "@core/illustrations/circuit";
 import { SignTableView } from "../figures/SignTableView";
 import { SpaceFigureView } from "../figures/SpaceFigureView";
@@ -829,10 +831,21 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
       if (!session.illustration) return null;
       const circuit = circuitOf(session.illustration);
       const solid = solidOf(session.illustration);
+      // The step in focus drives the figure (Figure3DSteps): the resistors it joins, the solid's part it names.
+      const steps = (session.part?.cards ?? []).map((card) => ({
+        formula: card.latex,
+        words: `${card.title} ${card.note ?? ""}`,
+      }));
+      const step = session.selectedStep;
+      const circuitLit = circuit && step !== null ? (circuitStepPlan(circuit, steps)[step] ?? null) : null;
+      const solidParts = solid
+        ? GenericSolidBuilder.order(GenericSolidBuilder.build(solid) ?? { pieces: [], axes: [] })
+        : [];
+      const solidLit = solid && step !== null ? (solidStepPlan(solidParts, steps)[step] ?? null) : null;
       return circuit ? (
-        <CircuitView spec={circuit} caption={session.illustration.title || undefined} />
+        <CircuitView spec={circuit} caption={session.illustration.title || undefined} highlight={circuitLit} />
       ) : solid ? (
-        <SolidView solid={solid} caption={session.illustration.title || undefined} />
+        <SolidView solid={solid} caption={session.illustration.title || undefined} highlight={solidLit} />
       ) : (
         <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
       );

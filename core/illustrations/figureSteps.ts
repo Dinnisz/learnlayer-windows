@@ -138,3 +138,22 @@ function match(numbers: number[], pieces: Piece[], blocks: Piece[]): Piece | nul
   }
   return best?.block ?? null;
 }
+
+/** A solution card as the plan reads it: its formula (the numbers) and its words (the part it names). */
+export interface PlanStep {
+  formula: string;
+  words: string;
+}
+
+/** For each step (from 0), what the circuit lights: the resistors joined so far into the latest block. */
+export function circuitStepPlan(spec: CircuitSpec, steps: readonly PlanStep[]): (string[] | null)[] {
+  return CircuitReduction.plan(
+    spec,
+    steps.map((step) => step.formula),
+  );
+}
+
+/** For each step (from 0), the solid's part it lights, among the parts drawn. */
+export function solidStepPlan(parts: readonly string[], steps: readonly PlanStep[]): (string | null)[] {
+  return steps.map((step) => Figure3DSteps.solidPart(`${step.formula} ${step.words}`, parts));
+}

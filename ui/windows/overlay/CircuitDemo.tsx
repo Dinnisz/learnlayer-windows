@@ -63,7 +63,7 @@ export function CircuitDemo() {
   return (
     <div className="stage" style={{ flexDirection: "column", alignItems: "center", gap: 32 }}>
       {specs.map(([name, spec]) => (
-        <CircuitView key={name} spec={spec} caption={name} />
+        <CircuitView key={name} spec={spec} caption={name} highlight={name === "ICSE Q1" ? ["R1", "R2"] : null} />
       ))}
       {solids.map(([name, params]) => {
         const solid = GenericSolids.fromParams(params as never);

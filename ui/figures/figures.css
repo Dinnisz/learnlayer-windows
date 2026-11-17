@@ -408,3 +408,17 @@
 .solid-canvas:active {
   cursor: grabbing;
 }
+
+/* The resistors the step in focus joins, and their equivalent. */
+.circuit-lit,
+.circuit-lit path,
+.circuit-lit circle,
+.circuit-lit rect {
+  stroke: var(--stage-accent, #0a84ff);
+}
+
+.circuit-merge {
+  margin: 4px 0 0;
+  color: var(--stage-accent, #0a84ff);
+  font: 600 14px var(--font-text, "Segoe UI Variable", "Segoe UI", sans-serif);
+}

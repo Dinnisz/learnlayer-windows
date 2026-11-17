@@ -4,7 +4,7 @@
 // the terminals; reduced motion only fades it in.
 
 import { useMemo } from "react";
-import { CircuitSpecs, type CircuitComponent, type CircuitSpec } from "@core/illustrations/circuit";
+import { CircuitMerges, CircuitSpecs, type CircuitComponent, type CircuitSpec } from "@core/illustrations/circuit";
 import { CircuitLayouts, type Vec } from "@core/illustrations/circuitLayout";
 import "./figures.css";
 
@@ -91,7 +91,18 @@ function Symbol({ item }: { item: CircuitComponent }) {
   }
 }
 
-export function CircuitView({ spec, caption }: { spec: CircuitSpec; caption?: string }) {
+export function CircuitView({
+  spec,
+  caption,
+  highlight = null,
+}: {
+  spec: CircuitSpec;
+  caption?: string;
+  /** The resistors the step in focus joins (Figure3DSteps): lit in the blue, with their equivalent written. */
+  highlight?: readonly string[] | null;
+}) {
+  const lit = new Set(highlight ?? []);
+  const merge = highlight && highlight.length >= 2 ? CircuitMerges.make(spec, highlight) : null;
   const layout = useMemo(() => CircuitLayouts.make(spec), [spec]);
   const bounds = CircuitLayouts.bounds(layout);
   // Room for the labels: a vertical part's sits on its right ("R1 = 1 kΩ"), a terminal's on the left.
@@ -132,7 +143,10 @@ export function CircuitView({ spec, caption }: { spec: CircuitSpec; caption?: st
           const label = [item.id, valueLabel(item)].filter(Boolean).join(" = ");
           return (
             <g key={item.id}>
-              <g transform={`translate(${centre.x} ${centre.y}) rotate(${angle})`}>
+              <g
+                transform={`translate(${centre.x} ${centre.y}) rotate(${angle})`}
+                className={lit.has(item.id) ? "circuit-lit" : undefined}
+              >
                 <Symbol item={item} />
               </g>
               <text
@@ -160,6 +174,11 @@ export function CircuitView({ spec, caption }: { spec: CircuitSpec; caption?: st
           return degree(node) >= 3 ? <circle key={node} cx={p.x} cy={p.y} r={3.5} className="circuit-node" /> : null;
         })}
       </svg>
+      {merge ? (
+        <p className="circuit-merge" role="status">
+          {`${merge.ids.join(" + ")} = ${CircuitSpecs.engineering(merge.ohms, "Ω")}`}
+        </p>
+      ) : null}
       {caption ? <figcaption>{caption}</figcaption> : null}
     </figure>
   );

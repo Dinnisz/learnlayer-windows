@@ -45,9 +45,14 @@ function material(look: GenericPiece["look"]): THREE.Material {
   }
 }
 
-/** The three.js objects of the pieces a step shows (not the travelling slices). */
+/** The three.js objects of the pieces a step shows (not the travelling slices), each named after its piece. */
 function objects(built: BuiltSolid): THREE.Object3D[] {
   const out: THREE.Object3D[] = [];
+  const named = (object: THREE.Object3D, name: string) => {
+    object.name = name;
+    object.userData.opacity = ((object as THREE.Mesh).material as THREE.Material & { opacity: number }).opacity;
+    return object;
+  };
   for (const part of built.pieces) {
     if (part.name === GenericSolidBuilder.sweep) continue;
     if (part.mesh) {
@@ -61,11 +66,11 @@ function objects(built: BuiltSolid): THREE.Object3D[] {
       );
       geometry.setIndex(part.mesh.indices);
       geometry.computeVertexNormals();
-      out.push(new THREE.Mesh(geometry, material(part.look)));
+      out.push(named(new THREE.Mesh(geometry, material(part.look)), part.name));
     }
     if (part.line.length > 1) {
       const geometry = new THREE.BufferGeometry().setFromPoints(part.line.map((p) => new THREE.Vector3(...p)));
-      out.push(new THREE.Line(geometry, material(part.look)));
+      out.push(named(new THREE.Line(geometry, material(part.look)), part.name));
     }
   }
   for (const axis of built.axes) {
@@ -84,12 +89,29 @@ export function SolidView({
   solid,
   caption,
   height = 300,
+  highlight = null,
 }: {
   solid: GenericSolid;
   caption?: string;
   height?: number;
+  /** The part the step in focus works with (Figure3DSteps): it stands out, the others dim. */
+  highlight?: string | null;
 }) {
   const holder = useRef<HTMLDivElement>(null);
+  const figureRef = useRef<THREE.Group | null>(null);
+
+  // The part in focus stands out; the others dim (opacity only, the scene is not rebuilt).
+  useEffect(() => {
+    figureRef.current?.traverse((object) => {
+      if (!(object instanceof THREE.Mesh || object instanceof THREE.Line)) return;
+      const base = (object.userData.opacity as number | undefined) ?? 1;
+      const material = object.material as THREE.Material & { opacity: number };
+      material.transparent = true;
+      material.opacity =
+        !highlight || !object.name ? base : object.name === highlight ? Math.min(1, base * 1.6) : base * 0.3;
+      material.needsUpdate = true;
+    });
+  }, [highlight]);
 
   useEffect(() => {
     const element = holder.current;
@@ -104,6 +126,7 @@ export function SolidView({
     const figure = new THREE.Group();
     for (const object of objects(built)) figure.add(object);
     sceneRoot.add(figure);
+    figureRef.current = figure;
     sceneRoot.add(new THREE.AmbientLight(0xffffff, 1.4));
     const light = new THREE.DirectionalLight(0xffffff, 1.6);
     light.position.set(3, 5, 6);
