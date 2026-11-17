@@ -192,6 +192,12 @@ pub fn run() {
         builder
     };
     builder
+        // The microphone is the app's own (the talk key, the introduction's level bars), and only the app's own pages
+        // load here: no browser prompt naming "localhost". Windows' own microphone privacy setting still decides.
+        .on_permission_request(|_, kind| match kind {
+            tauri::webview::PermissionKind::Microphone => tauri::webview::PermissionResponse::Allow,
+            _ => tauri::webview::PermissionResponse::Default,
+        })
         .manage(AppState::new())
         .manage(updates::PendingUpdate::default())
         .invoke_handler(tauri::generate_handler![
