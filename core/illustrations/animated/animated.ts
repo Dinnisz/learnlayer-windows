@@ -7,6 +7,8 @@
 
 import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
+import { choiceIndex, flowchartPrograms } from "./flowchart";
+import { Syllogism } from "./syllogism";
 import { algorithmFigures } from "./algorithms";
 import { argumentFigures } from "./argument";
 import { calculusFigures } from "./calculus";
@@ -167,3 +169,107 @@ export const animatedGallery: PremadeFigure[] = [
     '{"premises": ["p -> q", "q -> r"], "conclusion": "p -> r", "premiseTexts": ["Se estudo, aprendo.", "Se aprendo, passo."], "conclusionText": "Se estudo, passo."}',
   ),
 ];
+
+/** Sliders of batch 4 that pick an option or a count: the value is rounded, not stored as 2.37. */
+const batch4IntegerSliders = new Set([
+  "truthTable.law",
+  "truthTable.connective",
+  "logicGates.gate",
+  "logicGates.inputs",
+  "flowchart.n",
+  "flowchart.a",
+  "flowchart.b",
+  "flowchart.program",
+  "arrayLoop.length",
+  "arrayLoop.k",
+  "arrayLoop.target",
+  "recursionTree.n",
+  "argumentMap.form",
+  "syllogismVenn.major",
+  "syllogismVenn.minor",
+  "syllogismVenn.conclusion",
+  "syllogismVenn.figure",
+  "fallacies.fallacy",
+  "squareOfOpposition.given",
+  "squareOfOpposition.value",
+  "squareOfOpposition.existentialImport",
+]);
+
+/** Swift's `.rounded()`: half away from zero. */
+const rounded = (value: number) => Math.sign(value) * Math.round(Math.abs(value));
+const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
+
+/**
+ * Port of PremadeFigure.mergingParameters (PremadeFigureInteractive.swift) with `adjustingBatch4` and
+ * `mergeBatch4Parameter` (PremadeFigureBatch4.swift), for the animated types: a slider's value goes into the params
+ * the way the figure reads them (whole numbers rounded, ranges kept, a shorthand the slider replaces removed).
+ */
+export function mergingAnimatedParameters(
+  figure: PremadeFigure,
+  values: Readonly<Record<string, number>>,
+): PremadeFigure {
+  const params = new Params(figure);
+  const next: Record<string, PremadeValue> = { ...figure.params };
+  let entries = Object.entries(values);
+  // Another flowchart program starts from its own defaults.
+  if (figure.type === "flowchart" && values["program"] !== undefined) {
+    const current = choiceIndex(params, "program", flowchartPrograms) ?? 0;
+    if (rounded(values["program"]) !== current) {
+      for (const key of ["n", "a", "b"]) delete next[key];
+      entries = entries.filter(([key]) => !["n", "a", "b"].includes(key));
+    }
+  }
+  for (const [key, value] of entries) {
+    if (batch4IntegerSliders.has(`${figure.type}.${key}`)) {
+      next[key] = rounded(value);
+      // A slider that sets the mood piece by piece replaces the "AAA-1" shorthand: its other pieces are kept.
+      if (figure.type === "syllogismVenn") {
+        const mood = typeof next["mood"] === "string" ? Syllogism.fromMood(next["mood"]) : null;
+        if (mood)
+          for (const [name, piece] of [
+            ["major", mood.major],
+            ["minor", mood.minor],
+            ["conclusion", mood.conclusion],
+            ["figure", mood.figure],
+          ] as const)
+            if (name !== key && next[name] === undefined) next[name] = piece;
+        delete next["mood"];
+      }
+      // A slider that picks the connective or the law replaces a written expression.
+      if (figure.type === "truthTable" && (key === "law" || key === "connective")) {
+        delete next["expression"];
+        delete next[key === "law" ? "connective" : "law"];
+      }
+      continue;
+    }
+    switch (`${figure.type}.${key}`) {
+      case "tangentLine.a": {
+        // Moving the point must not slide the window the model left implicit (a ± width).
+        const half = params.number("width") ?? 2;
+        const original = params.number("a");
+        if (next["xMin"] === undefined && original !== null) next["xMin"] = original - half;
+        if (next["xMax"] === undefined && original !== null) next["xMax"] = original + half;
+        next["a"] = value;
+        break;
+      }
+      case "riemannSums.n":
+        next["n"] = clamp(rounded(value), 1, 24);
+        break;
+      case "seriesPartialSums.count":
+        next["count"] = clamp(rounded(value), 3, 24);
+        break;
+      case "refraction.angle":
+        next["angle"] = clamp(value, 5, 89);
+        break;
+      case "refraction.n2":
+        next["n2"] = clamp(value, 1, 4);
+        break;
+      case "prismDispersion.incidence":
+        next["incidence"] = clamp(value, 56, 75);
+        break;
+      default:
+        next[key] = value;
+    }
+  }
+  return { type: figure.type, params: next };
+}

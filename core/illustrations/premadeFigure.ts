@@ -16,7 +16,7 @@ import {
   type IllustrationParameter,
 } from "./illustration";
 import { compileTemplate, parseDouble, TemplateWords, type IllustrationTemplate } from "./illustrationTemplate";
-import { compileAnimated } from "./animated/animated";
+import { animatedTypes, compileAnimated, mergingAnimatedParameters } from "./animated/animated";
 
 export type PremadeValue = string | number | boolean | PremadeValue[] | { [key: string]: PremadeValue };
 
@@ -89,6 +89,7 @@ const recompiledTypes = new Set([
   "flowchart",
   "truthTable",
   "argumentMap",
+  "syllogismVenn",
 ]);
 
 export class PremadeFigures {
@@ -147,6 +148,8 @@ export class PremadeFigures {
   }
 
   mergingParameters(values: Readonly<Record<string, number>>): PremadeFigure {
+    // The animated figures take a slider's value the way they read it (rounded, kept in range, a shorthand replaced).
+    if (animatedTypes.has(this.figure.type)) return mergingAnimatedParameters(this.figure, values);
     const next = { ...this.params };
     for (const [key, value] of Object.entries(values)) next[key] = value;
     return { type: this.figure.type, params: next };
