@@ -26,6 +26,42 @@ import {
 import { boxesOverlap, LabelBoard, Params, PlottedFunction, withinBounds, type LabelBox } from "./figureCanvas";
 
 const language = "Portuguese (Portugal)";
+/** `PremadeFigure.AnimatedKind.allCases` on the Mac. */
+const macAnimatedKinds = [
+  "limitApproach",
+  "tangentLine",
+  "taylorPolynomials",
+  "riemannSums",
+  "revolutionVolume",
+  "signTable",
+  "variationTable",
+  "piecewiseFunction",
+  "rationalAsymptotes",
+  "expLog",
+  "seriesPartialSums",
+  "slopeField",
+  "polarCurve",
+  "parametricCurve",
+  "levelCurves",
+  "surface3D",
+  "gradientField",
+  "doubleIntegralRegion",
+  "cylindricalSpherical",
+  "vectorField2D",
+  "characteristicsPDE",
+  "arrayBars",
+  "binarySearch",
+  "linkedList",
+  "stackQueue",
+  "binaryTree",
+  "heap",
+  "hashTable",
+  "graph",
+  "complexityChart",
+  "motionScene",
+  "verticalThrow",
+  "inclinedBlock",
+];
 const compile = (figure: PremadeFigure, lang = language) => new PremadeFigures(figure).compile("t", lang);
 const values = (time: number) => ({ t: time, revealed: 1, step: 1000 });
 const times = (scene: Illustration) => {
@@ -227,8 +263,9 @@ describe("animated premade figures", () => {
 
   it("unknown or invalid params fall back", () => {
     expect(compile({ type: "hypercube", params: {} }, "English")).toBeNull();
-    for (const type of animatedTypes) {
-      // As on the Mac: these two have defaults for every param.
+    // As on the Mac, over `AnimatedKind` (the batch figures, such as the optics, have defaults for every param), and
+    // these two have defaults too.
+    for (const type of macAnimatedKinds) {
       if (type === "expLog" || type === "complexityChart") continue;
       expect(compile({ type, params: { nonsense: "?" } }, "English"), `${type} accepted empty params`).toBeNull();
     }

@@ -11,6 +11,7 @@ import { algorithmFigures } from "./algorithms";
 import { calculusFigures } from "./calculus";
 import { heatingFigures } from "./heating";
 import { multivariableFigures } from "./multivariable";
+import { opticsFigures } from "./optics";
 import { physicsFigures } from "./physics";
 import { seriesFigures } from "./series";
 import { structureFigures } from "./structures";
@@ -25,6 +26,7 @@ const compilers = {
   ...structureFigures,
   ...physicsFigures,
   ...heatingFigures,
+  ...opticsFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -113,4 +115,18 @@ export const animatedGallery: PremadeFigure[] = [
   sample("heatingCurve", '{"m": 100, "T0": -20, "T1": 120}'),
   sample("heatingCurve", '{"m": 200, "T0": -10, "T1": 60}'),
   sample("heatingCurve", '{"m": 50, "T0": -15, "T1": 100}'),
+  sample("mirrorRays", '{"kind": "plane", "objectDistance": 3}'),
+  sample("mirrorRays", '{"kind": "concave", "focal": 2, "objectDistance": 5}'),
+  sample("mirrorRays", '{"kind": "concave", "focal": 2, "objectDistance": 1}'),
+  sample("mirrorRays", '{"kind": "convex", "focal": 2, "objectDistance": 4}'),
+  sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
+  sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
+  sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
+  sample("lensRays", '{"kind": "diverging", "focal": 2, "objectDistance": 4}'),
+  sample("refraction", '{"n1": 1, "n2": 1.5, "angle": 40}'),
+  sample("refraction", '{"n1": 1.5, "n2": 1, "angle": 30}'),
+  sample("refraction", '{"n1": 1.5, "n2": 1, "angle": 60}'),
+  sample("prismDispersion", '{"incidence": 60}'),
+  sample("doubleSlit", '{"wavelength": 600, "separation": 0.5, "screenDistance": 2}'),
+  sample("emSpectrum", "{}"),
 ];

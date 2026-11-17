@@ -79,6 +79,11 @@ const recompiledTypes = new Set([
   "verticalThrow",
   "inclinedBlock",
   "heatingCurve",
+  "lensRays",
+  "mirrorRays",
+  "refraction",
+  "prismDispersion",
+  "doubleSlit",
 ]);
 
 export class PremadeFigures {
