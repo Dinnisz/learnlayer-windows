@@ -183,7 +183,11 @@ describe("the fast reading and the solve", () => {
   it("hands over once a reading that came before the stage was listening", async () => {
     const run = await scripted({ solveDelay: 200 });
     void run.session.load();
-    await sleep(60);
+    // The reading has come in (held for the stage) before the stage listens; waited for, not timed, so a busy
+    // machine doesn't make it listen first.
+    const held = () => (run.session as unknown as { pendingTranscription: unknown }).pendingTranscription !== undefined;
+    await until(held);
+    expect(held()).toBe(true);
     run.listen();
     expect(run.received).toHaveLength(1);
     await until(() => run.session.state.kind === "ready");
