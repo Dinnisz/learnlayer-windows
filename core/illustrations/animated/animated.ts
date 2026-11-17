@@ -12,6 +12,7 @@ import { Syllogism } from "./syllogism";
 import { algorithmFigures } from "./algorithms";
 import { argumentFigures } from "./argument";
 import { calculusFigures } from "./calculus";
+import { chemistryFigures } from "./chemistry";
 import { electromagnetismFigures } from "./electromagnetism";
 import { fallacyFigures } from "./fallacies";
 import { flowchartFigures } from "./flowchart";
@@ -38,6 +39,7 @@ const compilers = {
   ...physicsFigures,
   ...heatingFigures,
   ...mechanicsFigures,
+  ...chemistryFigures,
   ...electromagnetismFigures,
   ...opticsFigures,
   ...loopFigures,
@@ -181,6 +183,43 @@ export const animatedGallery: PremadeFigure[] = [
   sample("atwood", '{"kind": "atwood", "m1": 2, "m2": 3}'),
   sample("atwood", '{"kind": "atwood", "m1": 4, "m2": 4}'),
   sample("atwood", '{"kind": "table", "m1": 2, "m2": 3}'),
+  sample("lewisStructure", '{"molecule": "H2O"}'),
+  sample("lewisStructure", '{"molecule": "NH3"}'),
+  sample("lewisStructure", '{"molecule": "CO2"}'),
+  sample("lewisStructure", '{"molecule": "N2"}'),
+  sample("lewisStructure", '{"molecule": "C2H4"}'),
+  sample("lewisStructure", '{"molecule": "CH2O"}'),
+  sample("lewisStructure", '{"molecule": "HCN"}'),
+  sample("lewisStructure", '{"molecule": "BF3"}'),
+  sample("lewisStructure", '{"molecule": "CCl4"}'),
+  sample("reactionProfile", '{"Ea": 100, "deltaH": -60}'),
+  sample("reactionProfile", '{"Ea": 120, "deltaH": 40}'),
+  sample("reactionProfile", '{"Ea": 100, "deltaH": -60, "catalystEa": 60}'),
+  sample("titrationCurve", '{"acid": "strong", "Ca": 0.1, "Va": 25, "Cb": 0.1}'),
+  sample("titrationCurve", '{"acid": "weak", "Ca": 0.1, "Va": 25, "Cb": 0.1, "pKa": 4.76}'),
+  sample(
+    "iceTable",
+    '{"reactants": [{"name": "H₂", "coeff": 1, "c0": 1}, {"name": "I₂", "coeff": 1, "c0": 1}], "products": [{"name": "HI", "coeff": 2, "c0": 0}], "K": 50}',
+  ),
+  sample(
+    "iceTable",
+    '{"reactants": [{"name": "HA", "coeff": 1, "c0": 0.1}], "products": [{"name": "H⁺", "coeff": 1, "c0": 0}, {"name": "A⁻", "coeff": 1, "c0": 0}], "K": 0.000018}',
+  ),
+  sample(
+    "iceTable",
+    '{"reactants": [{"name": "N₂", "coeff": 1, "c0": 1}, {"name": "H₂", "coeff": 3, "c0": 3}], "products": [{"name": "NH₃", "coeff": 2, "c0": 0}], "K": 0.5}',
+  ),
+  sample("periodicTrends", '{"series": "period2", "property": "ionization"}'),
+  sample("periodicTrends", '{"series": "period3", "property": "radius"}'),
+  sample("periodicTrends", '{"series": "group1", "property": "ionization"}'),
+  sample("periodicTrends", '{"series": "group17", "property": "electronegativity"}'),
+  sample("periodicTrends", '{"series": "period3", "property": "electronegativity"}'),
+  sample("concentrationTime", '{"order": 0, "k": 0.05, "A0": 1}'),
+  sample("concentrationTime", '{"order": 1, "k": 0.1, "A0": 1}'),
+  sample("concentrationTime", '{"order": 2, "k": 0.1, "A0": 1}'),
+  sample("punnettSquare", '{"parent1": "Aa", "parent2": "Aa"}'),
+  sample("punnettSquare", '{"parent1": "Aa", "parent2": "aa"}'),
+  sample("punnettSquare", '{"parent1": "AaBb", "parent2": "AaBb"}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),

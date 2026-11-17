@@ -10,12 +10,12 @@ export const times = (scene: Illustration) => {
   const duration = scene.duration ?? 0;
   return [0, 0.2 * duration, 0.4 * duration, 0.6 * duration, 0.8 * duration, 0.95 * duration];
 };
-const isShown = (element: IllustrationElement, compiled: CompiledIllustration, at: Record<string, number>) => {
+export const isShown = (element: IllustrationElement, compiled: CompiledIllustration, at: Record<string, number>) => {
   if (!element.visible) return true;
   const value = compiled.value(element.visible, at);
   return value !== null && Number.isFinite(value) && value > 0;
 };
-const labelBox = (element: IllustrationElement, compiled: CompiledIllustration, at: Record<string, number>) => {
+export const labelBox = (element: IllustrationElement, compiled: CompiledIllustration, at: Record<string, number>) => {
   if (element.kind !== "label" || !element.text) return null;
   const x = compiled.value(element.x, at);
   const y = compiled.value(element.y, at);

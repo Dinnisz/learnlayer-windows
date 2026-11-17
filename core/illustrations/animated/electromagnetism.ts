@@ -474,7 +474,7 @@ export function polylineLength(points: Point[]): number {
 }
 
 /** A polyline that grows at `speed` world units per second from its first point. */
-function growingPolyline(
+export function growingPolyline(
   canvas: FigureCanvas,
   points: Point[],
   start: number,
