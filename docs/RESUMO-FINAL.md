@@ -18,7 +18,11 @@ O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado
 - **Figuras novas:**
   - circuitos: resolvidos e verificados contra a resposta, e desenhados como esquema 2D;
   - sólidos em 3D com three.js: revoluções, superfícies, secções e os sólidos fixos do Mac, com o volume verificado contra a resposta;
-  - o passo em foco comanda a figura: junta as resistências e acende a parte do sólido.
+  - o passo em foco comanda a figura: junta as resistências e acende a parte do sólido;
+  - o passo que escreve o integral do volume faz a fatia percorrer o sólido (a app calcula esse integral e compara-o com o volume); os cartões podem montar o sólido peça a peça;
+  - nas figuras de geometria no espaço, o passo acende os pontos, arestas, plano, reta, normal e o ponto de interseção que nomeia;
+  - 17 figuras animadas do Mac portadas com os testes: Cálculo 1, séries e curvas, e as cenas de física (carro, lançamento vertical, plano inclinado). Ver em `overlay.html?demo=animated`.
+- **Leitor de PDF:** o texto seleciona-se. O botão «Ask» (ou Enter) pergunta sobre a seleção: prosa abre o excerto e uma linha de matemática abre o explicador.
 - Utilitários para testar a app real sem pessoa: `scripts/desktop-test/`.
 
 ## Em números
