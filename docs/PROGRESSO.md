@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-17 — Instalador experimentado neste PC: o Smart App Control bloqueou-o antes de correr. Para abrir a app falta a assinatura ou outro PC.
 - 2026-11-17 — Primeira compilação do Rust (no CI). Correções: uma linha de formatação, 9 avisos do clippy, e o manifesto da app embutido pelo linker para os testes arrancarem. CI todo verde (22 testes Rust) e instalador em `dist/`.
 - 2026-11-17 — O Dinis tornou o repositório público, o que deixa o CI grátis. Push das notas e nova corrida do CI.
 - 2026-11-16 — GitHub CLI instalado (`winget install GitHub.cli`). O Dinis entrou na conta Dinnisz e autorizou o push. Repositório privado `learnlayer-windows` criado e `main` enviado. O primeiro CI não arrancou por falta de faturação no GitHub.
