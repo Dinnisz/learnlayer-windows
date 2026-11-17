@@ -7,9 +7,19 @@ import { CompiledIllustration, type Illustration } from "@core/illustrations/ill
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "@core/illustrations/premadeFigure";
 import { formatG } from "@core/math/printf";
 import { IllustrationRenderer, type DrawOp, type Paint, type TextMeasurer } from "@core/illustrations/renderer";
+import { setMascotPreference } from "@core/illustrations/animated/mascot";
 import { Icon } from "../components/Icon";
 import { useT } from "../i18n";
 import "./figures.css";
+
+// The physics scenes bring the mascot in only when the student keeps it on (Settings › General, "mascotEnabled").
+setMascotPreference(() => {
+  try {
+    return localStorage.getItem("mascotEnabled") !== "0";
+  } catch {
+    return true;
+  }
+});
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

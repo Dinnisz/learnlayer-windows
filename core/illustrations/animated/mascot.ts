@@ -10,6 +10,14 @@ export interface Point {
   y: number;
 }
 
+/** Whether the student keeps the mascot on (Settings › General); the app sets this from its preference. */
+let mascotShown: () => boolean = () => true;
+
+/** Sets where the scenes read the mascot preference from (`AppPreferences.standard.mascotEnabled` on the Mac). */
+export function setMascotPreference(read: () => boolean): void {
+  mascotShown = read;
+}
+
 /**
  * The mascot sphere's trip into a physics scene: it starts where the tutor's body rests (the stage passes that point
  * as `mascotX`, `mascotY`; the corner stands in when there is no stage), glides slowly (calm ease, a small hop) to
@@ -21,7 +29,7 @@ export class MascotTrip {
     readonly target: Point,
     readonly radius = 0.3,
     /** False when Settings turned the mascot off: the object is there from the first frame. */
-    readonly shown = true,
+    readonly shown = mascotShown(),
     readonly hop = 0.4,
   ) {}
 

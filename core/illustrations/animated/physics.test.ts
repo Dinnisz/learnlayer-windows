@@ -5,7 +5,7 @@ import { CompiledIllustration, type Illustration, type IllustrationElement } fro
 import { PremadeFigures, type PremadeFigure } from "../premadeFigure";
 import { sample } from "./animated";
 import type { AnimatedIllustration } from "./figureCanvas";
-import { CarArt } from "./mascot";
+import { CarArt, setMascotPreference } from "./mascot";
 import {
   easedSimTime,
   inclineAcceleration,
@@ -166,6 +166,19 @@ describe("physics scenes", () => {
         expect(Math.min(...above), `block floats above the slope at t = ${time}`).toBeLessThan(0.02);
         expect(Math.min(...along) > -0.01 && Math.max(...along) < length + 0.01).toBe(true);
       }
+    }
+  });
+
+  it("with the mascot off, the object is there from the first frame and no face is drawn", () => {
+    setMascotPreference(() => false);
+    try {
+      const figure = scene("inclinedBlock", '{"angle": 30, "mu": 0.2}');
+      const body = figure.elements.find((e) => e.kind === "shape" && e.color === "accent")!;
+      expect(body.morph).toBe("1");
+      expect(figure.elements.some((e) => e.kind === "shape" && e.color === "white" && e.fill === 0.95)).toBe(false);
+      expect(figure.mascotHoldsUntil).toBe(0.3);
+    } finally {
+      setMascotPreference(() => true);
     }
   });
 
