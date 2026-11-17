@@ -1,11 +1,13 @@
 // Port of PremadeFigure.compileAnimated (LearnLayer/Illustrations/PremadeFigureAnimated.swift) and the gallery of
 // PremadeFigureAnimatedGallery.swift @ ref 2026-11-04, for the animated kinds this port draws so far (Calculus 1;
-// series, slope fields, polar and parametric curves; multivariable; the physics scenes). The other kinds the Mac offers
-// (algorithms, data structures and the Batch figures) return null here, so the provider asks for a template instead and a
-// figure that can't be drawn never appears.
+// series, slope fields, polar and parametric curves; multivariable; sorting, search, lists, stacks, queues and hash
+// tables; the physics scenes). The other kinds the Mac offers (trees, heaps, graphs, the complexity chart and the Batch
+// figures) return null here, so the provider asks for a template instead and a figure that can't be drawn never
+// appears.
 
 import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
+import { algorithmFigures } from "./algorithms";
 import { calculusFigures } from "./calculus";
 import { multivariableFigures } from "./multivariable";
 import { physicsFigures } from "./physics";
@@ -13,7 +15,13 @@ import { seriesFigures } from "./series";
 import { Params } from "./figureCanvas";
 
 /** The animated premade types this port compiles. */
-const compilers = { ...calculusFigures, ...seriesFigures, ...multivariableFigures, ...physicsFigures };
+const compilers = {
+  ...calculusFigures,
+  ...seriesFigures,
+  ...multivariableFigures,
+  ...algorithmFigures,
+  ...physicsFigures,
+};
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
 
@@ -63,6 +71,20 @@ export const animatedGallery: PremadeFigure[] = [
   sample("cylindricalSpherical", '{"system": "spherical", "r": 3, "theta": 50, "phi": 40}'),
   sample("vectorField2D", '{"P": "-y", "Q": "x"}'),
   sample("characteristicsPDE", '{"a": 2, "b": 1, "phi": "exp(-x^2)"}'),
+  sample("arrayBars", '{"values": [5, 2, 8, 1, 9, 3], "algorithm": "bubble"}'),
+  sample("arrayBars", '{"values": [5, 2, 8, 1, 9, 3], "algorithm": "insertion"}'),
+  sample("arrayBars", '{"values": [5, 2, 8, 1, 9, 3, 7], "algorithm": "merge"}'),
+  sample("arrayBars", '{"values": [5, 2, 8, 1, 9, 3, 7], "algorithm": "quick"}'),
+  sample("binarySearch", '{"values": [1, 3, 5, 7, 9, 11, 13, 15], "target": 11}'),
+  sample("linkedList", '{"values": [4, 7, 2], "operation": "insert", "index": 1, "value": 9}'),
+  sample("linkedList", '{"values": [4, 7, 2, 8], "operation": "delete", "index": 1}'),
+  sample("linkedList", '{"values": [4, 7, 2], "operation": "traverse"}'),
+  sample("stackQueue", '{"kind": "stack", "operations": ["push 3", "push 8", "push 5", "pop", "push 1"]}'),
+  sample(
+    "stackQueue",
+    '{"kind": "queue", "operations": ["enqueue 3", "enqueue 8", "enqueue 5", "dequeue", "enqueue 1"]}',
+  ),
+  sample("hashTable", '{"size": 5, "keys": [12, 7, 22, 3, 17, 8]}'),
   sample("motionScene", '{"x0": 0, "v0": 3, "a": 1.2, "tMax": 4}'),
   sample("verticalThrow", '{"v0": 12, "g": 9.8}'),
   sample("inclinedBlock", '{"angle": 30, "mu": 0.2}'),
