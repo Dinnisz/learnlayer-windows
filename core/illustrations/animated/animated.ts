@@ -24,6 +24,7 @@ import { mechanicsFigures } from "./mechanics";
 import { multivariableFigures } from "./multivariable";
 import { opticsFigures } from "./optics";
 import { physicsFigures } from "./physics";
+import { probabilityFigures } from "./probability";
 import { seriesFigures } from "./series";
 import { squareFigures } from "./square";
 import { structureFigures } from "./structures";
@@ -42,6 +43,7 @@ const compilers = {
   ...mechanicsFigures,
   ...chemistryFigures,
   ...analysisFigures,
+  ...probabilityFigures,
   ...electromagnetismFigures,
   ...opticsFigures,
   ...loopFigures,
@@ -231,6 +233,17 @@ export const animatedGallery: PremadeFigure[] = [
   sample("sequenceTerms", '{"kind": "geometric", "u1": 8, "r": 0.5, "count": 10}'),
   sample("sequenceTerms", '{"kind": "general", "u": "(2*n+1)/(n+1)", "count": 12}'),
   sample("sequenceTerms", '{"kind": "general", "u": "(-1)^n*n", "count": 9}'),
+  sample(
+    "probabilityTree",
+    '{"events1": ["A", "B"], "p1": [0.3, 0.7], "events2": ["R", "V"], "p2": [[0.5, 0.5], [0.2, 0.8]], "highlight": ["A,R", "B,R"]}',
+  ),
+  sample(
+    "probabilityTree",
+    '{"events1": ["X", "Y", "Z"], "p1": [0.2, 0.5, 0.3], "events2": ["S", "N"], "p2": [0.6, 0.4]}',
+  ),
+  sample("vennDiagram", '{"sets": 2, "A": 12, "B": 8, "AB": 3, "U": 20}'),
+  sample("vennDiagram", '{"sets": 3, "A": 10, "B": 8, "C": 6, "AB": 4, "AC": 3, "BC": 2, "ABC": 1, "U": 20}'),
+  sample("vennDiagram", '{"sets": 2, "A": 0.5, "B": 0.4, "AB": 0.2, "measure": "probability"}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
@@ -396,6 +409,18 @@ export function mergingAnimatedParameters(
         break;
       case "sequenceTerms.count":
         next["count"] = clamp(Math.trunc(rounded(value)), 4, 16);
+        break;
+      case "probabilityTree.p": {
+        // The slider is the first probability of a two-branch first stage; the other is what is left.
+        const first = clamp(value, 0.05, 0.95);
+        next["p1"] = [first, 1 - first];
+        delete next["p"];
+        break;
+      }
+      case "vennDiagram.AB":
+      case "vennDiagram.ABC":
+        // Counts are whole numbers; probabilities are not.
+        next[key] = params.text("measure") === "probability" ? value : rounded(value);
         break;
       case "acSignal.frequency":
         next["frequency"] = Math.max(1, value);
