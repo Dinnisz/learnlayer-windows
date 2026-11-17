@@ -478,3 +478,23 @@
   color: var(--stage-accent, #0a84ff);
   font: 600 14px var(--font-text, "Segoe UI Variable", "Segoe UI", sans-serif);
 }
+
+/* Stepped playback (IllustrationStepControls): previous, play/pause, next and the step counter. */
+.figure-steps {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.figure-steps .figure-play:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.figure-step-count {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}

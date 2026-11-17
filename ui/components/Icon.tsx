@@ -36,6 +36,8 @@ const glyphs: Record<string, string> = {
   network: "\uE774", // Globe
   waveform: "\uE767", // Volume
   "lock.doc": "\uE72E", // Lock
+  "backward.frame.fill": "\uE892", // Previous
+  "forward.frame.fill": "\uE893", // Next
 };
 
 export const knownSymbols = Object.keys(glyphs);

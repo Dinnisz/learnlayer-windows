@@ -7,6 +7,7 @@ import { CompiledIllustration, type Illustration } from "@core/illustrations/ill
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "@core/illustrations/premadeFigure";
 import { formatG } from "@core/math/printf";
 import { IllustrationRenderer, type DrawOp, type Paint, type TextMeasurer } from "@core/illustrations/renderer";
+import { Icon } from "../components/Icon";
 import { useT } from "../i18n";
 import "./figures.css";
 
@@ -219,6 +220,37 @@ export function IllustrationView({
     return () => cancelAnimationFrame(frame);
   }, [animated, playing, duration]);
 
+  // Stepped playback (IllustrationStepPlayback): each boundary is the scene time when that step has finished.
+  const boundaries = (working as { stepPlayback?: { boundaries: number[] } | null }).stepPlayback?.boundaries ?? null;
+  const [stepped, setStepped] = useState<number | null>(null);
+  const shownTime = stepped !== null && boundaries ? (boundaries[stepped] ?? 0) : time;
+  /** The step the picture is at: the one picked, else the last one the running clock has passed. */
+  const currentStep =
+    stepped ??
+    (boundaries
+      ? Math.max(
+          0,
+          boundaries.reduce((last, end, index) => (time >= end ? index : last), 0),
+        )
+      : 0);
+  const snapTo = (index: number) => {
+    if (!boundaries) return;
+    const next = Math.max(0, Math.min(boundaries.length - 1, index));
+    setStepped(next);
+    setPlaying(false);
+    paused.current = boundaries[next] ?? 0;
+  };
+  const togglePlaying = () => {
+    if (playing) {
+      paused.current = time;
+      setPlaying(false);
+    } else {
+      if (stepped !== null && boundaries) paused.current = boundaries[stepped] ?? 0;
+      setStepped(null);
+      setPlaying(true);
+    }
+  };
+
   const width = Math.max(120, available);
   const height = Math.min(maxHeight, (width * working.height) / Math.max(0.001, working.width));
   const drawnWidth = Math.min(width, (height * working.width) / Math.max(0.001, working.height));
@@ -226,13 +258,13 @@ export function IllustrationView({
   const ops = useMemo(() => {
     if (available === 0) return [];
     const scope: Record<string, number> = {
-      t: animated ? time : 0,
+      t: animated ? shownTime : 0,
       revealed: revealed ? 1 : 0,
       step: step === Number.MAX_SAFE_INTEGER ? 1000 : step,
     };
     for (const parameter of working.parameters ?? []) scope[parameter.name] = values[parameter.name] ?? parameter.value;
     return new IllustrationRenderer(compiled, scope, { width: drawnWidth, height }, scope.t!, measureText).draw();
-  }, [available, animated, time, revealed, step, working, values, compiled, drawnWidth, height]);
+  }, [available, animated, shownTime, revealed, step, working, values, compiled, drawnWidth, height]);
 
   const premade = decodePremade(working.premade ?? scene.premade);
   const recompiles = premade ? new PremadeFigures(premade).needsParameterRecompile : false;
@@ -253,18 +285,37 @@ export function IllustrationView({
       <div className="figure-canvas" style={{ height }}>
         <DisplayList ops={ops} width={drawnWidth} height={height} label={working.title} />
       </div>
-      {animated && (
-        <button
-          type="button"
-          className="figure-play"
-          onClick={() => {
-            if (playing) paused.current = time;
-            setPlaying(!playing);
-          }}
-        >
+      {animated && boundaries && boundaries.length > 1 ? (
+        // IllustrationStepControls: previous, play/pause, next and the step counter.
+        <div className="figure-steps">
+          <button
+            type="button"
+            className="figure-play"
+            aria-label={t("Previous")}
+            disabled={currentStep <= 0}
+            onClick={() => snapTo(currentStep - 1)}
+          >
+            <Icon symbol="backward.frame.fill" size={14} />
+          </button>
+          <button type="button" className="figure-play" onClick={togglePlaying}>
+            {playing ? t("Pause") : t("Play")}
+          </button>
+          <button
+            type="button"
+            className="figure-play"
+            aria-label={t("Next")}
+            disabled={currentStep >= boundaries.length - 1}
+            onClick={() => snapTo(currentStep + 1)}
+          >
+            <Icon symbol="forward.frame.fill" size={14} />
+          </button>
+          <span className="figure-step-count">{t("Step %lld of %lld", currentStep + 1, boundaries.length)}</span>
+        </div>
+      ) : animated ? (
+        <button type="button" className="figure-play" onClick={togglePlaying}>
           {playing ? t("Pause") : t("Play")}
         </button>
-      )}
+      ) : null}
       {(working.parameters ?? []).map((parameter) => (
         <label key={parameter.name} className="figure-slider">
           <span>
