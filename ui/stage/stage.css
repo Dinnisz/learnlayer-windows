@@ -850,3 +850,12 @@
     }
   }
 }
+
+/* A selected passage reads at the size of a question's statement. */
+.stage-passage {
+  max-width: 720px;
+  margin-bottom: 18px;
+  color: var(--stage-text, #fff);
+  font-size: 19px;
+  line-height: 1.5;
+}

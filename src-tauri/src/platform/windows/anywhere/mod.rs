@@ -6,6 +6,7 @@
 //! region ever goes to the model.
 
 pub mod capture;
+pub mod copy;
 pub mod hook;
 pub mod ocr;
 pub mod overlay;
@@ -21,8 +22,12 @@ use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Monitor};
-use windows::Win32::Foundation::{POINT, RECT};
-use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, GetForegroundWindow, GetWindowThreadProcessId};
+use windows::Win32::Foundation::{HWND, POINT, RECT};
+use windows::Win32::System::Threading::GetCurrentProcessId;
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetCursorPos, GetForegroundWindow, GetWindow, GetWindowRect, GetWindowTextLengthW, GetWindowThreadProcessId,
+    IsWindowVisible, SetForegroundWindow, GW_HWNDNEXT,
+};
 
 use capture::Picture;
 
@@ -274,14 +279,49 @@ pub fn explain_selection(app: &AppHandle) {
     std::thread::spawn(move || read_selection(&app));
 }
 
+/// The window the student was working in. A click on the pill can give the pill the keyboard; then it is the first
+/// visible, titled window below LearnLayer's own, which gets the keyboard back so its selection can be read.
+fn student_window() -> HWND {
+    // SAFETY: plain window queries; a window that closes meanwhile only makes them fail.
+    unsafe {
+        let own = GetCurrentProcessId();
+        let owner = |window: HWND| {
+            let mut process = 0u32;
+            GetWindowThreadProcessId(window, Some(&mut process as *mut u32));
+            process
+        };
+        let front = GetForegroundWindow();
+        if owner(front) != own {
+            return front;
+        }
+        let mut window = front;
+        for _ in 0..200 {
+            let Ok(next) = GetWindow(window, GW_HWNDNEXT) else {
+                break;
+            };
+            if next.is_invalid() {
+                break;
+            }
+            window = next;
+            if IsWindowVisible(window).as_bool() && GetWindowTextLengthW(window) > 0 && owner(window) != own {
+                let _ = SetForegroundWindow(window);
+                std::thread::sleep(Duration::from_millis(120));
+                return window;
+            }
+        }
+        front
+    }
+}
+
 fn read_selection(app: &AppHandle) {
     let id = NEXT_ID.fetch_add(1, Ordering::SeqCst) + 1;
+    let student = student_window();
     let mut cursor = POINT::default();
     // SAFETY: reads the pointer's position and the window in front; both only fail harmlessly.
     let (front_app, cursor) = unsafe {
         let _ = GetCursorPos(&mut cursor);
         let mut process_id = 0u32;
-        GetWindowThreadProcessId(GetForegroundWindow(), Some(&mut process_id as *mut u32));
+        GetWindowThreadProcessId(student, Some(&mut process_id as *mut u32));
         (capture::executable_name(process_id).unwrap_or_default(), cursor)
     };
     let Ok(Some(pointer_monitor)) = app.monitor_from_point(f64::from(cursor.x), f64::from(cursor.y)) else {
@@ -292,6 +332,18 @@ fn read_selection(app: &AppHandle) {
     if !refused {
         if let Some(reader) = uia::Reader::new(f64::from(pointer_monitor.size().height)) {
             selection = reader.selection();
+        }
+        // No text pattern for it (Chromium's PDF viewer): the selection by copying it, placed on the window in front.
+        if selection.is_none() {
+            selection = copy::copied_selection().map(|text| {
+                let mut window = RECT::default();
+                // SAFETY: reads the rectangle of the window in front.
+                let _ = unsafe { GetWindowRect(student, &mut window) };
+                uia::Selection {
+                    text,
+                    frame: uia::Frame::from(window),
+                }
+            });
         }
     }
     // The stage opens where the selection is (its monitor), else under the pointer.
