@@ -1,18 +1,19 @@
 // Port of PremadeFigure.compileAnimated (LearnLayer/Illustrations/PremadeFigureAnimated.swift) and the gallery of
 // PremadeFigureAnimatedGallery.swift @ ref 2026-11-04, for the animated kinds this port draws so far (Calculus 1;
-// series, slope fields, polar and parametric curves; the physics scenes). The other kinds the Mac offers
-// (multivariable, algorithms, data structures) return null here, so the provider asks for a template instead and a
+// series, slope fields, polar and parametric curves; multivariable; the physics scenes). The other kinds the Mac offers
+// (algorithms, data structures and the Batch figures) return null here, so the provider asks for a template instead and a
 // figure that can't be drawn never appears.
 
 import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
 import { calculusFigures } from "./calculus";
+import { multivariableFigures } from "./multivariable";
 import { physicsFigures } from "./physics";
 import { seriesFigures } from "./series";
 import { Params } from "./figureCanvas";
 
 /** The animated premade types this port compiles. */
-const compilers = { ...calculusFigures, ...seriesFigures, ...physicsFigures };
+const compilers = { ...calculusFigures, ...seriesFigures, ...multivariableFigures, ...physicsFigures };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
 
@@ -57,6 +58,11 @@ export const animatedGallery: PremadeFigure[] = [
   sample("slopeField", '{"f": "x-y", "solutions": [{"x": 0, "y": 1}, {"x": -2, "y": -1}]}'),
   sample("polarCurve", '{"kind": "cardioid"}'),
   sample("parametricCurve", '{"x": "sin(2*t)", "y": "sin(3*t)"}'),
+  sample("levelCurves", '{"f": "x^2-y^2", "levels": [-4, -1, 0, 1, 4]}'),
+  sample("doubleIntegralRegion", '{"lower": "x^2", "upper": "x", "a": 0, "b": 1}'),
+  sample("cylindricalSpherical", '{"system": "spherical", "r": 3, "theta": 50, "phi": 40}'),
+  sample("vectorField2D", '{"P": "-y", "Q": "x"}'),
+  sample("characteristicsPDE", '{"a": 2, "b": 1, "phi": "exp(-x^2)"}'),
   sample("motionScene", '{"x0": 0, "v0": 3, "a": 1.2, "tMax": 4}'),
   sample("verticalThrow", '{"v0": 12, "g": 9.8}'),
   sample("inclinedBlock", '{"angle": 30, "mu": 0.2}'),
