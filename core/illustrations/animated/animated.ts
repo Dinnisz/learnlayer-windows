@@ -8,6 +8,7 @@
 import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
 import { algorithmFigures } from "./algorithms";
+import { argumentFigures } from "./argument";
 import { calculusFigures } from "./calculus";
 import { flowchartFigures } from "./flowchart";
 import { heatingFigures } from "./heating";
@@ -33,6 +34,7 @@ const compilers = {
   ...loopFigures,
   ...flowchartFigures,
   ...logicFigures,
+  ...argumentFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -151,4 +153,11 @@ export const animatedGallery: PremadeFigure[] = [
   sample("truthTable", '{"law": "deMorgan1"}'),
   sample("truthTable", '{"law": "excludedMiddle"}'),
   sample("truthTable", '{"law": "contradiction"}'),
+  sample("argumentMap", '{"form": "modusPonens"}'),
+  sample("argumentMap", '{"form": "affirmingConsequent"}'),
+  sample("argumentMap", '{"form": "validButUnsound"}'),
+  sample(
+    "argumentMap",
+    '{"premises": ["p -> q", "q -> r"], "conclusion": "p -> r", "premiseTexts": ["Se estudo, aprendo.", "Se aprendo, passo."], "conclusionText": "Se estudo, passo."}',
+  ),
 ];

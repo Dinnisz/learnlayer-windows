@@ -88,6 +88,7 @@ const recompiledTypes = new Set([
   "recursionTree",
   "flowchart",
   "truthTable",
+  "argumentMap",
 ]);
 
 export class PremadeFigures {
