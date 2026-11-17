@@ -30,6 +30,8 @@ import { memoryStore } from "../memory/memory";
 import { detectTimingDiagram, timingPath, TimingDiagrams, type GreyBitmap } from "@core/timing/timing";
 import { IllustrationView } from "../figures/IllustrationView";
 import { CircuitView } from "../figures/CircuitView";
+import { SolidView } from "../figures/SolidView";
+import { solidOf } from "@core/illustrations/solid";
 import { circuitOf } from "@core/illustrations/circuit";
 import { SignTableView } from "../figures/SignTableView";
 import { SpaceFigureView } from "../figures/SpaceFigureView";
@@ -826,8 +828,11 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
     case "ready": {
       if (!session.illustration) return null;
       const circuit = circuitOf(session.illustration);
+      const solid = solidOf(session.illustration);
       return circuit ? (
         <CircuitView spec={circuit} caption={session.illustration.title || undefined} />
+      ) : solid ? (
+        <SolidView solid={solid} caption={session.illustration.title || undefined} />
       ) : (
         <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
       );

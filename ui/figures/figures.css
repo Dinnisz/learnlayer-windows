@@ -393,3 +393,18 @@
     animation-duration: 150ms;
   }
 }
+
+/* A solid in 3D: drag to turn it. */
+.solid-figure {
+  margin: 0;
+}
+
+.solid-canvas {
+  width: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.solid-canvas:active {
+  cursor: grabbing;
+}

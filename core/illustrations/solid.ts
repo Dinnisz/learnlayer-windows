@@ -355,3 +355,11 @@ export const SolidCheck = {
     return given.some((value) => Math.abs(value - measured) <= 0.02 * measured);
   },
 };
+
+/** The solid an illustration carries (premade `solid3d`), or null; the 3D view draws it from its built pieces. */
+export function solidOf(illustration: {
+  premade?: { type: string; params: Record<string, unknown> } | null;
+}): GenericSolid | null {
+  const premade = illustration.premade;
+  return premade ? GenericSolids.fromPremade(premade as PremadeFigure) : null;
+}

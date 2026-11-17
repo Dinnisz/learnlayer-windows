@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 8 fechada (fases 0–8 feitas; o que falta depende do Dinis: `PARA-O-DINIS.md`)
-- **Próximo passo:** testar a app real neste PC (Smart App Control desligado) com `LEARNLAYER_TEST_INPUT=1 npm run tauri dev` e `scripts/desktop-test/` (README). Já verificados: Alt-clique numa página web e num PDF no Brave, Esc, pílula, Capturar uma área, Explicar o texto selecionado, microfone sem pedido do WebView2 (`docs/anywhere-medicao.md`). Circuitos feitos: resolvedor, verificação e esquema 2D (`overlay.html?demo=circuit`). Sólidos: `core/illustrations/solid.ts` já tem `SafeFormula`, `GenericSolid` (premade `solid3d`) e `SolidCheck` (volume contra a resposta, eixo do enunciado), ligados ao fornecedor e à sessão. Falta o construtor das malhas (`GenericSolidBuilder`, `Figure3DGeneric.swift` l. 236–826, com os testes de geometria de `Figure3DGenericTests`; o `fromParams` do Mac só aceita sólidos que se constroem) e o desenho com three.js. Depois, pendentes no código: figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, seleção de texto no leitor. Falta experimentar com sessão iniciada (voz premium, «Explica-me», tutor por voz): precisa da conta do Dinis.
+- **Próximo passo:** testar a app real neste PC (Smart App Control desligado) com `LEARNLAYER_TEST_INPUT=1 npm run tauri dev` e `scripts/desktop-test/` (README). Já verificados: Alt-clique numa página web e num PDF no Brave, Esc, pílula, Capturar uma área, Explicar o texto selecionado, microfone sem pedido do WebView2 (`docs/anywhere-medicao.md`). Circuitos feitos: resolvedor, verificação e esquema 2D (`overlay.html?demo=circuit`). Sólidos feitos: leitura, construtor das malhas, verificação do volume e desenho com three.js (`ui/figures/SolidView.tsx`). Pendentes no código: figuras 3D fixas (`Figure3D.swift`) e montagem passo a passo pela mascote (`Figure3DSteps`), figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, seleção de texto no leitor. Falta experimentar com sessão iniciada (voz premium, «Explica-me», tutor por voz): precisa da conta do Dinis.
 - **Última atualização:** 2026-11-16
 - **Bloqueio que só o Dinis resolve:** nenhum para desenvolver. Para distribuir: assinatura (PARA-O-DINIS ponto 4) e URL e chave das atualizações (ponto 5).
 
@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-17 — Sólidos em 3D com three.js: construtor das malhas do Mac (todas as variantes, com os testes dele) e vista rodável no palco. 801 testes.
 - 2026-11-17 — Sólidos: leitura segura das fórmulas e verificação do volume contra a resposta (testes do Mac). 790 testes.
 - 2026-11-17 — Circuitos: resolvedor e verificação do Mac (com os testes dele), colocação na grelha do Mac e esquema 2D em SVG no palco. 780 testes.
 - 2026-11-17 — Testes na app real: corrigidos o «Pergunta I» do OCR, o texto estragado sem região, a seleção do leitor de PDF do Chromium (copiada, área de transferência reposta), o teclado que ficava na pílula e o pedido do microfone do WebView2. Utilitários em `scripts/desktop-test/`.

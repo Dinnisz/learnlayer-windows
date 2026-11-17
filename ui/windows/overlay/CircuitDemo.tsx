@@ -1,7 +1,16 @@
-// `overlay.html?demo=circuit` in a browser: the circuits of the Mac's tests drawn as the stage draws them.
+// `overlay.html?demo=circuit` in a browser: the circuits and the solids of the Mac's tests drawn as the stage draws them.
 
 import { CircuitSpecs, type CircuitSpec } from "@core/illustrations/circuit";
 import { CircuitView } from "../../figures/CircuitView";
+import { SolidView } from "../../figures/SolidView";
+import { GenericSolids } from "@core/illustrations/solid";
+
+/** The round 10 solids of the Mac's tests: a washer about y = −1, a shell about Oy, semicircular sections. */
+const solids: [string, object][] = [
+  ["y = x, y = x², about y = −1", { kind: "revolution", f: "x", g: "x^2", axis: "x", k: -1, a: 0, b: 1 }],
+  ["y = x² about Oy", { kind: "revolution", f: "x^2", axis: "y", a: 0, b: 2 }],
+  ["semicircles on y = ±√x", { kind: "sections", f: "sqrt(x)", g: "-sqrt(x)", a: 0, b: 4, section: "semicircle" }],
+];
 
 const netlists: [string, object][] = [
   [
@@ -56,6 +65,14 @@ export function CircuitDemo() {
       {specs.map(([name, spec]) => (
         <CircuitView key={name} spec={spec} caption={name} />
       ))}
+      {solids.map(([name, params]) => {
+        const solid = GenericSolids.fromParams(params as never);
+        return solid ? (
+          <div key={name} style={{ width: 460 }}>
+            <SolidView solid={solid} caption={name} height={280} />
+          </div>
+        ) : null;
+      })}
     </div>
   );
 }

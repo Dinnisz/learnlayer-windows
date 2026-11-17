@@ -32,7 +32,7 @@ import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./prob
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
 import { CircuitCheck, circuitOf, CircuitSpecs } from "../illustrations/circuit";
 import type { PremadeFigure } from "../illustrations/premadeFigure";
-import { GenericSolids, SolidCheck } from "../illustrations/solid";
+import { GenericSolids, SolidCheck, solidOf } from "../illustrations/solid";
 import { ComplexFigures, decodeComplexFigure } from "../illustrations/complexFigure";
 import {
   figureTopicOf,
@@ -1396,13 +1396,14 @@ ${part.label}`,
         }
         this.illustration = drawn;
         // Not drawable as asked (free-form refused, a template that doesn't compile): say so.
-        this.illustrationState = circuitOf(drawn)
-          ? "ready"
-          : drawn.elements.length === 0 || !new CompiledIllustration(drawn).isDrawable
-            ? drawn.rejected === true
-              ? "failed"
-              : "empty"
-            : "ready";
+        this.illustrationState =
+          circuitOf(drawn) || solidOf(drawn)
+            ? "ready"
+            : drawn.elements.length === 0 || !new CompiledIllustration(drawn).isDrawable
+              ? drawn.rejected === true
+                ? "failed"
+                : "empty"
+              : "ready";
         this.drawingChecked(drawn);
       })
       .catch(() => {
