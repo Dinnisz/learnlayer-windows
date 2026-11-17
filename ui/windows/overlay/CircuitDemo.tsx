@@ -6,6 +6,9 @@ import { SolidView } from "../../figures/SolidView";
 import { GenericSolids } from "@core/illustrations/solid";
 import { sweepHighlight } from "@core/illustrations/figureSteps";
 import { useState } from "react";
+import { animatedGallery } from "@core/illustrations/animated/animated";
+import { PremadeFigures } from "@core/illustrations/premadeFigure";
+import { IllustrationView } from "../../figures/IllustrationView";
 import { decodeSpaceFigure } from "@core/illustrations/spaceFigure";
 import { spaceParts } from "@core/illustrations/spaceSteps";
 import { SpaceFigureView } from "../../figures/SpaceFigureView";
@@ -128,6 +131,22 @@ export function CircuitDemo() {
                 assemble
               </button>
             ) : null}
+          </div>
+        ) : null;
+      })}
+    </div>
+  );
+}
+
+/** `overlay.html?demo=animated`: every animated premade drawn here, as the stage shows it. */
+export function AnimatedDemo() {
+  return (
+    <div className="stage" style={{ flexDirection: "column", alignItems: "center", gap: 24, overflow: "auto" }}>
+      {animatedGallery.map((figure) => {
+        const scene = new PremadeFigures(figure).compile(figure.type, "Portuguese (Portugal)");
+        return scene ? (
+          <div key={figure.type} style={{ width: 520 }} data-type={figure.type}>
+            <IllustrationView scene={scene} />
           </div>
         ) : null;
       })}

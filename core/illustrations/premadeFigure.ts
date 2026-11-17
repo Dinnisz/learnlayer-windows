@@ -1,9 +1,10 @@
 // Port of LearnLayer/Illustrations/PremadeFigure.swift, PremadeFigureKinds.swift (the kinds laid out by the templates)
 // and PremadeFigureInteractive.swift (the sliders that recompile a figure) @ ref 2026-11-04.
 //
-// The Mac also has animated premades (FigureCanvas: Ruffini, orbitals, equation steps, the calculus, physics,
-// chemistry, logic and algorithm figures) and 3D ones (SceneKit). Those types are not drawn here yet: `compile` returns
-// null for them, so the provider asks for a template instead and a figure that can't be drawn never appears.
+// The animated premades of Calculus 1 (limits, tangent, Maclaurin, Riemann, revolution, exp/log, piecewise, asymptotes,
+// sign and variation tables) are drawn by core/illustrations/animated/. The Mac's other animated kinds (series, fields,
+// algorithms, physics scenes, Ruffini, orbitals…) are not drawn here yet: `compile` returns null for them, so the
+// provider asks for a template instead and a figure that can't be drawn never appears.
 
 import { tryParseExpression, variables } from "../math/expression";
 import { formatF } from "../math/printf";
@@ -15,6 +16,7 @@ import {
   type IllustrationParameter,
 } from "./illustration";
 import { compileTemplate, parseDouble, TemplateWords, type IllustrationTemplate } from "./illustrationTemplate";
+import { compileAnimated } from "./animated/animated";
 
 export type PremadeValue = string | number | boolean | PremadeValue[] | { [key: string]: PremadeValue };
 
@@ -63,7 +65,16 @@ const slider = (name: string, label: string, value: number, min: number, max: nu
 });
 
 /** Types whose sliders recompile the figure locally (the ones this port draws). */
-const recompiledTypes = new Set(["functionGraph", "parabola", "projectile", "wave", "lens"]);
+const recompiledTypes = new Set([
+  "functionGraph",
+  "parabola",
+  "projectile",
+  "wave",
+  "lens",
+  "tangentLine",
+  "riemannSums",
+  "limitApproach",
+]);
 
 export class PremadeFigures {
   constructor(readonly figure: PremadeFigure) {}
@@ -111,7 +122,7 @@ export class PremadeFigures {
       case "statsChart":
         return this.compileStatsChart(title, language);
       default:
-        return null;
+        return compileAnimated(this.figure, title, language);
     }
   }
 

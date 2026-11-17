@@ -9,7 +9,7 @@ describe("SelectionAsk", () => {
     expect(SelectionAsk.make("", "question")).toBeNull();
     expect(SelectionAsk.make("  \n\t ", "question")).toBeNull();
     expect(SelectionAsk.make(" . , ; ", "explanation")).toBeNull();
-    expect(SelectionAsk.make("​­", "statement")).toBeNull();
+    expect(SelectionAsk.make("\u200B\u00AD", "statement")).toBeNull();
   });
 
   it("one letter or symbol is asked", () => {
@@ -25,7 +25,7 @@ describe("SelectionAsk", () => {
   });
 
   it("invisible characters and line hyphens go", () => {
-    expect(SelectionAsk.cleaned("deri­vada​")).toBe("derivada");
+    expect(SelectionAsk.cleaned("deri\u00ADvada\u200B")).toBe("derivada");
     expect(SelectionAsk.cleaned("a deriva-\nda de f")).toBe("a derivada de f");
     // A minus that ends a line of maths is kept.
     expect(SelectionAsk.cleaned("x = 3 -\n2")).toBe("x = 3 -\n2");
