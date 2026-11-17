@@ -149,3 +149,11 @@ Cada entrada: data, dúvida, escolha, porquê.
   - O gráfico que o TextHelp pode trazer aparece por baixo da resposta («Gráfico»), com o parâmetro para arrastar, como no Mac.
   - O contexto à volta da seleção vai vazio, porque a UI Automation não o dá como o `AccessibilityReader` do Mac.
   - A seleção no leitor de PDF da própria app ainda não acende a ação da pílula (`hasReaderSelection`).
+
+## 2026-11-17 — Primeiros testes na app real (Alt-clique, pílula)
+- **Cliques de teste:** o hook ignora eventos injetados, de propósito, para não reagir a programas que simulam cliques. Para testar sem pessoa, uma build de **desenvolvimento** lançada com `LEARNLAYER_TEST_INPUT=1` aceita-os. A release nunca lê esta variável (`cfg!(debug_assertions)`).
+- **Registo de diagnóstico:** uma build de desenvolvimento escreve a última leitura em `%APPDATA%\LearnLayer\anywhere-debug.json` (texto lido, linhas do OCR, decisão). A release não escreve nada (`import.meta.env.DEV`).
+- **OCR do Windows e «Pergunta 1»:** o `Windows.Media.Ocr` leu «Pergunta 1» como «Pergunta I» numa página em Times. Sem o título, a regra do cabeçalho do exame recusava a pergunta. Os títulos com palavra («Pergunta», «Questão», «Exercício»…) aceitam agora «I», «l» ou «|» como 1. O padrão do Mac é igual exceto nisto (o Vision lê bem).
+- **Texto estragado sem região:** se a UI Automation devolve texto estragado (fórmulas um símbolo por linha) e não se encontra região, recorta-se a imagem onde a UI Automation diz que o texto está, para o modelo a ler. Não se recorta quando esse sítio é a janela quase toda.
+- **Seleção que a UI Automation não dá:** o leitor de PDF do Chromium (Edge, Chrome, Brave) tem seleção mas não a expõe. A app copia-a com Ctrl+C na app da frente, lê a área de transferência e repõe o texto que lá estava. Não o faz se a área de transferência tiver uma imagem ou ficheiros, que se perderiam. O Mac lê sempre pela acessibilidade.
+- **A pílula e o teclado:** clicar na pílula pode dar-lhe o teclado. Antes de ler a seleção, a app devolve o teclado à primeira janela visível com título abaixo das do LearnLayer.
