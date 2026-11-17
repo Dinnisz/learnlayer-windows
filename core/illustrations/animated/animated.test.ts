@@ -257,6 +257,35 @@ describe("animated premade figures", () => {
     },
   );
 
+  // LogicGatesLayoutTests and aWideCircuitFitsItsPicture (PremadeFigureBatch4LogicTests.swift): a small circuit and a
+  // wide one fit, and the wide one at every stop of its slider (Batch4Check.everyStop).
+  it("small and wide gate circuits fit their picture at every stop", () => {
+    const fits = (built: Illustration | null, name: string) => {
+      expect(built, `${name} did not compile`).not.toBeNull();
+      if (!built) return;
+      for (const time of times(built)) {
+        expect(boundsProblems(built, time).slice(0, 3), name).toEqual([]);
+        expect(overlapProblems(built, time).slice(0, 3), name).toEqual([]);
+      }
+    };
+    fits(compile(sample("logicGates", '{"expression": "a & b", "inputs": 3}')), "small");
+    const wide = sample("logicGates", '{"expression": "((p & q) | r) & !(p ⊕ r)", "inputs": 6}');
+    const built = compile(wide);
+    fits(built, "wide");
+    for (const parameter of built?.parameters ?? []) {
+      const span = Math.round(parameter.max - parameter.min);
+      const stops =
+        span <= 8
+          ? Array.from({ length: Math.max(span, 0) + 1 }, (_, i) => parameter.min + i)
+          : Array.from({ length: 8 }, (_, i) => Math.round(parameter.min + (span * i) / 7));
+      for (const value of stops)
+        fits(
+          compile(new PremadeFigures(wide).mergingParameters({ [parameter.name]: value })),
+          `${parameter.name} = ${value}`,
+        );
+    }
+  });
+
   it("English figures keep their decimal point", () => {
     const text = finalLabels(scene("riemannSums", '{"f": "x^2", "a": 0, "b": 2, "n": 6}', "English")).join(" ");
     expect(text).toContain("2.04");
