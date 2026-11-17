@@ -228,7 +228,8 @@ describe("animated premade figures", () => {
   it("unknown or invalid params fall back", () => {
     expect(compile({ type: "hypercube", params: {} }, "English")).toBeNull();
     for (const type of animatedTypes) {
-      if (type === "expLog") continue;
+      // As on the Mac: these two have defaults for every param.
+      if (type === "expLog" || type === "complexityChart") continue;
       expect(compile({ type, params: { nonsense: "?" } }, "English"), `${type} accepted empty params`).toBeNull();
     }
     expect(compile(sample("riemannSums", '{"f": "x +* 2", "a": 0, "b": 1}'), "English")).toBeNull();

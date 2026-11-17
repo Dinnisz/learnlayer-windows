@@ -1,9 +1,9 @@
 // Port of PremadeFigure.compileAnimated (LearnLayer/Illustrations/PremadeFigureAnimated.swift) and the gallery of
 // PremadeFigureAnimatedGallery.swift @ ref 2026-11-04, for the animated kinds this port draws so far (Calculus 1;
 // series, slope fields, polar and parametric curves; multivariable; sorting, search, lists, stacks, queues and hash
-// tables; the physics scenes). The other kinds the Mac offers (trees, heaps, graphs, the complexity chart and the Batch
-// figures) return null here, so the provider asks for a template instead and a figure that can't be drawn never
-// appears.
+// tables; trees, heaps, graphs and growth rates; the physics scenes). The other kinds the Mac offers (the Batch
+// figures: optics, chemistry, logic…) return null here, so the provider asks for a template instead and a figure
+// that can't be drawn never appears.
 
 import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
@@ -12,6 +12,7 @@ import { calculusFigures } from "./calculus";
 import { multivariableFigures } from "./multivariable";
 import { physicsFigures } from "./physics";
 import { seriesFigures } from "./series";
+import { structureFigures } from "./structures";
 import { Params } from "./figureCanvas";
 
 /** The animated premade types this port compiles. */
@@ -20,6 +21,7 @@ const compilers = {
   ...seriesFigures,
   ...multivariableFigures,
   ...algorithmFigures,
+  ...structureFigures,
   ...physicsFigures,
 };
 
@@ -85,6 +87,23 @@ export const animatedGallery: PremadeFigure[] = [
     '{"kind": "queue", "operations": ["enqueue 3", "enqueue 8", "enqueue 5", "dequeue", "enqueue 1"]}',
   ),
   sample("hashTable", '{"size": 5, "keys": [12, 7, 22, 3, 17, 8]}'),
+  sample("binaryTree", '{"values": [5, 3, 8, 1, 4, 7, 9]}'),
+  sample("binaryTree", '{"values": [5, 3, 8, 1, 4, 7, 9], "traversal": "inorder"}'),
+  sample("heap", '{"values": [7, 3, 9, 1, 5], "kind": "min", "extract": true}'),
+  sample("heap", '{"values": [4, 10, 3, 8, 6, 9], "kind": "max"}'),
+  sample(
+    "graph",
+    '{"nodes": ["A", "B", "C", "D", "E"], "algorithm": "bfs", "source": "A", "edges": [{"from": "A", "to": "B"}, {"from": "A", "to": "C"}, {"from": "B", "to": "D"}, {"from": "C", "to": "D"}, {"from": "D", "to": "E"}]}',
+  ),
+  sample(
+    "graph",
+    '{"nodes": ["A", "B", "C", "D", "E"], "algorithm": "dfs", "source": "A", "edges": [{"from": "A", "to": "B"}, {"from": "A", "to": "C"}, {"from": "B", "to": "D"}, {"from": "C", "to": "D"}, {"from": "D", "to": "E"}]}',
+  ),
+  sample(
+    "graph",
+    '{"nodes": ["A", "B", "C", "D", "E"], "algorithm": "dijkstra", "source": "A", "edges": [{"from": "A", "to": "B", "weight": 4}, {"from": "A", "to": "C", "weight": 1}, {"from": "C", "to": "B", "weight": 2}, {"from": "B", "to": "D", "weight": 1}, {"from": "C", "to": "D", "weight": 5}, {"from": "D", "to": "E", "weight": 3}]}',
+  ),
+  sample("complexityChart", "{}"),
   sample("motionScene", '{"x0": 0, "v0": 3, "a": 1.2, "tMax": 4}'),
   sample("verticalThrow", '{"v0": 12, "g": 9.8}'),
   sample("inclinedBlock", '{"angle": 30, "mu": 0.2}'),
