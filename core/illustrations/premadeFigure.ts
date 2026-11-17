@@ -74,6 +74,7 @@ const recompiledTypes = new Set([
   "tangentLine",
   "riemannSums",
   "limitApproach",
+  "seriesPartialSums",
 ]);
 
 export class PremadeFigures {

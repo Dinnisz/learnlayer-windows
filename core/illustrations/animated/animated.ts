@@ -1,19 +1,23 @@
 // Port of PremadeFigure.compileAnimated (LearnLayer/Illustrations/PremadeFigureAnimated.swift) and the gallery of
-// PremadeFigureAnimatedGallery.swift @ ref 2026-11-04, for the animated kinds this port draws so far (Calculus 1). The
-// other kinds the Mac offers (series, fields, curves in 2D and 3D, algorithms, physics scenes) return null here, so the
-// provider asks for a template instead and a figure that can't be drawn never appears.
+// PremadeFigureAnimatedGallery.swift @ ref 2026-11-04, for the animated kinds this port draws so far (Calculus 1, and
+// series, slope fields, polar and parametric curves). The other kinds the Mac offers (multivariable, algorithms, data
+// structures, physics scenes) return null here, so the provider asks for a template instead and a figure that can't be
+// drawn never appears.
 
 import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
 import { calculusFigures } from "./calculus";
+import { seriesFigures } from "./series";
 import { Params } from "./figureCanvas";
 
 /** The animated premade types this port compiles. */
-export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(calculusFigures));
+const compilers = { ...calculusFigures, ...seriesFigures };
+
+export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
 
 /** The animated figure, or null for a kind not drawn here or invalid params. */
 export function compileAnimated(figure: PremadeFigure, title: string, language: string): Illustration | null {
-  const compiler = calculusFigures[figure.type];
+  const compiler = compilers[figure.type];
   if (!compiler) return null;
   const scene = compiler(new Params(figure), title, language);
   // A figure the renderer could not draw is not offered: free-form runs instead.
@@ -48,4 +52,8 @@ export const animatedGallery: PremadeFigure[] = [
   ),
   sample("rationalAsymptotes", '{"numerator": "x^2+1", "denominator": "x-1", "xMin": -5, "xMax": 7}'),
   sample("expLog", '{"base": 2}'),
+  sample("seriesPartialSums", '{"kind": "geometric", "ratio": 0.5, "count": 10}'),
+  sample("slopeField", '{"f": "x-y", "solutions": [{"x": 0, "y": 1}, {"x": -2, "y": -1}]}'),
+  sample("polarCurve", '{"kind": "cardioid"}'),
+  sample("parametricCurve", '{"x": "sin(2*t)", "y": "sin(3*t)"}'),
 ];
