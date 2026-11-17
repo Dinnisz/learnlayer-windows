@@ -8,6 +8,7 @@ import * as THREE from "three";
 import type { BuiltSolid, GenericPiece } from "@core/illustrations/solidBuilder";
 import { GenericSolidBuilder } from "@core/illustrations/solidBuilder";
 import type { GenericSolid } from "@core/illustrations/solid";
+import { solidPartOpacity, sweepOpacity, sweepSeconds, type StepFigureHooks } from "@core/illustrations/figureSteps";
 import "./figures.css";
 
 const accent = 0x0a84ff;
@@ -91,21 +92,32 @@ export function SolidView({
   caption,
   height = 300,
   highlight = null,
+  assembleStep = null,
 }: {
   solid: GenericSolid;
   caption?: string;
   height?: number;
-  /** The part the step in focus works with (Figure3DSteps): it stands out, the others dim. */
+  /** The parts the step in focus works with (Figure3DSteps, or the card's figureHighlight): they stand out, the others
+   * dim; "sweep" sends the slice along [a, b]. */
   highlight?: string | null;
+  /** How many parts are shown, in assembly order (the card's assembleStep); null shows them all. */
+  assembleStep?: number | null;
 }) {
   const holder = useRef<HTMLDivElement>(null);
-  const figureRef = useRef<THREE.Group | null>(null);
-  /** When the slice started travelling along [a, b] (the step that writes the volume's integral), else null. */
-  const sweepStart = useRef<number | null>(null);
+  /** The step's hooks and when they changed (the slice travels from then; set on mount by the effect below). */
+  const hooks = useRef<{ value: StepFigureHooks; since: number }>({
+    value: { highlight, assembleStep },
+    since: 0,
+  });
+  useEffect(() => {
+    hooks.current = { value: { highlight, assembleStep }, since: performance.now() };
+  }, [highlight, assembleStep]);
+
   useEffect(() => {
     const element = holder.current;
     const built = GenericSolidBuilder.build(solid);
     if (!element || !built) return;
+    const order = GenericSolidBuilder.order(built);
     const width = element.clientWidth || 420;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -113,9 +125,9 @@ export function SolidView({
     element.appendChild(renderer.domElement);
     const sceneRoot = new THREE.Scene();
     const figure = new THREE.Group();
-    for (const object of objects(built)) figure.add(object);
+    const parts = objects(built);
+    for (const object of parts) figure.add(object);
     sceneRoot.add(figure);
-    figureRef.current = figure;
     sceneRoot.add(new THREE.AmbientLight(0xffffff, 1.4));
     const light = new THREE.DirectionalLight(0xffffff, 1.6);
     light.position.set(3, 5, 6);
@@ -131,29 +143,50 @@ export function SolidView({
     let last = { x: 0, y: 0 };
     let frame = 0;
     let idle = 0;
-    const slices = figure.children.filter((object) => object.name === GenericSolidBuilder.sweep);
-    const sweepMs = 2400;
-    const draw = () => {
-      // The slice travels from a to b, then rests at b; with reduced motion it stands halfway.
-      const started = sweepStart.current;
-      if (slices.length > 0) {
-        const shown =
-          started === null
-            ? -1
-            : reduced
-              ? Math.floor(slices.length / 2)
-              : Math.min(slices.length - 1, Math.floor(((performance.now() - started) / sweepMs) * slices.length));
-        slices.forEach((slice, index) => {
-          slice.visible = index === shown;
-        });
+    let previous = performance.now();
+    const named = parts.filter((object) => object.name !== "");
+    const slices = named.filter((object) => object.name === GenericSolidBuilder.sweep);
+    // Each part's share of its drawn opacity, eased toward the step's (0.35 s; at once with reduced motion).
+    const shown = new Map<THREE.Object3D, number>(named.map((object) => [object, slices.includes(object) ? 0 : 1]));
+    const paint = (object: THREE.Object3D, share: number) => {
+      const material = (object as THREE.Mesh).material as THREE.Material & { opacity: number };
+      material.transparent = true;
+      material.opacity = ((object.userData.opacity as number | undefined) ?? 1) * share;
+      object.visible = share > 0.01;
+    };
+    const draw = (now: number) => {
+      const { value, since } = hooks.current;
+      const elapsed = (now - since) / 1000;
+      const ease = reduced ? 1 : Math.min(1, (now - previous) / 350);
+      previous = now;
+      for (const object of named) {
+        let target = solidPartOpacity(object.name, order, value);
+        if (target === null) {
+          if (object.name === GenericSolidBuilder.sweep) {
+            // The slice's own timing; it is painted as computed, not eased.
+            const share = sweepOpacity(slices.indexOf(object), slices.length, elapsed, reduced);
+            shown.set(object, share);
+            paint(object, share);
+            continue;
+          }
+          // The solid fills in behind the travelling slice.
+          target = reduced ? 1 : 0.15 + 0.85 * Math.min(1, elapsed / sweepSeconds);
+          shown.set(object, target);
+          paint(object, target);
+          continue;
+        }
+        const current = shown.get(object) ?? 1;
+        const next = current + (target - current) * ease;
+        shown.set(object, next);
+        paint(object, next);
       }
       figure.rotation.set(pitch, yaw, 0);
       renderer.render(sceneRoot, camera);
     };
-    const tick = () => {
+    const tick = (now: number) => {
       // It turns slowly by itself until the student takes it.
       if (!dragging && !reduced && idle < 1) yaw += 0.003;
-      draw();
+      draw(now);
       frame = requestAnimationFrame(tick);
     };
     const down = (event: PointerEvent) => {
@@ -190,22 +223,6 @@ export function SolidView({
       element.removeChild(renderer.domElement);
     };
   }, [solid, height]);
-
-  // The parts in focus stand out; the others dim (opacity only, the scene is not rebuilt).
-  useEffect(() => {
-    const lit = new Set(highlight ? highlight.split(",") : []);
-    sweepStart.current = lit.has(GenericSolidBuilder.sweep) ? performance.now() : null;
-    figureRef.current?.traverse((object) => {
-      if (!(object instanceof THREE.Mesh || object instanceof THREE.Line)) return;
-      const base = (object.userData.opacity as number | undefined) ?? 1;
-      const material = object.material as THREE.Material & { opacity: number };
-      material.transparent = true;
-      material.opacity =
-        lit.size === 0 || !object.name ? base : lit.has(object.name) ? Math.min(1, base * 1.6) : base * 0.3;
-      material.needsUpdate = true;
-      if (object.name === GenericSolidBuilder.sweep) object.visible = false;
-    });
-  }, [highlight, solid, height]);
 
   return (
     <figure className="solid-figure">

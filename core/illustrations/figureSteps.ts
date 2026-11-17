@@ -179,3 +179,80 @@ export function solidStepPlan(solid: GenericSolid, steps: readonly PlanStep[]): 
     return Figure3DSteps.solidPart(`${step.formula} ${step.words}`, order);
   });
 }
+
+/** What a step asks of a figure built in parts. */
+export interface StepFigureHooks {
+  /** The parts that stand out: resistors joined ("R1,R2"), a solid's part ("section"), the slice sent along. */
+  highlight: string | null;
+  /** How many of the parts are shown, in assembly order; null shows them all. */
+  assembleStep: number | null;
+}
+
+/**
+ * Port of QuestionSession.stepFigureHooks: the card's own figureHighlight and assembleStep; when the card names no
+ * highlight, what the step itself does to the figure (`plan`, from Figure3DSteps), only on a step where it changes, so
+ * the others leave the figure in its place.
+ */
+export function stepFigureHooks(
+  plan: readonly (string | null)[],
+  cards: readonly { figureHighlight?: string | null; assembleStep?: number | null }[],
+  step: number,
+): StepFigureHooks {
+  const card = cards[step];
+  if (!card) return { highlight: null, assembleStep: null };
+  const here = plan[step] ?? null;
+  const before = step > 0 ? (plan[step - 1] ?? null) : null;
+  const derived = step < plan.length && here !== before ? here : null;
+  return { highlight: card.figureHighlight ?? derived, assembleStep: card.assembleStep ?? null };
+}
+
+/** For each step, the circuit's plan as the highlight text the figure reads ("R1,R2,R3"). */
+export function circuitHighlightPlan(spec: CircuitSpec, steps: readonly PlanStep[]): (string | null)[] {
+  return circuitStepPlan(spec, steps).map((ids) => (ids ? ids.join(",") : null));
+}
+
+/** How long the slice takes to travel [a, b], in seconds (Figure3DGeneric.playSweep). */
+export const sweepSeconds = 1.8;
+
+/**
+ * Port of GenericFigure3DController.playSweep: the opacity of travelling slice `index` of `count`, `elapsed` seconds
+ * after the step that writes the integral opened. One exact slice after another fades in and out from a to b, the last
+ * one stays; with reduced motion, three slices stand in place (first, middle, last).
+ */
+export function sweepOpacity(index: number, count: number, elapsed: number, reduced: boolean): number {
+  if (count <= 0 || index < 0 || index >= count) return 0;
+  if (reduced) return [0, Math.floor(count / 2), count - 1].includes(index) ? 0.8 : 0;
+  const step = sweepSeconds / count;
+  let t = elapsed - step * index;
+  if (t < 0) return 0;
+  const fadeIn = step * 0.4;
+  if (t < fadeIn) return (0.9 * t) / fadeIn;
+  if (index === count - 1) return 0.9;
+  t -= fadeIn;
+  const hold = step * 0.6;
+  if (t < hold) return 0.9;
+  t -= hold;
+  const fadeOut = step * 0.6;
+  return t < fadeOut ? 0.9 * (1 - t / fadeOut) : 0;
+}
+
+/**
+ * Port of GenericFigure3DController.apply: for a named part of the solid, how opaque it is (0 hidden, 1 as drawn, 0.3
+ * dimmed) under a step's hooks. `assembleStep` shows the first parts of `order`; the highlight names parts (through the
+ * aliases, "curve,section" names two) and the others dim. Null for the travelling slice (`sweepOpacity`) and for the
+ * solid's surface while it fills in behind the slice.
+ */
+export function solidPartOpacity(name: string, order: readonly string[], hooks: StepFigureHooks | null): number | null {
+  const ids = CircuitMerges.ids(hooks?.highlight);
+  const sweeping = ids.includes(GenericSolidBuilder.sweep);
+  if (name === GenericSolidBuilder.sweep || (sweeping && name === "surface")) return null;
+  const count = Math.min(Math.max(hooks?.assembleStep ?? order.length, 1), order.length);
+  const visible = new Set(order.slice(0, count));
+  const part = (id: string) => {
+    const key = GenericSolidBuilder.aliases[id] ?? id;
+    return order.includes(key) ? key : null;
+  };
+  const highlighted = new Set(ids.map(part).filter((id): id is string => id !== null && visible.has(id)));
+  if (!visible.has(name)) return 0;
+  return highlighted.size === 0 || highlighted.has(name) ? 1 : 0.3;
+}

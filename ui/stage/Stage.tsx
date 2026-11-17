@@ -32,8 +32,8 @@ import { IllustrationView } from "../figures/IllustrationView";
 import { CircuitView } from "../figures/CircuitView";
 import { SolidView } from "../figures/SolidView";
 import { solidOf } from "@core/illustrations/solid";
-import { circuitStepPlan, solidStepPlan } from "@core/illustrations/figureSteps";
-import { circuitOf } from "@core/illustrations/circuit";
+import { circuitHighlightPlan, solidStepPlan } from "@core/illustrations/figureSteps";
+import { circuitOf, CircuitMerges } from "@core/illustrations/circuit";
 import { SignTableView } from "../figures/SignTableView";
 import { SpaceFigureView } from "../figures/SpaceFigureView";
 import { StatementQuotes } from "@core/problems/statementQuotes";
@@ -831,17 +831,31 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
       const circuit = circuitOf(session.illustration);
       const solid = solidOf(session.illustration);
       // The step in focus drives the figure (Figure3DSteps): the resistors it joins, the solid's part it names.
-      const steps = (session.part?.cards ?? []).map((card) => ({
+      const cards = session.part?.cards ?? [];
+      const steps = cards.map((card) => ({
         formula: card.latex,
         words: `${card.title} ${card.note ?? ""}`,
       }));
+      // A clicked step keeps what it does to the figure even when the step before did the same (unlike the mascot's
+      // walk through the steps, `stepFigureHooks`); the card's own figureHighlight and assembleStep come first.
       const step = session.selectedStep;
-      const circuitLit = circuit && step !== null ? (circuitStepPlan(circuit, steps)[step] ?? null) : null;
-      const solidLit = solid && step !== null ? (solidStepPlan(solid, steps)[step] ?? null) : null;
+      const card = step !== null ? cards[step] : undefined;
+      const plan = circuit ? circuitHighlightPlan(circuit, steps) : solid ? solidStepPlan(solid, steps) : [];
+      const lit = step !== null && card ? (card.figureHighlight ?? plan[step] ?? null) : null;
+      const assembleStep = card?.assembleStep ?? null;
       return circuit ? (
-        <CircuitView spec={circuit} caption={session.illustration.title || undefined} highlight={circuitLit} />
+        <CircuitView
+          spec={circuit}
+          caption={session.illustration.title || undefined}
+          highlight={lit ? CircuitMerges.ids(lit) : null}
+        />
       ) : solid ? (
-        <SolidView solid={solid} caption={session.illustration.title || undefined} highlight={solidLit} />
+        <SolidView
+          solid={solid}
+          caption={session.illustration.title || undefined}
+          highlight={lit}
+          assembleStep={assembleStep}
+        />
       ) : (
         <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
       );

@@ -3,7 +3,14 @@
 
 import { describe, expect, it } from "vitest";
 import { CircuitSpecs, type CircuitSpec } from "./circuit";
-import { CircuitReduction, Figure3DSteps, solidStepPlan } from "./figureSteps";
+import {
+  CircuitReduction,
+  Figure3DSteps,
+  solidPartOpacity,
+  solidStepPlan,
+  stepFigureHooks,
+  sweepOpacity,
+} from "./figureSteps";
 import { LatexIntegrals } from "./latexIntegral";
 import { GenericSolids, solidOf } from "./solid";
 
@@ -61,6 +68,46 @@ describe("Figure3DSteps", () => {
     expect(CircuitReduction.values("\\frac{21}{13} = 1{,}6").some((value) => Math.abs(value - 21 / 13) < 1e-9)).toBe(
       true,
     );
+  });
+
+  it("a card's own figure hooks come first; a derived highlight only where the plan changes", () => {
+    const plan = ["R2,R3", "R2,R3", null, "R1,R2,R3"];
+    const cards = [
+      { figureHighlight: null, assembleStep: null },
+      { figureHighlight: null, assembleStep: 2 },
+      { figureHighlight: "R4", assembleStep: null },
+      { figureHighlight: null, assembleStep: null },
+    ];
+    expect(stepFigureHooks(plan, cards, 0)).toEqual({ highlight: "R2,R3", assembleStep: null });
+    expect(stepFigureHooks(plan, cards, 1)).toEqual({ highlight: null, assembleStep: 2 });
+    expect(stepFigureHooks(plan, cards, 2)).toEqual({ highlight: "R4", assembleStep: null });
+    expect(stepFigureHooks(plan, cards, 3)).toEqual({ highlight: "R1,R2,R3", assembleStep: null });
+    expect(stepFigureHooks(plan, cards, 9)).toEqual({ highlight: null, assembleStep: null });
+  });
+
+  it("the slice travels one slice after another and the last one stays", () => {
+    // Four slices over 1.8 s: 0.45 s each, fading in for 0.18 s.
+    expect(sweepOpacity(0, 4, 0, false)).toBe(0);
+    expect(sweepOpacity(0, 4, 0.2, false)).toBeCloseTo(0.9);
+    expect(sweepOpacity(1, 4, 0.2, false)).toBe(0);
+    expect(sweepOpacity(0, 4, 1.5, false)).toBe(0);
+    expect(sweepOpacity(3, 4, 10, false)).toBeCloseTo(0.9);
+    expect([0, 1, 2, 3].map((index) => sweepOpacity(index, 4, 99, true))).toEqual([0.8, 0, 0.8, 0.8]);
+  });
+
+  it("a step shows the parts assembled so far and dims the ones it doesn't name", () => {
+    const order = ["region", "curve", "axis", "surface", "section"];
+    expect(solidPartOpacity("surface", order, null)).toBe(1);
+    const two = { highlight: null, assembleStep: 2 };
+    expect(order.map((name) => solidPartOpacity(name, order, two))).toEqual([1, 1, 0, 0, 0]);
+    const washer = { highlight: "washer,f", assembleStep: null };
+    expect(order.map((name) => solidPartOpacity(name, order, washer))).toEqual([0.3, 1, 0.3, 0.3, 1]);
+    // A part not shown yet is not lit; with none left lit, everything shown is as drawn.
+    expect(solidPartOpacity("region", order, { highlight: "section", assembleStep: 1 })).toBe(1);
+    const sweep = { highlight: "sweep,section", assembleStep: null };
+    expect(solidPartOpacity("surface", order, sweep)).toBeNull();
+    expect(solidPartOpacity("section", order, sweep)).toBe(1);
+    expect(solidPartOpacity("curve", order, sweep)).toBe(0.3);
   });
 
   it("a solid's step lights the part it works with", () => {

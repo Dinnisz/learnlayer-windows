@@ -59,6 +59,7 @@ const netlists: [string, object][] = [
 
 export function CircuitDemo() {
   const [sweep, setSweep] = useState(0);
+  const [assemble, setAssemble] = useState(0);
   const specs = netlists.flatMap(([name, params]): [string, CircuitSpec][] => {
     const spec = CircuitSpecs.fromPremade({ type: CircuitSpecs.generic, params: params as never });
     return spec ? [[name, spec]] : [];
@@ -78,10 +79,15 @@ export function CircuitDemo() {
               caption={name}
               height={280}
               highlight={index === 0 ? (sweep % 2 === 0 ? sweepHighlight : null) : null}
+              assembleStep={index === 1 && assemble > 0 ? assemble : null}
             />
             {index === 0 ? (
               <button type="button" onClick={() => setSweep((n) => n + 1)}>
                 sweep
+              </button>
+            ) : index === 1 ? (
+              <button type="button" onClick={() => setAssemble((n) => (n + 1) % 7)}>
+                assemble
               </button>
             ) : null}
           </div>
