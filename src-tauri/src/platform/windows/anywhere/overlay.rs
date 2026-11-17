@@ -38,7 +38,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     if let Ok(handle) = window.hwnd() {
         // SAFETY: the live top-level window just made, on its own thread: kept out of Alt-Tab.
         unsafe {
-            let hwnd = HWND(handle.0 as *mut c_void);
+            let hwnd = HWND(handle.0);
             let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
             SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_TOOLWINDOW.0 as isize);
         }
@@ -49,10 +49,6 @@ pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 
 fn window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(LABEL)
-}
-
-pub fn is_visible(app: &AppHandle) -> bool {
-    window(app).and_then(|window| window.is_visible().ok()).unwrap_or(false)
 }
 
 /// Out of the way while the app below is read: the point (and its picture) must be that app's.
@@ -84,7 +80,7 @@ pub fn set_interactive(app: &AppHandle, interactive: bool) {
         // SAFETY: reads which window has the keyboard now.
         let previous = unsafe { GetForegroundWindow() };
         if let Ok(own) = window.hwnd() {
-            if previous.0 != own.0 as *mut c_void {
+            if !std::ptr::eq(previous.0, own.0) {
                 PREVIOUS.store(previous.0 as isize, Ordering::SeqCst);
             }
         }

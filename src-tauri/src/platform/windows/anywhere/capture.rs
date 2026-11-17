@@ -29,7 +29,6 @@ pub struct TargetWindow {
     pub handle: isize,
     /// Physical pixels, global: the window as drawn (no invisible resize border).
     pub frame: RECT,
-    pub process_id: u32,
     /// The executable's file name ("msedge.exe"), for the exclusions and the log.
     pub executable: String,
     pub title: String,
@@ -72,7 +71,6 @@ pub fn window_at(point: POINT, skip: isize) -> Option<TargetWindow> {
         Some(TargetWindow {
             handle: root.0 as isize,
             frame,
-            process_id,
             executable: executable_name(process_id).unwrap_or_default(),
             title: String::from_utf16_lossy(&title[..length]),
         })

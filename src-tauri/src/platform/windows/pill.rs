@@ -46,7 +46,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 /// the pointer only passes over the pill.
 fn keep_out_of_alt_tab(window: &WebviewWindow) {
     let Ok(hwnd) = window.hwnd() else { return };
-    let handle = hwnd.0 as *mut c_void;
+    let handle = hwnd.0;
     // SAFETY: `handle` is the live top-level window Tauri just created, on the thread that owns it.
     unsafe {
         let style = GetWindowLongPtrW(handle, GWL_EXSTYLE);

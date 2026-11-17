@@ -144,10 +144,6 @@ pub fn set_enabled(enabled: bool) {
     ENABLED.store(enabled, Ordering::SeqCst);
 }
 
-pub fn is_enabled() -> bool {
-    ENABLED.load(Ordering::SeqCst)
-}
-
 /// While the stage is open, Esc is the stage's, whichever app has the keyboard.
 pub fn set_intercepts_escape(intercepts: bool) {
     INTERCEPTS_ESCAPE.store(intercepts, Ordering::SeqCst);
@@ -349,7 +345,8 @@ pub fn start(sender: Sender<HookEvent>) -> Result<(), String> {
         .map_err(|_| "the hook thread did not start".to_string())?
 }
 
-/// Ends the hook thread, which takes its hooks off.
+/// Ends the hook thread, which takes its hooks off. Not called yet: the hooks go with the process when it quits.
+#[allow(dead_code)]
 pub fn stop() {
     let thread = HOOK_THREAD.load(Ordering::SeqCst);
     if thread != 0 {
