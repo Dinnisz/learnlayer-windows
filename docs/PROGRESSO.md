@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 8 fechada (fases 0–8 feitas; o que falta depende do Dinis: `PARA-O-DINIS.md`)
-- **Próximo passo:** o código está em https://github.com/Dinnisz/learnlayer-windows (privado), mas o CI está parado porque os minutos grátis do GitHub de novembro acabaram (sem custos: PARA-O-DINIS, ponto 1). A partir de 1 de dezembro de 2026: `gh run rerun 43910966786 --repo Dinnisz/learnlayer-windows` (o `gh` está em `C:\Program Files\GitHub CLI\gh.exe`, com a sessão do Dinis), ler os erros com `gh run view --log-failed`, `cargo fmt`, `clippy` e `cargo test`, corrigir o que o compilador apontar no Rust escrito à mão, gerar o instalador (`scripts/build-installer.ps1`) e fazer as verificações dos pontos 6–10. Sem isso, os pendentes que não dependem dele: 3D com three.js, figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, e a seleção no leitor (o leitor desenha as páginas em canvas, sem camada de texto) a acender «Explicar o texto selecionado» na pílula.
+- **Próximo passo:** o código está em https://github.com/Dinnisz/learnlayer-windows (público desde 17/11, por isso o CI é grátis). A seguir: `gh run rerun 43910966786 --repo Dinnisz/learnlayer-windows` (o `gh` está em `C:\Program Files\GitHub CLI\gh.exe`, com a sessão do Dinis), ler os erros com `gh run view --log-failed`, `cargo fmt`, `clippy` e `cargo test`, corrigir o que o compilador apontar no Rust escrito à mão, gerar o instalador (`scripts/build-installer.ps1`) e fazer as verificações dos pontos 6–10. Sem isso, os pendentes que não dependem dele: 3D com three.js, figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, e a seleção no leitor (o leitor desenha as páginas em canvas, sem camada de texto) a acender «Explicar o texto selecionado» na pílula.
 - **Última atualização:** 2026-11-16
 - **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
 
@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-17 — O Dinis tornou o repositório público, o que deixa o CI grátis. Push das notas e nova corrida do CI.
 - 2026-11-16 — GitHub CLI instalado (`winget install GitHub.cli`). O Dinis entrou na conta Dinnisz e autorizou o push. Repositório privado `learnlayer-windows` criado e `main` enviado. O primeiro CI não arrancou por falta de faturação no GitHub.
 - 2026-11-16 — Depois da fase 8: as ações da pílula passaram a funcionar. «Perguntar sobre este exercício» e as sugestões chegam ao palco, «Silenciar» também. «Capturar uma área» congela o monitor e deixa arrastar um retângulo; «Explicar texto selecionado» lê a app à frente. O texto selecionado abre uma passagem própria (`SelectionSession`). 762 testes.
 - 2026-11-16 — Fase 8 fechada: sincronização cifrada da memória no formato do Mac (WebCrypto, testes do Mac e o vetor do RFC 7748), memória fundida entre janelas, «Abrir com o Windows», atualizações com «Reiniciar para atualizar», `scripts/build-installer.ps1` e trabalho do CI. O instalador não sai nesta máquina (o SAC bloqueia a compilação e agora também o `rustfmt`). 759 testes.

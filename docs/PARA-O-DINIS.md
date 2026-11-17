@@ -34,7 +34,7 @@ Quando uma destas estiver feita, diz «continua» e eu retomo a parte nativa a p
 - O repositório privado [Dinnisz/learnlayer-windows](https://github.com/Dinnisz/learnlayer-windows) já existe e tem o `main`. Criei-o com o GitHub CLI depois de entrares na conta e de autorizares o push.
 - O CI não arrancou. O GitHub recusou os trabalhos com «recent account payments have failed or your spending limit needs to be increased».
 - **Causa (vista na página de faturação):** não há pagamento em falta. A conta é GitHub Free e os minutos grátis de novembro já se gastaram (12,46 USD de uso, quase todo do repositório do Mac, «LearnLayer»). Com o limite de gastos a 0 USD, o GitHub para os trabalhos em vez de cobrar.
-- **Decisão: não pagar.** Os minutos grátis recomeçam a **1 de dezembro de 2026**. Nesse dia diz «continua»: volto a correr o CI (`gh run rerun`), corrijo o Rust e trago o instalador para `dist/`. Os trabalhos do repositório do Mac gastam da mesma quota.
+- **Decisão: não pagar.** A 17/11 o Dinis tornou o repositório **público**, e o Actions é grátis e sem limite em repositórios públicos. O CI corre a cada push.
 
 ### 1b. Identidade dos commits
 Os commits estão com `Dinis Santos <dinis@learnlayer.invalid>` (só na configuração local deste repositório), para não pôr um e-mail verdadeiro no histórico sem tu decidires. Antes do primeiro push: `git config user.email "o-teu@email"` e, se quiseres corrigir os commits antigos, `git rebase -r --root --exec "git commit --amend --no-edit --reset-author"`.
