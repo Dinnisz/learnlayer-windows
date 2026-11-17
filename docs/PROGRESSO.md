@@ -5,7 +5,7 @@
 ## Estado atual
 
 - **Fase atual:** 8 fechada (fases 0–8 feitas; o que falta depende do Dinis: `PARA-O-DINIS.md`)
-- **Próximo passo:** testar a app real neste PC (Smart App Control desligado) com `LEARNLAYER_TEST_INPUT=1 npm run tauri dev` e `scripts/desktop-test/` (README). Já verificados: Alt-clique numa página web e num PDF no Brave, Esc, pílula, Capturar uma área, Explicar o texto selecionado, microfone sem pedido do WebView2 (`docs/anywhere-medicao.md`). Circuitos feitos: resolvedor, verificação e esquema 2D (`overlay.html?demo=circuit`). Sólidos feitos: leitura, construtor das malhas, verificação do volume e desenho com three.js (`ui/figures/SolidView.tsx`). Figuras 3D fixas do Mac também (desenhadas como sólidos genéricos). Pendentes no código: montagem passo a passo e realce das partes pela mascote (`Figure3DSteps.swift` com `Figure3DStepsTests`, `GenericFigure3DController`), a fatia que percorre o intervalo, figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, seleção de texto no leitor. Falta experimentar com sessão iniciada (voz premium, «Explica-me», tutor por voz): precisa da conta do Dinis.
+- **Próximo passo:** testar a app real neste PC (Smart App Control desligado) com `LEARNLAYER_TEST_INPUT=1 npm run tauri dev` e `scripts/desktop-test/` (README). Já verificados: Alt-clique numa página web e num PDF no Brave, Esc, pílula, Capturar uma área, Explicar o texto selecionado, microfone sem pedido do WebView2 (`docs/anywhere-medicao.md`). Circuitos feitos: resolvedor, verificação e esquema 2D (`overlay.html?demo=circuit`). Sólidos feitos: leitura, construtor das malhas, verificação do volume e desenho com three.js (`ui/figures/SolidView.tsx`). Figuras 3D fixas do Mac também (desenhadas como sólidos genéricos). O passo em foco já comanda a figura (resistências juntas e equivalente; parte do sólido realçada; `core/illustrations/figureSteps.ts`). Pendentes no código: a fatia que percorre o intervalo no passo do integral (`LatexIntegral`), a montagem peça a peça (`assembleStep`), as partes de uma figura do espaço, figuras pré-feitas animadas, marcas da voz e da lição na figura, menu de estudo do explicador, seleção de texto no leitor. Falta experimentar com sessão iniciada (voz premium, «Explica-me», tutor por voz): precisa da conta do Dinis.
 - **Última atualização:** 2026-11-16
 - **Bloqueio que só o Dinis resolve:** nenhum para desenvolver. Para distribuir: assinatura (PARA-O-DINIS ponto 4) e URL e chave das atualizações (ponto 5).
 
@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-17 — O passo em foco comanda a figura: redução do circuito e parte do sólido (testes do Mac). 808 testes.
 - 2026-11-17 — Sólidos fixos do Mac (cone, cilindro, esfera, paraboloide, toro, revoluções, esfera cortada) desenhados pelo construtor genérico. 804 testes.
 - 2026-11-17 — Sólidos em 3D com three.js: construtor das malhas do Mac (todas as variantes, com os testes dele) e vista rodável no palco. 801 testes.
 - 2026-11-17 — Sólidos: leitura segura das fórmulas e verificação do volume contra a resposta (testes do Mac). 790 testes.
