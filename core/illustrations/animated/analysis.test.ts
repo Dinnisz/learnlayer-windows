@@ -1,13 +1,14 @@
-// Port of the modulus, Bolzano and sequence suites of LearnLayerTests/PremadeFigureBatch3MathTests.swift @ ref
+// Port of the modulus, Bolzano, sequence and Argand plane suites of LearnLayerTests/PremadeFigureBatch3MathTests.swift @ ref
 // 2026-11-04. Every gallery sample is also checked for bounds, overlaps and movement in animated.test.ts.
 
 import { describe, expect, it } from "vitest";
 import { CompiledIllustration, type Illustration, type IllustrationElement } from "../illustration";
 import { PremadeFigures, type PremadeFigure } from "../premadeFigure";
-import { bisection, modulusSolutions, sequenceSpec, type SequenceBehaviour } from "./analysis";
+import { bisection, Complex, complexText, modulusSolutions, sequenceSpec, type SequenceBehaviour } from "./analysis";
 import { sample } from "./animated";
 import { Params, PlottedFunction } from "./figureCanvas";
-import { curvePoints, finalLabels, values } from "./sceneCheck";
+import { Teach } from "./heating";
+import { curvePoints, finalLabels, labels, values } from "./sceneCheck";
 
 const language = "Portuguese (Portugal)";
 const figure = (type: string, json: string) => sample(type, json);
@@ -269,5 +270,128 @@ describe("sequence terms", () => {
       '{"kind": "geometric", "u1": 1e8, "r": 1000, "count": 16}',
     ])
       expect(refused("sequenceTerms", json), json).toBe(true);
+  });
+});
+
+describe("Argand plane", () => {
+  /** The arrows at the end of the animation, in world coordinates. */
+  const arrows = (built: Illustration) => {
+    const compiled = new CompiledIllustration(built);
+    const time = ending(built);
+    return built.elements.flatMap((e) => {
+      if (e.kind !== "arrow") return [];
+      const [x, y, x2, y2] = [e.x, e.y, e.x2, e.y2].map((t) => at(compiled, t, time));
+      if ([x, y, x2, y2].some((v) => v === null)) return [];
+      return [{ color: e.color ?? "white", from: { x: x!, y: y! }, to: { x: x2!, y: y2! } }];
+    });
+  };
+  const find = <T>(list: T[], test: (item: T) => boolean) => {
+    const found = list.find(test);
+    if (found === undefined) throw new Error("not found");
+    return found;
+  };
+  const boundariesOf = (built: Illustration) =>
+    (built as { stepPlayback?: { boundaries: number[] } | null }).stepPlayback?.boundaries ?? [];
+
+  it("the complex arithmetic is right", () => {
+    const z = new Complex(3, 4);
+    const w = new Complex(1, -2);
+    expect(z.modulus === 5 && Math.abs(z.argumentDegrees - 53.13010235415598) < 1e-9).toBe(true);
+    expect(z.plus(w)).toEqual(new Complex(4, 2));
+    expect(z.times(w)).toEqual(new Complex(11, -2)); // (3 + 4i)(1 − 2i) = 3 − 6i + 4i + 8
+    expect(Math.abs(z.times(w).modulus - z.modulus * w.modulus)).toBeLessThan(1e-12);
+    expect(Math.abs(z.times(w).argumentDegrees - (z.argumentDegrees + w.argumentDegrees))).toBeLessThan(1e-9);
+    expect(z.conjugate).toEqual(new Complex(3, -4));
+    // The argument is the principal one: −2 − 2i is at −135°, not 225°.
+    expect(Math.abs(new Complex(-2, -2).argumentDegrees + 135)).toBeLessThan(1e-12);
+    // Swift's String(Double) writes "3.0".
+    const swift = (v: number) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
+    expect(complexText(3, 4, swift)).toBe("3.0 + 4.0i");
+    expect(complexText(0, -1, swift)).toBe("−i");
+    expect(complexText(2, 0, swift)).toBe("2.0");
+    expect(complexText(0, 2, swift)).toBe("2.0i");
+    expect(complexText(-1, -2, swift)).toBe("-1.0 − 2.0i");
+  });
+
+  it("the polar form shows the modulus, the argument and the conjugate", () => {
+    const built = scene("argandPlane", '{"operation": "polar", "re": 3, "im": 4}');
+    const shown = finalLabels(built);
+    expect(shown).toContain("z = a + bi = 3 + 4i");
+    expect(shown.some((l) => l.includes("z\u0304 = 3 − 4i"))).toBe(true);
+    expect(labels(built, Teach.start(2) + 0.5)).toContain("|z| = √(a² + b²) = √(3² + 4²) = 5");
+    expect(labels(built, Teach.start(3) + 0.5).some((l) => l.includes("θ = 53,13°"))).toBe(true);
+    // Geometry: z and its conjugate are mirror images about the real axis; equal scale on both axes.
+    const all = arrows(built);
+    const axis = find(all, (a) => a.color === "muted" && Math.abs(a.from.y - a.to.y) < 1e-9).from.y;
+    const z = find(all, (a) => a.color === "accent");
+    const mirror = find(all, (a) => a.color === "second");
+    expect(Math.abs(z.from.x - mirror.from.x) < 1e-6 && Math.abs(z.from.y - axis) < 1e-6).toBe(true);
+    expect(Math.abs(z.to.x - mirror.to.x)).toBeLessThan(1e-3);
+    expect(Math.abs(z.to.y - axis + (mirror.to.y - axis))).toBeLessThan(1e-3);
+    const scale = (z.to.y - axis) / 4;
+    expect(Math.abs((z.to.x - z.from.x) / scale - 3), "equal units on both axes").toBeLessThan(1e-2);
+    // The arc of θ ends at the direction of z.
+    const arc = find(built.elements, (e) => e.kind === "curve" && e.color === "second");
+    const end = curvePoints(arc, built, ending(built)).at(-1)!;
+    const measured = (Math.atan2(end.y - z.from.y, end.x - z.from.x) * 180) / Math.PI;
+    expect(Math.abs(measured - 53.13010235415598)).toBeLessThan(0.5);
+    // A real number has no conjugate to draw: one step fewer.
+    const real = scene("argandPlane", '{"operation": "polar", "re": -2, "im": 0}');
+    expect(boundariesOf(real).length === 5 && boundariesOf(built).length === 6).toBe(true);
+  });
+
+  it("the sum is the diagonal of the parallelogram", () => {
+    const built = scene("argandPlane", '{"operation": "add", "re": 3, "im": 1, "re2": -1, "im2": 2}');
+    const all = arrows(built);
+    const z = find(all, (a) => a.color === "accent");
+    const w = find(all, (a) => a.color === "second");
+    const sum = find(all, (a) => a.color === "white");
+    // In world units the arrow of z + w is the vector sum of the arrows of z and w.
+    expect(Math.abs(sum.to.x - sum.from.x - (z.to.x - z.from.x + (w.to.x - w.from.x)))).toBeLessThan(1e-3);
+    expect(Math.abs(sum.to.y - sum.from.y - (z.to.y - z.from.y + (w.to.y - w.from.y)))).toBeLessThan(1e-3);
+    // The dashed sides of the parallelogram end at the same corner as the sum.
+    const compiled = new CompiledIllustration(built);
+    const dashed = built.elements.filter((e) => e.kind === "line" && e.dashed === true && e.color !== "muted");
+    expect(dashed).toHaveLength(2);
+    for (const line of dashed) {
+      const x = at(compiled, line.x2, ending(built))!;
+      const y = at(compiled, line.y2, ending(built))!;
+      expect(Math.abs(x - sum.to.x) < 1e-3 && Math.abs(y - sum.to.y) < 1e-3).toBe(true);
+    }
+    expect(finalLabels(built)).toContain("z + w = (3 + i) + (−1 + 2i) = 2 + 3i");
+  });
+
+  it("the product multiplies the moduli and adds the arguments", () => {
+    const built = scene("argandPlane", '{"operation": "multiply", "re": 1, "im": 1, "re2": 0, "im2": 2}');
+    // (1 + i)(2i) = 2i − 2 = −2 + 2i: modulus √2 × 2 = 2√2, argument 45° + 90° = 135°.
+    const all = arrows(built);
+    const z = find(all, (a) => a.color === "accent");
+    const w = find(all, (a) => a.color === "second");
+    const product = find(all, (a) => a.color === "white");
+    const unit = Math.hypot(z.to.x - z.from.x, z.to.y - z.from.y) / Math.SQRT2;
+    const length = Math.hypot(product.to.x - product.from.x, product.to.y - product.from.y);
+    expect(Math.abs(length / unit - 2 * Math.SQRT2)).toBeLessThan(1e-2);
+    expect(Math.abs(Math.hypot(w.to.x - w.from.x, w.to.y - w.from.y) / unit - 2)).toBeLessThan(1e-2);
+    const direction = (Math.atan2(product.to.y - product.from.y, product.to.x - product.from.x) * 180) / Math.PI;
+    expect(Math.abs(direction - 135)).toBeLessThan(0.1);
+    expect(finalLabels(built).some((l) => l.includes("arg(z·w) = θ₁ + θ₂ = 135°"))).toBe(true);
+    expect(labels(built, Teach.start(2) + 0.5).some((l) => l.includes("|z·w| = |z|·|w| = 1,41 × 2 = 2,83"))).toBe(true);
+    // Arguments that add beyond 180° are shown reduced: (−1 − i)(−1 − i) has −135° + −135° = −270° ≡ 90°.
+    const wrapped = scene("argandPlane", '{"operation": "multiply", "re": -1, "im": -1, "re2": -1, "im2": -1}');
+    expect(finalLabels(wrapped).some((l) => l.includes("−270°") && l.includes("≡ 90°"))).toBe(true);
+  });
+
+  it("the sliders move the numbers", () => {
+    const base = figure("argandPlane", '{"operation": "add", "re": 3, "im": 1, "re2": -1, "im2": 2}');
+    const moved = merged(base, { re: 1, im2: -3 })!;
+    expect(finalLabels(moved)).toContain("z + w = (1 + i) + (−1 − 3i) = −2i");
+    expect(moved.parameters?.map((p) => p.name)).toEqual(["re", "im", "re2", "im2"]);
+    for (const json of [
+      '{"operation": "polar", "re": 0, "im": 0}',
+      '{"operation": "add", "re": 1, "im": 1}',
+      '{"operation": "multiply", "re": 1, "im": 1, "re2": 0, "im2": 0}',
+      '{"operation": "divide", "re": 1, "im": 1}',
+    ])
+      expect(refused("argandPlane", json), json).toBe(true);
   });
 });

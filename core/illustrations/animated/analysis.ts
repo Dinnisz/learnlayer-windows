@@ -1,11 +1,13 @@
 // Port of the first part of LearnLayer/Illustrations/PremadeFigureBatch3Math.swift (numerics, modulus, Bolzano's
-// theorem, sequence terms) and `prettyExpression` (PremadeFigureBatch3.swift) @ ref 2026-11-04: the graph of |f| with
+// theorem, sequence terms, Argand plane) and `prettyExpression` (PremadeFigureBatch3.swift) @ ref 2026-11-04: the graph of |f| with
 // the solutions of |f(x)| = k, the bisection that Bolzano's theorem allows, and a sequence drawn term by term with its
 // behaviour. Every number is worked out by the app.
 
 import { evaluate, tryParseExpression, variables, type Expression } from "../../math/expression";
 import type { IllustrationParameter } from "../illustration";
 import { subscripted } from "./calculus";
+import { Teach } from "./heating";
+import type { Point } from "./optics";
 import {
   Anim,
   FigureCanvas,
@@ -560,5 +562,254 @@ const sequenceTerms: Compiler = (params, title, language) => {
   return canvas.illustration(title, Anim.duration(dotsEnd + 1.0), parameters);
 };
 
+// MARK: Argand plane
+
+/** A complex number as written: 3 + 4i, −1 − 2i, 2i, i, −i, 5. */
+export function complexText(re: number, im: number, number: (value: number) => string): string {
+  const tiny = 1e-9;
+  if (Math.abs(im) < tiny) return number(re);
+  const imaginary = Math.abs(Math.abs(im) - 1) < tiny ? "i" : number(Math.abs(im)) + "i";
+  if (Math.abs(re) < tiny) return (im < 0 ? "−" : "") + imaginary;
+  return number(re) + (im < 0 ? " − " : " + ") + imaginary;
+}
+
+export class Complex {
+  constructor(
+    readonly re: number,
+    readonly im: number,
+  ) {}
+  get modulus(): number {
+    return Math.hypot(this.re, this.im);
+  }
+  /** The principal argument in degrees, in (−180, 180]. */
+  get argumentDegrees(): number {
+    return (Math.atan2(this.im, this.re) * 180) / Math.PI;
+  }
+  get conjugate(): Complex {
+    return new Complex(this.re, -this.im);
+  }
+  plus(other: Complex): Complex {
+    return new Complex(this.re + other.re, this.im + other.im);
+  }
+  times(other: Complex): Complex {
+    return new Complex(this.re * other.re - this.im * other.im, this.re * other.im + this.im * other.re);
+  }
+}
+
+const argandPlane: Compiler = (params, title, language) => {
+  const operation = params.text("operation") ?? "polar";
+  const re = params.number("re");
+  const im = params.number("im");
+  if (!["polar", "add", "multiply"].includes(operation) || re === null || im === null) return null;
+  const z = new Complex(re, im);
+  let w = new Complex(0, 0);
+  if (operation !== "polar") {
+    const re2 = params.number("re2");
+    const im2 = params.number("im2");
+    if (re2 === null || im2 === null) return null;
+    w = new Complex(re2, im2);
+  }
+  if (
+    ![z.re, z.im, w.re, w.im].every((v) => Math.abs(v) <= 1e3) ||
+    !(z.modulus > 1e-9) ||
+    !(operation === "polar" || w.modulus > 1e-9)
+  )
+    return null;
+  const result = operation === "add" ? z.plus(w) : z.times(w);
+  const shown = operation === "polar" ? [new Complex(0, 0), z, z.conjugate] : [new Complex(0, 0), z, w, result];
+  const xs = shown.map((c) => c.re);
+  const ys = shown.map((c) => c.im);
+  const spanX = Math.max(...xs) - Math.min(...xs);
+  const spanY = Math.max(...ys) - Math.min(...ys);
+  const padX = 0.12 * Math.max(spanX, 1);
+  const padY = 0.12 * Math.max(spanY, 1);
+  const frame = PremadeFrame.equalScale(
+    Math.min(...xs) - padX,
+    Math.max(...xs) + padX,
+    Math.min(...ys) - padY,
+    Math.max(...ys) + padY,
+  );
+  const canvas = new FigureCanvas(language);
+  const origin = { x: frame.x(0), y: frame.y(0) };
+  const world = (c: Complex) => ({ x: frame.x(c.re), y: frame.y(c.im) });
+  const text = (c: Complex) => complexText(c.re, c.im, (v) => canvas.number(v));
+  const growing = (from: Point, to: Point, step: number, color: string, dashed = false) => {
+    const start = Teach.start(step);
+    const grow = Anim.ramp(start, start + 0.8);
+    const x2 = `${Anim.n(from.x)} + ${Anim.lit(to.x - from.x)}*${grow}`;
+    const y2 = `${Anim.n(from.y)} + ${Anim.lit(to.y - from.y)}*${grow}`;
+    if (dashed) canvas.line(from.x, from.y, x2, y2, { color, dashed: true });
+    else canvas.arrow(from.x, from.y, x2, y2, { color });
+  };
+  // The arcs are known before the labels are placed, so that the labels keep clear of them.
+  const reserveArc = (radius: number, degrees: number) =>
+    canvas.reserveStrokes(
+      Array.from({ length: 41 }, (_, index) => {
+        const angle = (((degrees * Math.PI) / 180) * index) / 40;
+        return { x: origin.x + radius * Math.cos(angle), y: origin.y + radius * Math.sin(angle) };
+      }),
+    );
+  const arc = (radius: number, degrees: number, step: number, color: string) => {
+    const start = Teach.start(step);
+    canvas.curve(
+      `${Anim.n(origin.x)} + ${Anim.n(radius)}*cos(s)`,
+      `${Anim.n(origin.y)} + ${Anim.n(radius)}*sin(s)`,
+      "0",
+      `${Anim.lit((degrees * Math.PI) / 180)}*${Anim.ramp(start, start + 0.8)}`,
+      { color },
+    );
+  };
+
+  // Words first, so that nothing else takes their place.
+  const degreesText = (value: number) => canvas.number(value, 4) + "°";
+  let steps: number;
+  if (operation === "polar") {
+    const a = canvas.number(z.re);
+    const b = canvas.number(Math.abs(z.im));
+    canvas.caption(`z = a + bi = ${text(z)}`, { row: 0, color: "white", visible: Anim.after(Teach.start(0)) });
+    const modulusLine = `|z| = √(a² + b²) = √(${a}² + ${b}²) = ${canvas.number(z.modulus)}`;
+    const angleLine = canvas.say(
+      `arg z = θ = ${degreesText(z.argumentDegrees)}  (tan θ = b/a)`,
+      `arg z = θ = ${degreesText(z.argumentDegrees)}  (tan θ = b/a)`,
+    );
+    const conjugateLine = canvas.say(
+      `z\u0304 = ${text(z.conjugate)}: reflexão de z no eixo real`,
+      `z\u0304 = ${text(z.conjugate)}: z reflected in the real axis`,
+    );
+    canvas.caption(modulusLine, { row: 1, color: "white", visible: Anim.window(Teach.start(2), Teach.start(3)) });
+    canvas.caption(angleLine, {
+      row: 1,
+      color: "accent",
+      visible: Anim.window(Teach.start(3), Teach.start(4)),
+      claim: false,
+    });
+    canvas.caption(conjugateLine, { row: 1, color: "second", visible: Anim.after(Teach.start(4)), claim: false });
+    steps = Math.abs(z.im) > 1e-9 ? 5 : 4;
+  } else if (operation === "add") {
+    canvas.caption(
+      canvas.say("Soma: os vetores somam-se (regra do paralelogramo)", "Sum: the vectors add (parallelogram rule)"),
+      { row: 0, color: "white", visible: Anim.after(Teach.start(2)) },
+    );
+    canvas.caption(`z + w = (${text(z)}) + (${text(w)}) = ${text(result)}`, {
+      row: 1,
+      color: "white",
+      visible: Anim.after(Teach.start(3)),
+    });
+    steps = 4;
+  } else {
+    canvas.caption(
+      canvas.say(
+        "Produto: multiplicam-se os módulos e somam-se os argumentos",
+        "Product: the moduli multiply and the arguments add",
+      ),
+      { row: 0, color: "white", visible: Anim.after(Teach.start(2)) },
+    );
+    const modulusLine = `|z·w| = |z|·|w| = ${canvas.number(z.modulus)} × ${canvas.number(w.modulus)} = ${canvas.number(result.modulus)}`;
+    const sum = z.argumentDegrees + w.argumentDegrees;
+    const principal = result.argumentDegrees;
+    const wrapped = Math.abs(sum - principal) > 1e-6;
+    const anglesLine = `arg(z·w) = θ₁ + θ₂ = ${degreesText(sum)}` + (wrapped ? ` ≡ ${degreesText(principal)}` : "");
+    canvas.caption(modulusLine, { row: 1, color: "white", visible: Anim.window(Teach.start(2), Teach.start(3)) });
+    canvas.caption(anglesLine, { row: 1, color: "accent", visible: Anim.after(Teach.start(3)), claim: false });
+    steps = 4;
+  }
+  canvas.axes(frame, { xName: "Re", yName: "Im", ticks: false, titles: false });
+  if (operation === "polar") reserveArc(0.55, z.argumentDegrees);
+  else if (operation === "multiply") {
+    reserveArc(0.45, z.argumentDegrees);
+    reserveArc(0.7, w.argumentDegrees);
+    reserveArc(0.95, result.argumentDegrees);
+  }
+  growing(origin, world(z), 0, "accent");
+  canvas.labelBeside("z", world(z).x, world(z).y, { color: "accent", visible: Anim.after(Teach.start(0) + 0.8) });
+  if (operation === "polar") {
+    const tip = world(z);
+    const first = Anim.after(Teach.start(1));
+    canvas.line(tip.x, tip.y, tip.x, origin.y, { color: "muted", dashed: true, visible: first });
+    canvas.line(tip.x, tip.y, origin.x, tip.y, { color: "muted", dashed: true, visible: first });
+    canvas.dot(tip.x, origin.y, { color: "accent", visible: first });
+    canvas.dot(origin.x, tip.y, { color: "accent", visible: first });
+    // |z| written along the arrow; the angle between the real axis and z.
+    const mid = { x: (origin.x + tip.x) / 2, y: (origin.y + tip.y) / 2 };
+    canvas.labelBeside("|z|", mid.x, mid.y, { color: "white", visible: Anim.after(Teach.start(2)) });
+    arc(0.55, z.argumentDegrees, 3, "second");
+    const half = ((z.argumentDegrees / 2) * Math.PI) / 180;
+    for (const reach of [0.85, 1.15, 1.45])
+      if (
+        canvas.label("θ", origin.x + reach * Math.cos(half), origin.y + reach * Math.sin(half), {
+          anchor: "center",
+          color: "second",
+          visible: Anim.after(Teach.start(3) + 0.4),
+          avoidStrokes: true,
+        })
+      )
+        break;
+    if (steps === 5) {
+      const mirror = world(z.conjugate);
+      growing(origin, mirror, 4, "second");
+      canvas.line(tip.x, tip.y, mirror.x, mirror.y, {
+        color: "muted",
+        dashed: true,
+        visible: Anim.after(Teach.start(4)),
+      });
+      canvas.labelBeside("z\u0304", mirror.x, mirror.y, { color: "second", visible: Anim.after(Teach.start(4) + 0.8) });
+    }
+  } else if (operation === "add") {
+    growing(origin, world(w), 1, "second");
+    canvas.labelBeside("w", world(w).x, world(w).y, { color: "second", visible: Anim.after(Teach.start(1) + 0.8) });
+    const zTip = world(z);
+    const wTip = world(w);
+    const sum = world(result);
+    growing(zTip, sum, 2, "second", true);
+    growing(wTip, sum, 2, "accent", true);
+    growing(origin, sum, 3, "white");
+    canvas.labelBeside("z + w", sum.x, sum.y, { color: "white", visible: Anim.after(Teach.start(3) + 0.8) });
+  } else {
+    growing(origin, world(w), 1, "second");
+    canvas.labelBeside("w", world(w).x, world(w).y, { color: "second", visible: Anim.after(Teach.start(1) + 0.8) });
+    const product = world(result);
+    growing(origin, product, 2, "white");
+    canvas.labelBeside("z·w", product.x, product.y, { color: "white", visible: Anim.after(Teach.start(2) + 0.8) });
+    arc(0.45, z.argumentDegrees, 3, "accent");
+    arc(0.7, w.argumentDegrees, 3, "second");
+    arc(0.95, result.argumentDegrees, 3, "white");
+    for (const [name, radius, degrees, color] of [
+      ["θ₁", 0.45, z.argumentDegrees, "accent"],
+      ["θ₂", 0.7, w.argumentDegrees, "second"],
+      ["θ₁+θ₂", 0.95, result.argumentDegrees, "white"],
+    ] as const) {
+      const half = ((degrees / 2) * Math.PI) / 180;
+      for (const reach of [0.3, 0.6, 0.9, 1.2])
+        if (
+          canvas.label(
+            name,
+            origin.x + (radius + reach) * Math.cos(half),
+            origin.y + (radius + reach) * Math.sin(half),
+            {
+              anchor: "center",
+              color,
+              visible: Anim.after(Teach.start(3) + 0.5),
+              avoidStrokes: true,
+            },
+          )
+        )
+          break;
+    }
+  }
+  canvas.axisTitles(frame, "Re", "Im");
+  canvas.axisTicks(frame);
+  canvas.recordSteps(Teach.boundaries(steps));
+  const parameters: IllustrationParameter[] = [
+    slider("re", "Re z", re, Math.min(-6, re), Math.max(6, re)),
+    slider("im", "Im z", im, Math.min(-6, im), Math.max(6, im)),
+  ];
+  if (operation !== "polar")
+    parameters.push(
+      slider("re2", "Re w", w.re, Math.min(-6, w.re), Math.max(6, w.re)),
+      slider("im2", "Im w", w.im, Math.min(-6, w.im), Math.max(6, w.im)),
+    );
+  return canvas.illustration(title, Anim.duration(Teach.finish(steps) + 0.6), parameters);
+};
+
 /** The first maths figures of batch 3, by premade type. */
-export const analysisFigures: Record<string, Compiler> = { modulus, bolzano, sequenceTerms };
+export const analysisFigures: Record<string, Compiler> = { modulus, bolzano, sequenceTerms, argandPlane };

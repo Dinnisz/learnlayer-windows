@@ -102,6 +102,7 @@ const recompiledTypes = new Set([
   "modulus",
   "bolzano",
   "sequenceTerms",
+  "argandPlane",
   "probabilityTree",
   "vennDiagram",
   "arrayLoop",
