@@ -131,7 +131,9 @@ fn session_clear_handoff(state: State<'_, AppState>) {
 fn memory_secret_account(name: &str) -> Option<String> {
     let allowed = (name.starts_with("device.") || name.starts_with("memory."))
         && name.len() <= 120
-        && name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'));
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'));
     allowed.then(|| format!("memory-sync.{name}"))
 }
 
