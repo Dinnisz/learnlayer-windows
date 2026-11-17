@@ -15,6 +15,8 @@ import { IllustrationPrompt } from "./illustrationPrompt";
 import { compileTemplate, compilingTemplate, decodeTemplate, type IllustrationTemplate } from "./illustrationTemplate";
 import { CircuitCheck, circuitOf, CircuitSolver, CircuitSpecs } from "./circuit";
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "./premadeFigure";
+import { GenericSolids, SolidCheck } from "./solid";
+import { formatG } from "../math/printf";
 import { plottingAuxiliarySum } from "./auxiliarySum";
 
 export class IllustrationFailure extends Error {
@@ -193,6 +195,17 @@ export class IllustrationProvider {
           if (!decoded) throw new IllustrationFailure();
           return decoded;
         });
+        // A solid must have the volume the answer gives.
+        const solidReply = GenericSolids.fromPremade(decodePremade(reply.premade));
+        if (solidReply && SolidCheck.agrees(solidReply, part.answer.text) === false) {
+          if (attempt !== 0) throw new IllustrationFailure();
+          const measured = SolidCheck.volume(solidReply);
+          note =
+            `Your solid's volume is ${measured !== null ? formatG(measured, 4) : "?"}, but the answer is ${part.answer.text}: ` +
+            `the figure is not the question's solid. Check the axis of rotation ("axis" and "k" for a line y = k or x = k), the ` +
+            'second curve "g" and the interval, and reply with premade "solid3d".';
+          continue;
+        }
         // A circuit must have the resistance the answer gives between its terminals.
         const circuitReply = decodePremade(reply.premade);
         const circuit = circuitReply ? CircuitSpecs.fromPremade(circuitReply) : null;
