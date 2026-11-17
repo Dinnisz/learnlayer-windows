@@ -36,4 +36,4 @@ npm test
 - «Instalo num Windows limpo sem avisos do SmartScreen»: falta a conta de assinatura (ponto 4) e uma máquina que compile (ponto 1). Falta verificação do Dinis.
 - «A app atualiza-se sozinha»: o código está feito; falta o URL e a chave (ponto 5). Falta verificação do Dinis.
 - «A memória criada no Mac aparece no Windows»: o formato é o do Mac e está testado com fragmentos escritos como o Mac os escreve. Falta experimentar com as duas apps na mesma conta (precisa da app compilada). Falta verificação do Dinis.
-- **Instalador em `dist/`:** não foi possível gerá-lo nesta máquina, porque o Smart App Control bloqueia a compilação (ponto 1). O script e o trabalho do CI estão prontos (ponto 10).
+- **Instalador em `dist/`:** gerado pelo CI a 2026-11-17 (`LearnLayer_0.1.0_x64-setup.exe`, sem assinatura). Os testes do Rust (22) passam no CI.

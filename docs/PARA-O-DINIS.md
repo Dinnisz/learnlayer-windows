@@ -100,7 +100,9 @@ Os clipes `onboarding_talk_*` e `onboarding_tryIt_*` do Mac falam de Control + O
 Depois disso basta mudar `onboardingClip` em `core/onboarding/onboarding.ts` para os usar.
 
 ### 10. Gerar o instalador (quando houver uma máquina que compile, ponto 1)
-Não consegui pôr um instalador em `dist\`: o SAC bloqueia a compilação. Há duas formas de o gerar:
+**Feito a 2026-11-17 pelo CI:** `dist\LearnLayer_0.1.0_x64-setup.exe`, sem assinatura. Cada push para o `main` gera um novo, no artefacto «learnlayer-windows-installer» da corrida do CI. Para o trazer: `gh run download <id da corrida> --name learnlayer-windows-installer --dir dist`. Sem assinatura, o Smart App Control desta máquina provavelmente bloqueia-o; para o experimentar aqui é precisa a assinatura (ponto 4), ou usa outro PC.
+
+Há duas formas de o gerar:
 - numa máquina que compile, com `powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1`;
 - no CI, que guarda o instalador sem assinatura como artefacto «learnlayer-windows-installer».
 
