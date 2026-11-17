@@ -5,9 +5,9 @@
 ## Estado atual
 
 - **Fase atual:** 8 fechada (fases 0–8 feitas; o que falta depende do Dinis: `PARA-O-DINIS.md`)
-- **Próximo passo:** o CI está verde e o instalador está em `dist/` (gerado pelo CI). Falta abrir a app num Windows que a deixe correr (assinatura, PARA-O-DINIS ponto 4, ou outro PC) e fazer as verificações dos pontos 6–9. Pendentes no código: figuras 3D (three.js) e animadas, marcas da voz e da lição na figura, menu de estudo do explicador, e a seleção de texto no leitor.
+- **Próximo passo:** o Smart App Control está desligado e tudo compila e corre neste PC (`npm run tauri dev`, `cargo test`). Agora: experimentar a app real (introdução, pílula e as suas ações, Alt-clique no Edge, Chrome, Word e Acrobat, voz), registar em `docs/anywhere-medicao.md` e corrigir o que falhar. Pendentes no código: figuras 3D (three.js) e animadas, marcas da voz e da lição na figura, menu de estudo do explicador, seleção de texto no leitor.
 - **Última atualização:** 2026-11-16
-- **Bloqueio que só o Dinis resolve:** o Smart App Control impede compilar o Rust nesta máquina (ver `PARA-O-DINIS.md`, ponto 1). Tudo o que é nativo está escrito e formatado, mas não compilado nem testado. O `core/` e a `ui/` não dependem disso.
+- **Bloqueio que só o Dinis resolve:** nenhum para desenvolver. Para distribuir: assinatura (PARA-O-DINIS ponto 4) e URL e chave das atualizações (ponto 5).
 
 ## Ambiente (máquina do Dinis, Windows 11 Home x64)
 
@@ -109,6 +109,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Registo
 
+- 2026-11-17 — O Dinis desligou o Smart App Control. O instalador do CI instalou-se e a app abriu (janela principal com a introdução, pílula no topo). `cargo fmt` e `cargo test` (22) passam localmente.
 - 2026-11-17 — Instalador experimentado neste PC: o Smart App Control bloqueou-o antes de correr. Para abrir a app falta a assinatura ou outro PC.
 - 2026-11-17 — Primeira compilação do Rust (no CI). Correções: uma linha de formatação, 9 avisos do clippy, e o manifesto da app embutido pelo linker para os testes arrancarem. CI todo verde (22 testes Rust) e instalador em `dist/`.
 - 2026-11-17 — O Dinis tornou o repositório público, o que deixa o CI grátis. Push das notas e nova corrida do CI.

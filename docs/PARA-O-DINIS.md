@@ -4,7 +4,8 @@ O que só tu podes fazer. O código fica pronto com o valor em configuração e 
 
 ## Pendente
 
-### 1. ⛔ O Smart App Control bloqueia a compilação nativa (o mais importante)
+### 1. ✅ Resolvido a 2026-11-17: o Smart App Control bloqueava a compilação nativa
+O Dinis desligou o Smart App Control (`VerifiedAndReputablePolicyState = 0`). Neste PC passam o `cargo fmt` e os 22 testes do Rust. O instalador corre, e a app instalada em `%LOCALAPPDATA%\LearnLayer` abre com a janela principal, o cartão de boas-vindas em pt-PT e a pílula centrada no topo. O texto abaixo fica como histórico.
 
 **O que acontece.** O Smart App Control (SAC) do Windows 11 está ligado nesta máquina (`VerifiedAndReputablePolicyState = 1`). O Rust compila pequenos executáveis temporários (*build scripts*) e corre-os durante a build. O SAC bloqueia os que não conhece:
 

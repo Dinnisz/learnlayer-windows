@@ -4,7 +4,7 @@ As fases 0 a 8 estão feitas no código.
 
 **Atualização 2026-11-17:** o repositório público [Dinnisz/learnlayer-windows](https://github.com/Dinnisz/learnlayer-windows) compila no CI. Passam o lint, os testes de TypeScript, `cargo fmt`, `clippy` e os 22 testes do Rust. O CI gerou o instalador **`dist/LearnLayer_0.1.0_x64-setup.exe`** (5,9 MB, sem assinatura).
 
-O que falta depende de ti (`PARA-O-DINIS.md`). Sem assinatura, o Smart App Control desta máquina provavelmente bloqueia a app instalada (ponto 4). Por isso a app nativa ainda não foi aberta nem experimentada.
+O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado e a app instalada já abre neste PC (janela principal com a introdução e pílula no topo). Para distribuir aos alunos falta a assinatura (ponto 4).
 
 ## Em números
 
