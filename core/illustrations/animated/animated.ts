@@ -11,6 +11,7 @@ import { choiceIndex, flowchartPrograms } from "./flowchart";
 import { Syllogism } from "./syllogism";
 import { algorithmFigures } from "./algorithms";
 import { argumentFigures } from "./argument";
+import { analysisFigures } from "./analysis";
 import { calculusFigures } from "./calculus";
 import { chemistryFigures } from "./chemistry";
 import { electromagnetismFigures } from "./electromagnetism";
@@ -40,6 +41,7 @@ const compilers = {
   ...heatingFigures,
   ...mechanicsFigures,
   ...chemistryFigures,
+  ...analysisFigures,
   ...electromagnetismFigures,
   ...opticsFigures,
   ...loopFigures,
@@ -220,6 +222,15 @@ export const animatedGallery: PremadeFigure[] = [
   sample("punnettSquare", '{"parent1": "Aa", "parent2": "Aa"}'),
   sample("punnettSquare", '{"parent1": "Aa", "parent2": "aa"}'),
   sample("punnettSquare", '{"parent1": "AaBb", "parent2": "AaBb"}'),
+  sample("modulus", '{"f": "x-1", "xMin": -4, "xMax": 6, "k": 2}'),
+  sample("modulus", '{"f": "x^2-4", "xMin": -4, "xMax": 4, "k": 3}'),
+  sample("modulus", '{"f": "2*x+3", "xMin": -5, "xMax": 3}'),
+  sample("bolzano", '{"f": "x^3-x-2", "a": 1, "b": 2}'),
+  sample("bolzano", '{"f": "cos(x)-x", "a": 0, "b": 1.5, "n": 5}'),
+  sample("sequenceTerms", '{"kind": "arithmetic", "u1": 2, "d": 3, "count": 8}'),
+  sample("sequenceTerms", '{"kind": "geometric", "u1": 8, "r": 0.5, "count": 10}'),
+  sample("sequenceTerms", '{"kind": "general", "u": "(2*n+1)/(n+1)", "count": 12}'),
+  sample("sequenceTerms", '{"kind": "general", "u": "(-1)^n*n", "count": 9}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
@@ -379,6 +390,12 @@ export function mergingAnimatedParameters(
         delete next["T"];
         delete next["omega"];
         if (key === "r") delete next["radius"];
+        break;
+      case "bolzano.n":
+        next["n"] = clamp(Math.trunc(rounded(value)), 1, 6);
+        break;
+      case "sequenceTerms.count":
+        next["count"] = clamp(Math.trunc(rounded(value)), 4, 16);
         break;
       case "acSignal.frequency":
         next["frequency"] = Math.max(1, value);
