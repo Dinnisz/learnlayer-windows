@@ -91,6 +91,7 @@ const recompiledTypes = new Set([
   "argumentMap",
   "syllogismVenn",
   "fallacies",
+  "squareOfOpposition",
 ]);
 
 export class PremadeFigures {

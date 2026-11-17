@@ -21,6 +21,7 @@ import { multivariableFigures } from "./multivariable";
 import { opticsFigures } from "./optics";
 import { physicsFigures } from "./physics";
 import { seriesFigures } from "./series";
+import { squareFigures } from "./square";
 import { structureFigures } from "./structures";
 import { syllogismFigures } from "./syllogism";
 import { Params } from "./figureCanvas";
@@ -41,6 +42,7 @@ const compilers = {
   ...argumentFigures,
   ...syllogismFigures,
   ...fallacyFigures,
+  ...squareFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -171,6 +173,9 @@ export const animatedGallery: PremadeFigure[] = [
   sample("fallacies", '{"fallacy": "falseDilemma"}'),
   sample("fallacies", '{"fallacy": "hastyGeneralization"}'),
   sample("fallacies", '{"fallacy": "affirmingConsequent"}'),
+  sample("squareOfOpposition", '{"S": "gato", "P": "preto", "given": "A", "value": true}'),
+  sample("squareOfOpposition", '{"S": "gato", "P": "preto", "given": "I", "value": false}'),
+  sample("squareOfOpposition", '{"S": "gato", "P": "preto", "given": "E", "value": true, "existentialImport": false}'),
   sample(
     "argumentMap",
     '{"premises": ["p -> q", "q -> r"], "conclusion": "p -> r", "premiseTexts": ["Se estudo, aprendo.", "Se aprendo, passo."], "conclusionText": "Se estudo, passo."}',
