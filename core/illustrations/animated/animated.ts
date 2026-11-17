@@ -9,6 +9,7 @@ import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
 import { algorithmFigures } from "./algorithms";
 import { calculusFigures } from "./calculus";
+import { heatingFigures } from "./heating";
 import { multivariableFigures } from "./multivariable";
 import { physicsFigures } from "./physics";
 import { seriesFigures } from "./series";
@@ -23,6 +24,7 @@ const compilers = {
   ...algorithmFigures,
   ...structureFigures,
   ...physicsFigures,
+  ...heatingFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -108,4 +110,7 @@ export const animatedGallery: PremadeFigure[] = [
   sample("verticalThrow", '{"v0": 12, "g": 9.8}'),
   sample("inclinedBlock", '{"angle": 30, "mu": 0.2}'),
   sample("inclinedBlock", '{"angle": 18, "mu": 0.75}'),
+  sample("heatingCurve", '{"m": 100, "T0": -20, "T1": 120}'),
+  sample("heatingCurve", '{"m": 200, "T0": -10, "T1": 60}'),
+  sample("heatingCurve", '{"m": 50, "T0": -15, "T1": 100}'),
 ];

@@ -78,6 +78,7 @@ const recompiledTypes = new Set([
   "motionScene",
   "verticalThrow",
   "inclinedBlock",
+  "heatingCurve",
 ]);
 
 export class PremadeFigures {
