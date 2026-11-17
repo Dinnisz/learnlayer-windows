@@ -32,7 +32,7 @@ import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./prob
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
 import { CircuitCheck, circuitOf, CircuitSpecs } from "../illustrations/circuit";
 import type { PremadeFigure } from "../illustrations/premadeFigure";
-import { GenericSolids, SolidCheck, solidOf } from "../illustrations/solid";
+import { checkableSolid, SolidCheck, solidOf } from "../illustrations/solid";
 import { ComplexFigures, decodeComplexFigure } from "../illustrations/complexFigure";
 import {
   figureTopicOf,
@@ -1381,7 +1381,7 @@ ${part.label}`,
         // gives (or the same in kΩ), else it is not shown.
         const premade = drawn.premade as PremadeFigure | null | undefined;
         // A solid whose volume is not the answer's is not shown.
-        const solid = GenericSolids.fromPremade(premade);
+        const solid = checkableSolid(premade);
         if (solid && SolidCheck.agrees(solid, part.answer.text) === false) {
           this.illustrationState = "failed";
           return;

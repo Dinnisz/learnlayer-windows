@@ -360,6 +360,123 @@ export const SolidCheck = {
 export function solidOf(illustration: {
   premade?: { type: string; params: Record<string, unknown> } | null;
 }): GenericSolid | null {
-  const premade = illustration.premade;
-  return premade ? GenericSolids.fromPremade(premade as PremadeFigure) : null;
+  const premade = illustration.premade as PremadeFigure | null | undefined;
+  return checkableSolid(premade) ?? fixedSolid(premade);
+}
+
+// Port of the fixed templates of Figure3DSpec (LearnLayer/Explanation/Figure3D.swift @ ref 2026-11-04), as generic
+// solids the 3D view draws: the cone, the cylinder and the paraboloid upright (turned about Oy), the sphere and the
+// revolutions about Ox, the torus as a parametric surface, the cut sphere with its plane. Their volumes are not checked
+// (they are pictures of a kind of solid, with sizes the model may leave out), as on the Mac.
+
+const fixedIds = [
+  "solid_cone",
+  "solid_cylinder",
+  "solid_sphere",
+  "solid_paraboloid",
+  "solid_torus",
+  "solid_of_revolution",
+  "solid_of_revolution_sqrt",
+  "solid_washer_x_x2",
+  "solid_sphere_plane_cut",
+] as const;
+
+const number = (value: number) => (Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(6))));
+
+/** The generic solid of a fixed template (`solid_cone` …), with the sizes its params give; null for anything else. */
+export function fixedSolid(premade: PremadeFigure | null | undefined): GenericSolid | null {
+  if (!premade || !(fixedIds as readonly string[]).includes(premade.type)) return null;
+  const p = premade.params;
+  const positive = (key: string, fallback: number) => {
+    const value = asNumber(p[key]);
+    return value !== null && value > 0 ? value : fallback;
+  };
+  const interval = (a: number, b: number): [number, number] => {
+    const low = asNumber(p["a"]);
+    const high = asNumber(p["b"]);
+    return low !== null && high !== null && high > low ? [low, high] : [a, b];
+  };
+  const curve = (key: string, fallback: string) => {
+    const text = asString(p[key]);
+    return premade.type !== "solid_of_revolution_sqrt" && text && SafeFormula.make(text, ["x"]) ? text : fallback;
+  };
+  const params = ((): Record<string, Value> | null => {
+    switch (premade.type) {
+      case "solid_cone": {
+        const r = positive("r", 1.5);
+        const h = positive("h", 3);
+        return { kind: "revolution", f: `${number(h)} - ${number(h / r)}*x`, axis: "y", a: 0, b: r };
+      }
+      case "solid_cylinder":
+        return { kind: "revolution", f: number(positive("h", 3)), axis: "y", a: 0, b: positive("r", 1.2) };
+      case "solid_sphere": {
+        const r = positive("r", 2);
+        return { kind: "revolution", f: `sqrt(${number(r * r)} - x^2)`, axis: "x", a: -r, b: r };
+      }
+      case "solid_paraboloid": {
+        const r = positive("r", 2);
+        const h = positive("h", 3);
+        return { kind: "revolution", f: number(h), g: `${number(h / (r * r))}*x^2`, axis: "y", a: 0, b: r };
+      }
+      case "solid_torus": {
+        const big = positive("R", 2);
+        const given = positive("r", 0.7);
+        const small = given < big ? given : (0.7 * big) / 2;
+        const ring = `(${number(big)} + ${number(small)}*cos(v))`;
+        return {
+          kind: "parametric",
+          x: `${ring}*cos(u)`,
+          y: `${ring}*sin(u)`,
+          z: `${number(small)}*sin(v)`,
+          u: [0, 6.2832],
+          v: [0, 6.2832],
+        };
+      }
+      case "solid_of_revolution":
+      case "solid_of_revolution_sqrt": {
+        const [low, high] = interval(0, 4);
+        return {
+          kind: "revolution",
+          f: curve("f", "sqrt(x)"),
+          axis: "x",
+          a: premade.type === "solid_of_revolution_sqrt" ? Math.max(low, 0) : low,
+          b: high,
+        };
+      }
+      case "solid_washer_x_x2": {
+        const [low, high] = interval(0, 1);
+        return { kind: "revolution", f: curve("f", "x"), g: curve("g", "x^2"), axis: "x", a: low, b: high };
+      }
+      case "solid_sphere_plane_cut": {
+        const r = positive("r", 2);
+        const given = asNumber(p["h"]);
+        const plane = given !== null && Math.abs(given) < r ? given : Math.min(1, r * 0.5);
+        return {
+          kind: "revolution",
+          f: `sqrt(${number(r * r)} - x^2)`,
+          axis: "x",
+          a: -r,
+          b: r,
+          planes: [{ x: plane }],
+        };
+      }
+      default:
+        return null;
+    }
+  })();
+  return params ? GenericSolids.fromParams(params) : null;
+}
+
+/** A revolution by fixed id with its own curve: checked like a generic solid (its axis, second curve, volume). */
+export function checkableSolid(premade: PremadeFigure | null | undefined): GenericSolid | null {
+  if (!premade) return null;
+  if (premade.type === GenericSolids.premadeType) return GenericSolids.fromParams(premade.params);
+  if (["solid_of_revolution", "solid_washer_x_x2"].includes(premade.type) && premade.params["f"] !== undefined) {
+    const params: Record<string, Value> = { ...premade.params, kind: "revolution" };
+    if (premade.type === "solid_washer_x_x2") params["g"] = params["g"] ?? "x^2";
+    params["a"] = params["a"] ?? 0;
+    params["b"] = params["b"] ?? (premade.type === "solid_washer_x_x2" ? 1 : 4);
+    return GenericSolids.fromParams(params);
+  }
+  return null;
 }

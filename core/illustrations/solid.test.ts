@@ -2,7 +2,7 @@
 // against the answer. The tests of the mesh builder (kinds' geometry, falling back to 2D) come with the builder.
 
 import { describe, expect, it } from "vitest";
-import { GenericSolids, SafeFormula, SolidCheck, type GenericSolid } from "./solid";
+import { checkableSolid, fixedSolid, GenericSolids, SafeFormula, SolidCheck, type GenericSolid } from "./solid";
 import { GenericSolidBuilder, type BuiltSolid } from "./solidBuilder";
 
 const solid = (json: string): GenericSolid => {
@@ -206,5 +206,41 @@ describe("GenericSolidBuilder", () => {
     const start = performance.now();
     built(`{"kind":"surface","z":"sin(x)*cos(y)+sqrt(x^2+y^2)","x":[-3,3],"y":[-3,3]}`);
     expect(performance.now() - start).toBeLessThan(300); // fromParams builds once to check, then again here
+  });
+});
+
+describe("Fixed solids", () => {
+  it("every fixed id still draws, through the generic builder", () => {
+    for (const type of [
+      "solid_cone",
+      "solid_cylinder",
+      "solid_sphere",
+      "solid_paraboloid",
+      "solid_torus",
+      "solid_of_revolution",
+      "solid_of_revolution_sqrt",
+      "solid_washer_x_x2",
+      "solid_sphere_plane_cut",
+    ]) {
+      const fixed = fixedSolid({ type, params: {} });
+      expect(fixed, type).not.toBeNull();
+      expect(GenericSolidBuilder.build(fixed!), type).not.toBeNull();
+    }
+    expect(fixedSolid({ type: "functionGraph", params: {} })).toBeNull();
+  });
+
+  it("the cut sphere has its plane, and sizes come from the params", () => {
+    const cut = GenericSolidBuilder.build(fixedSolid({ type: "solid_sphere_plane_cut", params: { r: 3, h: 1 } })!)!;
+    expect(GenericSolidBuilder.order(cut).at(-1)).toBe("cutPlane");
+    const cone = fixedSolid({ type: "solid_cone", params: { r: 2, h: 6 } })!;
+    // An upright cone of radius 2 and height 6: V = πr²h/3 = 8π.
+    expect(Math.abs(SolidCheck.volume(cone)! - 8 * Math.PI)).toBeLessThan(1e-3);
+  });
+
+  it("a fixed revolution with its own curve is checked like a generic one", () => {
+    const own = checkableSolid({ type: "solid_of_revolution", params: { f: "x^2", a: 0, b: 2 } });
+    expect(own).not.toBeNull();
+    expect(SolidCheck.agrees(own!, "V = 32π/5")).toBe(true);
+    expect(checkableSolid({ type: "solid_cone", params: {} })).toBeNull();
   });
 });

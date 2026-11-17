@@ -15,7 +15,7 @@ import { IllustrationPrompt } from "./illustrationPrompt";
 import { compileTemplate, compilingTemplate, decodeTemplate, type IllustrationTemplate } from "./illustrationTemplate";
 import { CircuitCheck, circuitOf, CircuitSolver, CircuitSpecs } from "./circuit";
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "./premadeFigure";
-import { GenericSolids, SolidCheck, solidOf } from "./solid";
+import { checkableSolid, SolidCheck, solidOf } from "./solid";
 import { formatG } from "../math/printf";
 import { plottingAuxiliarySum } from "./auxiliarySum";
 
@@ -40,7 +40,7 @@ export function prepareFigure(
 ): { illustration: Illustration; outcome: RenderingOutcome } {
   const premade = decodePremade(reply.premade);
   // A circuit is drawn from its netlist as a schematic, a solid from its equations in 3D (no elements to compile).
-  if (premade && (CircuitSpecs.fromPremade(premade) || GenericSolids.fromPremade(premade)))
+  if (premade && (CircuitSpecs.fromPremade(premade) || solidOf({ premade })))
     return { illustration: { ...reply, elements: [], template: null, premade }, outcome: "premade" };
   if (premade && new PremadeFigures(premade).compile(reply.title === "" ? "Figure" : reply.title, language)) {
     const compiled = applyingPremadeFigure(reply, language);
@@ -196,7 +196,7 @@ export class IllustrationProvider {
           return decoded;
         });
         // A solid must have the volume the answer gives.
-        const solidReply = GenericSolids.fromPremade(decodePremade(reply.premade));
+        const solidReply = checkableSolid(decodePremade(reply.premade));
         if (solidReply && SolidCheck.agrees(solidReply, part.answer.text) === false) {
           if (attempt !== 0) throw new IllustrationFailure();
           const measured = SolidCheck.volume(solidReply);
