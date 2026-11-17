@@ -30,6 +30,8 @@ import { noteStage, solveClock, SolutionReveal, SolveKind, SolveProgress, type S
 import type { SolutionProvider } from "./solutionProvider";
 import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
+import { CircuitCheck, CircuitSpecs } from "../illustrations/circuit";
+import type { PremadeFigure } from "../illustrations/premadeFigure";
 import { ComplexFigures, decodeComplexFigure } from "../illustrations/complexFigure";
 import {
   figureTopicOf,
@@ -1374,6 +1376,17 @@ ${part.label}`,
     })
       .then((drawn) => {
         if (controller.signal.aborted || generation !== this.illustrationGeneration) return abandon();
+        // A circuit is checked against the answer: the resistance between its terminals must be the one the solution
+        // gives (or the same in kΩ), else it is not shown.
+        const premade = drawn.premade as PremadeFigure | null | undefined;
+        if (premade && CircuitSpecs.fromPremade(premade)) {
+          const checked = CircuitCheck.reconcile(premade, part.answer.text);
+          if (!checked) {
+            this.illustrationState = "failed";
+            return;
+          }
+          drawn = { ...drawn, premade: checked };
+        }
         this.illustration = drawn;
         // Not drawable as asked (free-form refused, a template that doesn't compile): say so.
         this.illustrationState =

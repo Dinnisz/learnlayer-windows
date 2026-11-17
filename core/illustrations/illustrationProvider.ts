@@ -13,6 +13,7 @@ import { isCircuit, wants3D } from "./figureTopic";
 import { CompiledIllustration, decodeIllustration, isAllowedFreeForm, type Illustration } from "./illustration";
 import { IllustrationPrompt } from "./illustrationPrompt";
 import { compileTemplate, compilingTemplate, decodeTemplate, type IllustrationTemplate } from "./illustrationTemplate";
+import { CircuitCheck, CircuitSolver, CircuitSpecs } from "./circuit";
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "./premadeFigure";
 import { plottingAuxiliarySum } from "./auxiliarySum";
 
@@ -189,6 +190,20 @@ export class IllustrationProvider {
           if (!decoded) throw new IllustrationFailure();
           return decoded;
         });
+        // A circuit must have the resistance the answer gives between its terminals.
+        const circuitReply = decodePremade(reply.premade);
+        const circuit = circuitReply ? CircuitSpecs.fromPremade(circuitReply) : null;
+        if (circuit && CircuitCheck.verdict(circuit, part.answer.text).kind === "refuse") {
+          if (attempt !== 0) throw new IllustrationFailure();
+          const ends = circuit.terminals;
+          const measured = ends ? CircuitSolver.equivalentResistance(circuit, ends[0]!, ends[1]!) : null;
+          note =
+            "Your circuit does not match the figure: between its terminals it measures " +
+            (measured !== null ? CircuitSpecs.engineering(measured, "Ω") : "no resistance (they are not joined)") +
+            `, but the answer is ${part.answer.text}. Look at the figure again node by node (which node each ` +
+            "resistor starts and ends at) and reply with the corrected netlist, values in ohms.";
+          continue;
+        }
         const prepared = prepareFigure(reply, language, true, reply.needsFigure === true || part.figureTopic !== null);
         if (prepared.outcome === "withheld" && reply.elements.length > 0 && !isAllowedFreeForm(reply)) {
           if (attempt === 0) {
