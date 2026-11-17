@@ -9,6 +9,7 @@ import { CompiledIllustration, type Illustration } from "../illustration";
 import type { PremadeFigure, PremadeValue } from "../premadeFigure";
 import { algorithmFigures } from "./algorithms";
 import { calculusFigures } from "./calculus";
+import { flowchartFigures } from "./flowchart";
 import { heatingFigures } from "./heating";
 import { loopFigures } from "./loops";
 import { multivariableFigures } from "./multivariable";
@@ -29,6 +30,7 @@ const compilers = {
   ...heatingFigures,
   ...opticsFigures,
   ...loopFigures,
+  ...flowchartFigures,
 };
 
 export const animatedTypes: ReadonlySet<string> = new Set(Object.keys(compilers));
@@ -137,4 +139,8 @@ export const animatedGallery: PremadeFigure[] = [
   sample("arrayLoop", '{"task": "search", "values": [4, 7, 2, 9, 5], "target": 9}'),
   sample("recursionTree", '{"function": "fibonacci", "n": 5}'),
   sample("recursionTree", '{"function": "factorial", "n": 4}'),
+  sample("flowchart", '{"program": "sum", "n": 4}'),
+  sample("flowchart", '{"program": "factorial", "n": 4}'),
+  sample("flowchart", '{"program": "gcd", "a": 48, "b": 18}'),
+  sample("flowchart", '{"program": "parity", "n": 7}'),
 ];
