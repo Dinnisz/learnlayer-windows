@@ -13,7 +13,7 @@ import { isCircuit, wants3D } from "./figureTopic";
 import { CompiledIllustration, decodeIllustration, isAllowedFreeForm, type Illustration } from "./illustration";
 import { IllustrationPrompt } from "./illustrationPrompt";
 import { compileTemplate, compilingTemplate, decodeTemplate, type IllustrationTemplate } from "./illustrationTemplate";
-import { CircuitCheck, CircuitSolver, CircuitSpecs } from "./circuit";
+import { CircuitCheck, circuitOf, CircuitSolver, CircuitSpecs } from "./circuit";
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "./premadeFigure";
 import { plottingAuxiliarySum } from "./auxiliarySum";
 
@@ -37,6 +37,9 @@ export function prepareFigure(
   modelNeedsFigure: boolean,
 ): { illustration: Illustration; outcome: RenderingOutcome } {
   const premade = decodePremade(reply.premade);
+  // A circuit is drawn from its netlist as a schematic (no elements to compile).
+  if (premade && CircuitSpecs.fromPremade(premade))
+    return { illustration: { ...reply, elements: [], template: null, premade }, outcome: "premade" };
   if (premade && new PremadeFigures(premade).compile(reply.title === "" ? "Figure" : reply.title, language)) {
     const compiled = applyingPremadeFigure(reply, language);
     return { illustration: { ...compiled, template: null, premade }, outcome: "premade" };
@@ -233,7 +236,8 @@ export class IllustrationProvider {
             '"template" or, where it is allowed, free-form elements, and "premade": null.';
           continue;
         }
-        if (new CompiledIllustration(prepared.illustration).isDrawable) return prepared.illustration;
+        if (new CompiledIllustration(prepared.illustration).isDrawable || circuitOf(prepared.illustration))
+          return prepared.illustration;
         if (attempt === 1) {
           const fallback = IllustrationFallback.scene(groupText, part, language);
           if (fallback) return fallback;

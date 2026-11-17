@@ -29,6 +29,8 @@ import { ConceptSlug } from "@core/memory/memory";
 import { memoryStore } from "../memory/memory";
 import { detectTimingDiagram, timingPath, TimingDiagrams, type GreyBitmap } from "@core/timing/timing";
 import { IllustrationView } from "../figures/IllustrationView";
+import { CircuitView } from "../figures/CircuitView";
+import { circuitOf } from "@core/illustrations/circuit";
 import { SignTableView } from "../figures/SignTableView";
 import { SpaceFigureView } from "../figures/SpaceFigureView";
 import { StatementQuotes } from "@core/problems/statementQuotes";
@@ -821,10 +823,15 @@ function SideFigures({ session }: { session: QuestionSession }) {
 function IllustrationPanel({ session }: { session: QuestionSession }) {
   const t = useT();
   switch (session.illustrationState) {
-    case "ready":
-      return session.illustration ? (
+    case "ready": {
+      if (!session.illustration) return null;
+      const circuit = circuitOf(session.illustration);
+      return circuit ? (
+        <CircuitView spec={circuit} caption={session.illustration.title || undefined} />
+      ) : (
         <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
-      ) : null;
+      );
+    }
     case "empty":
       return <p className="figure-status">{t("Nothing worth drawing for this one.")}</p>;
     case "failed":

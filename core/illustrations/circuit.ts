@@ -622,3 +622,15 @@ export const CircuitMerges = {
     return { ids: group.map((item) => item.id), ohms, ends: boundary };
   },
 };
+
+/**
+ * The circuit an illustration carries (a premade `circuit` or one of the templates), or null. Windows draws it as a 2D
+ * schematic from its netlist (`CircuitLayouts`); the Mac builds a 3D board.
+ */
+export function circuitOf(illustration: {
+  premade?: { type: string; params: Record<string, unknown> } | null;
+}): CircuitSpec | null {
+  const premade = illustration.premade;
+  if (!premade || typeof premade.type !== "string") return null;
+  return CircuitSpecs.fromPremade(premade as PremadeFigure);
+}

@@ -30,7 +30,7 @@ import { noteStage, solveClock, SolutionReveal, SolveKind, SolveProgress, type S
 import type { SolutionProvider } from "./solutionProvider";
 import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
-import { CircuitCheck, CircuitSpecs } from "../illustrations/circuit";
+import { CircuitCheck, circuitOf, CircuitSpecs } from "../illustrations/circuit";
 import type { PremadeFigure } from "../illustrations/premadeFigure";
 import { ComplexFigures, decodeComplexFigure } from "../illustrations/complexFigure";
 import {
@@ -1389,8 +1389,9 @@ ${part.label}`,
         }
         this.illustration = drawn;
         // Not drawable as asked (free-form refused, a template that doesn't compile): say so.
-        this.illustrationState =
-          drawn.elements.length === 0 || !new CompiledIllustration(drawn).isDrawable
+        this.illustrationState = circuitOf(drawn)
+          ? "ready"
+          : drawn.elements.length === 0 || !new CompiledIllustration(drawn).isDrawable
             ? drawn.rejected === true
               ? "failed"
               : "empty"
