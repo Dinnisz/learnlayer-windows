@@ -33,6 +33,6 @@ EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts --silent=false
 ## Falta (fica para depois, registado em PROGRESSO.md)
 
 - O explicador de fórmulas soltas (`ExplanationPrompt` v14) passou para a fase 6, com os gráficos (ver DECISOES.md).
-- Comparar com a app Mac as etiquetas de Biologia, Português e História (grupos que recomeçam a numeração).
+- Etiquetas de Biologia, Português e História comparadas com as regras do Mac (2026-11-18). O porte segue o `QuestionDetector.swift`. As etiquetas estranhas («II.1 … 2 3», os passos de um procedimento tomados por itens) vêm das regras do Mac, que só olham para uma página. Ver DECISOES.md e PARA-O-DINIS.md.
 - Medir os 150 ms da abertura do palco na app Tauri, e as capturas a 1366×768 e 1920×1080 — falta verificação do Dinis (o Rust não compila nesta máquina por causa do Smart App Control).
 - Uma chamada real em streaming ao Worker de teste (fase 2) — falta verificação do Dinis.
