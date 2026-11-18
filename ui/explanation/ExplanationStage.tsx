@@ -32,6 +32,7 @@ import { MathText } from "../components/Math";
 import { dataFiles } from "../native";
 import { useT } from "../i18n";
 import type { ReaderDocument } from "../reader/readerDocument";
+import { stageInk } from "../stage/stageInk";
 import "../stage/stage.css";
 import "./explanation.css";
 
@@ -158,7 +159,14 @@ export function ExplanationStage({
   const scale = width === 0 ? 1 : Math.min(2.4, width / region.width);
   useEffect(() => {
     if (!canvas.current || width === 0) return;
-    void document.renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1);
+    void document.renderRegion(
+      pageIndex,
+      canvas.current,
+      region,
+      scale,
+      window.devicePixelRatio || 1,
+      stageInk(canvas.current),
+    );
   }, [document, pageIndex, region, scale, width]);
   const toCrop = (rect: Rect) => ({
     left: (rect.x - region.x) * scale,

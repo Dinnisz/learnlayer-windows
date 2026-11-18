@@ -81,6 +81,7 @@ import { VoiceFormula } from "@core/voice/voiceFormula";
 import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
+import { stageInk } from "./stageInk";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
 
 const base64Bytes = (text: string) => Uint8Array.from(atob(text), (character) => character.charCodeAt(0));
@@ -480,7 +481,7 @@ function CropPiece({
   useEffect(() => {
     if (!canvas.current || !ready) return;
     void document
-      .renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1)
+      .renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1, stageInk(canvas.current))
       .then(() => setDrawn((count) => count + 1));
   }, [document, pageIndex, region, scale, ready]);
   const version = session?.version;
@@ -724,8 +725,7 @@ function LensLayer({
 
 /**
  * Quoted words coloured in place (the Mac's QuoteTint): the crop's own letters inside each box are copied and
- * recoloured, so exactly the glyphs turn blue, crisp, with nothing drawn round them. The crop is drawn as dark ink and
- * inverted on screen, so the letters are painted the colour the inversion turns into the blue.
+ * recoloured, so exactly the glyphs turn blue, crisp, with nothing drawn round them.
  */
 function TintLayer({
   base,
@@ -761,18 +761,11 @@ function TintLayer({
     }
     const accent = getComputedStyle(target).getPropertyValue("--stage-accent").trim() || "#0a84ff";
     context.globalCompositeOperation = "source-atop";
-    context.fillStyle = invertedColour(accent);
+    context.fillStyle = accent;
     context.fillRect(0, 0, target.width, target.height);
     context.globalCompositeOperation = "source-over";
   }, [base, drawn, width, key]);
   return <canvas ref={layer} className="stage-tint" style={{ width, height }} aria-hidden="true" />;
-}
-
-/** The colour that `filter: invert(1)` turns into `colour` (a hex colour; anything else is the system blue's). */
-function invertedColour(colour: string): string {
-  const hex = /^#([0-9a-f]{6})$/i.exec(colour)?.[1] ?? "0a84ff";
-  const [r, g, b] = [0, 2, 4].map((at) => 255 - parseInt(hex.slice(at, at + 2), 16));
-  return `rgb(${r} ${g} ${b})`;
 }
 
 /**

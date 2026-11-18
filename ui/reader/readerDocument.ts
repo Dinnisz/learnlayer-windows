@@ -7,6 +7,7 @@ import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask
 import type { PageText, Rect } from "@core/pdf/page";
 import { pageTextFromRuns, type TextContentItem } from "@core/pdf/pdfjsText";
 import { PageImage } from "@core/pdf/pageImage";
+import { PageInk, type InkTheme } from "@core/pdf/pageInk";
 import { questionsOn, type ExamQuestion } from "@core/problems/questionDetector";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -133,7 +134,8 @@ export class ReaderDocument {
 
   /**
    * Draws `region` (PDF points) of a page into `canvas`, `scale` CSS pixels per point, on a transparent ground: the
-   * question lifted off the page onto the stage.
+   * question lifted off the page onto the stage. With `ink`, the page's colours are mapped onto the stage's (`PageInk`):
+   * dark ink white, colours their palette hue, paper nothing.
    */
   async renderRegion(
     index: number,
@@ -141,6 +143,7 @@ export class ReaderDocument {
     region: Rect,
     scale: number,
     pixelRatio: number,
+    ink: InkTheme | null = null,
   ): Promise<void> {
     const page = await this.page(index);
     const media = this.sizes[index]!.mediaBox;
@@ -160,6 +163,10 @@ export class ReaderDocument {
       background: "rgba(0,0,0,0)",
       transform: [1, 0, 0, 1, -offsetX, -offsetY],
     }).promise;
+    if (!ink) return;
+    const image = context.getImageData(0, 0, canvas.width, canvas.height);
+    PageInk.recolour(image.data, ink);
+    context.putImageData(image, 0, 0);
   }
 
   /** A JPEG (base64, no prefix) of part of a page, as `PageImage.jpeg` makes it: page-wide, at most `maxPixels` on a side. */

@@ -64,9 +64,10 @@
     height 300ms var(--spring);
 }
 
+/* Drawn in the stage's ink (PageInk): white on nothing, the page's colours in the palette's hues. */
 .stage-crop canvas {
   display: block;
-  filter: invert(1) drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
+  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
 }
 
 .stage-underline {
@@ -106,7 +107,7 @@
 }
 
 .stage-crop .stage-lens canvas {
-  filter: invert(1);
+  filter: none;
 }
 
 /* What can be selected and asked about (SelectableText): the open step's words, the hint, the answers written for the
@@ -184,13 +185,13 @@
   }
 }
 
-/* Quoted words coloured in place: the crop's own letters, recoloured, laid exactly over them (the Mac's QuoteTint). It
-   is inverted like the crop, so its ink comes out in the blue. */
+/* Quoted words coloured in place: the crop's own letters, recoloured in the blue, laid exactly over them (the Mac's
+   QuoteTint). */
 .stage-crop canvas.stage-tint {
   position: absolute;
   left: 0;
   top: 0;
-  filter: invert(1);
+  filter: none;
   pointer-events: none;
   animation: stage-fade 250ms ease-out;
 }
@@ -695,7 +696,7 @@
     background: transparent;
   }
 
-  /* The crop is not inverted here, so the recoloured letters would not come out blue. */
+  /* The crop is in the system's text colour here, and only the system's colours are shown. */
   .stage-crop canvas.stage-tint {
     display: none;
   }
