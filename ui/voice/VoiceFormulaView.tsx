@@ -1,11 +1,13 @@
 // The formula a spoken answer is drawn on, with the symbol being said tinted blue and ringed (the Mac's HighlightPlan:
 // a single letter or symbol is circled, never the whole formula). The Mac measures the typeset ink to place the ring
-// (FormulaTerms, TypesetInk, PenRing); here KaTeX draws each symbol in its own element, so the ring goes round the
-// element whose text is that symbol. A symbol not found is left unmarked (docs/DECISOES.md).
+// (FormulaTerms, TypesetInk, PenRing); here KaTeX draws each symbol in its own element, so the pen's ring (PenRing.ring)
+// goes round the box of the element whose text is that symbol. A symbol not found is left unmarked (docs/DECISOES.md).
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { latexToUnicode } from "@core/math/latexText";
 import { spokenAtoms } from "@core/voice/voiceFormula";
+import { PenRing, type MarkRect } from "@core/explanation/handDrawn";
+import { HandDrawnMark } from "../components/HandDrawnMark";
 import { MathView } from "../components/Math";
 
 const plainDigits: Record<string, string> = Object.fromEntries([
@@ -71,13 +73,6 @@ function findSymbol(root: HTMLElement, symbol: string): HTMLElement | null {
   return null;
 }
 
-interface Ring {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
 export function VoiceFormulaView({
   latex,
   symbols,
@@ -89,8 +84,8 @@ export function VoiceFormulaView({
   underlined?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
-  const [rings, setRings] = useState<Ring[]>([]);
-  const [underline, setUnderline] = useState<Ring | null>(null);
+  const [rings, setRings] = useState<MarkRect[]>([]);
+  const [underline, setUnderline] = useState<MarkRect | null>(null);
   const key = symbols.join("\u0001");
 
   useLayoutEffect(() => {
@@ -98,7 +93,7 @@ export function VoiceFormulaView({
     if (!root) return;
     for (const tinted of root.querySelectorAll(".voice-symbol")) tinted.classList.remove("voice-symbol");
     const origin = root.getBoundingClientRect();
-    const found: Ring[] = [];
+    const found: MarkRect[] = [];
     for (const symbol of key === "" ? [] : key.split("\u0001")) {
       const element = symbolTexts(symbol).reduce<HTMLElement | null>(
         (found, spelling) => found ?? findSymbol(root, spelling),
@@ -107,15 +102,10 @@ export function VoiceFormulaView({
       if (!element) continue;
       element.classList.add("voice-symbol");
       const rect = element.getBoundingClientRect();
-      // A ring a little wider than the glyph, clear of it.
-      const padX = Math.max(4, rect.width * 0.35);
-      const padY = Math.max(3, rect.height * 0.2);
-      found.push({
-        left: rect.left - origin.left - padX,
-        top: rect.top - origin.top - padY,
-        width: rect.width + padX * 2,
-        height: rect.height + padY * 2,
-      });
+      // The smallest round loop that keeps clear of the glyph all the way round.
+      found.push(
+        PenRing.ring({ x: rect.left - origin.left, y: rect.top - origin.top, width: rect.width, height: rect.height }),
+      );
     }
     setRings(found);
     const bases = [...root.querySelectorAll(".katex-html > .katex-base, .katex-html > .base")].map((base) =>
@@ -125,22 +115,16 @@ export function VoiceFormulaView({
       const left = Math.min(...bases.map((rect) => rect.left));
       const right = Math.max(...bases.map((rect) => rect.right));
       const bottom = Math.max(...bases.map((rect) => rect.bottom));
-      setUnderline({ left: left - origin.left, top: bottom - origin.top + 2, width: right - left, height: 0 });
+      setUnderline({ x: left - origin.left, y: bottom - origin.top, width: right - left, height: 0 });
     } else setUnderline(null);
   }, [latex, key, underlined]);
 
   return (
     <div className="voice-formula" ref={box}>
       <MathView latex={latex} display />
-      {underline ? (
-        <span
-          className="voice-underline"
-          aria-hidden="true"
-          style={{ left: underline.left, top: underline.top, width: underline.width }}
-        />
-      ) : null}
-      {rings.map((ring, index) => (
-        <span key={index} className="voice-ring" aria-hidden="true" style={ring} />
+      {underline ? <HandDrawnMark style="underline" rect={underline} delay={0.05} /> : null}
+      {rings.map((ring) => (
+        <HandDrawnMark key={`${ring.x},${ring.y}`} style="circle" rect={ring} delay={0.1} />
       ))}
     </div>
   );

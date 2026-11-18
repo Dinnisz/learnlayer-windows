@@ -1,0 +1,46 @@
+/* The pen's loop and line (HandDrawnMark): drawn along their length, in the one blue. */
+.hand-drawn-mark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.hand-drawn {
+  fill: none;
+  stroke: var(--stage-accent, var(--accent, #0a84ff));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: hand-drawn-draw 0.6s ease-in-out forwards;
+}
+
+@keyframes hand-drawn-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-drawn {
+    stroke-dashoffset: 0;
+    opacity: 0;
+    animation: hand-drawn-fade 0.25s ease-in forwards;
+  }
+}
+
+@keyframes hand-drawn-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .hand-drawn {
+    stroke: Highlight;
+  }
+}

@@ -1,5 +1,7 @@
-// Port of LessonEvidence.inPlaceOp and isSingleValue (LearnLayer/Lesson/LessonLayer.swift @ ref 2026-11-04): how a
-// part of the question is marked where it stands.
+// Port of LessonEvidence.inPlaceOp, isSingleValue and ringBox (LearnLayer/Lesson/LessonLayer.swift @ ref 2026-11-04):
+// how a part of the question is marked where it stands.
+
+import { narrowestWobble, PenRing, type MarkRect } from "../explanation/handDrawn";
 
 export interface InPlaceMark {
   op: string;
@@ -48,5 +50,41 @@ export const LessonEvidence = {
       longest = Math.max(longest, run);
     }
     return longest < 3;
+  },
+
+  /**
+   * The box to ring `quote` with in place. The inside of the pen's loop (at its narrowest wobble, less half the stroke)
+   * goes round the whole quote, its corners `corner` points clear and its ends at least `reach` points clear, so no
+   * letter at either end is cut. Of the ellipses that fit, the one that grows least, height counting double since it
+   * runs into the lines above and below.
+   */
+  ringBox(quote: MarkRect, reach = 4, corner = 2): MarkRect {
+    if (quote.width <= 0 || quote.height <= 0) return quote;
+    const halfWidth = quote.width / 2 + corner;
+    const halfHeight = quote.height / 2 + corner;
+    let best: { cost: number; x: number; y: number } | null = null;
+    // (halfWidth / x)² + (halfHeight / y)² = 1: `share` is the corner's part on the vertical axis.
+    for (let step = 5; step <= 95; step += 1) {
+      const share = step / 100;
+      const x = Math.max(halfWidth / Math.sqrt(1 - share), quote.width / 2 + reach);
+      const y = halfHeight / Math.sqrt(share);
+      const cost = x - quote.width / 2 + 2 * (y - quote.height / 2);
+      if (best === null || cost < best.cost) best = { cost, x, y };
+    }
+    if (!best) return quote;
+    // From the inside of the stroke to the loop's centre line at its narrowest wobble, with room for the chords
+    // between its samples, then to the box the loop grows its ellipse from.
+    const stroke = PenRing.lineWidth / 2 + 0.5;
+    const pad = PenRing.ellipse({ x: 0, y: 0, width: 0, height: 0 });
+    const radiusX = (best.x + stroke) / narrowestWobble;
+    const radiusY = (best.y + stroke) / narrowestWobble;
+    const width = Math.max(1, 2 * (radiusX - pad.radiusX));
+    const height = Math.max(1, 2 * (radiusY - pad.radiusY));
+    return {
+      x: quote.x + quote.width / 2 - width / 2,
+      y: quote.y + quote.height / 2 - height / 2,
+      width,
+      height,
+    };
   },
 };

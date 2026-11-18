@@ -33,6 +33,7 @@ import { dataFiles } from "../native";
 import { useT } from "../i18n";
 import type { ReaderDocument } from "../reader/readerDocument";
 import { stageInk } from "../stage/stageInk";
+import { HandDrawnMark } from "../components/HandDrawnMark";
 import "../stage/stage.css";
 import "./explanation.css";
 
@@ -216,18 +217,14 @@ export function ExplanationStage({
             {session.marks.map((mark, index) => {
               const rect = rectOf(mark.target);
               if (!rect) return null;
-              const box = toCrop(
-                mark.style === "circle"
-                  ? { x: rect.x - 4, y: rect.y - 3, width: rect.width + 8, height: rect.height + 6 }
-                  : rect,
-              );
-              return mark.style === "circle" ? (
-                <span key={index} className="stage-circle" style={box} />
-              ) : (
-                <span
-                  key={index}
-                  className="stage-underline"
-                  style={{ left: box.left, top: box.top + box.height - 2, width: box.width }}
+              const box = toCrop(rect);
+              // New marks are drawn one after another, like a pen.
+              return (
+                <HandDrawnMark
+                  key={`${mark.style}\n${mark.target}`}
+                  style={mark.style === "circle" ? "circle" : "underline"}
+                  rect={{ x: box.left, y: box.top, width: box.width, height: box.height }}
+                  delay={Math.max(0, index - session.marksBeforeGroup) * 0.45}
                 />
               );
             })}

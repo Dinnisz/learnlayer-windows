@@ -4,6 +4,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Graphs, type Graph } from "@core/illustrations/graph";
+import { PenRing } from "@core/explanation/handDrawn";
+import { HandDrawnPath } from "../components/HandDrawnMark";
 import { useLanguage } from "../i18n";
 import "./figures.css";
 
@@ -291,7 +293,20 @@ export function CurveGraph({
             Number.isFinite(ring.y) &&
             (() => {
               const p = mapping.point(ring.x, ring.y);
-              return <circle key="lesson-ring" cx={p.x} cy={p.y} r={14} className="curve-graph-ring" />;
+              // The pen's loop wobbles and overruns its start, so it is not centred on its box: the box moves by the
+              // difference, so the loop as drawn is centred on the point (CurveGraphView.ringBox).
+              const diameter = 34;
+              const loop = PenRing.outerBounds({ x: 0, y: 0, width: diameter, height: diameter });
+              const dx = loop.x + loop.width / 2 - diameter / 2;
+              const dy = loop.y + loop.height / 2 - diameter / 2;
+              return (
+                <HandDrawnPath
+                  key={`lesson-ring ${ring.x},${ring.y}`}
+                  style="circle"
+                  rect={{ x: p.x - diameter / 2 - dx, y: p.y - diameter / 2 - dy, width: diameter, height: diameter }}
+                  delay={0.1}
+                />
+              );
             })()}
           {drawn &&
             visible.map((mark, index) => {

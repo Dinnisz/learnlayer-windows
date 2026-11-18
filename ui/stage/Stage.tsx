@@ -82,6 +82,7 @@ import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import { stageInk } from "./stageInk";
+import { HandDrawnMark } from "../components/HandDrawnMark";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
 
 const base64Bytes = (text: string) => Uint8Array.from(atob(text), (character) => character.charCodeAt(0));
@@ -515,7 +516,16 @@ function CropPiece({
     () =>
       page && session
         ? cropMarks(page, region, session, shows)
-        : { underlines: [], circles: [], highlights: [], strikes: [], pointers: [], tints: [] },
+        : {
+            underlines: [],
+            penUnderlines: [],
+            circles: [],
+            answer: null,
+            highlights: [],
+            strikes: [],
+            pointers: [],
+            tints: [],
+          },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, region, session, version, shows],
   );
@@ -529,7 +539,7 @@ function CropPiece({
     const focus = session.part?.cards?.[session.mascotFocusStep]?.focus ?? null;
     const on = focus?.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
     const spot = focus && on === role ? StepFocusGeometry.rect(focus, crop) : null;
-    const line = marks.underlines[0];
+    const line = marks.underlines[0] ?? marks.penUnderlines[0];
     const target = spot ?? (line ? cropBox(line, region, scale) : null);
     if (!target) return null;
     const zoom = spot ? StepFocusGeometry.zoom(spot, crop) : QuoteLoupeScale;
@@ -583,10 +593,42 @@ function CropPiece({
           />
         );
       })}
-      {marks.circles.map((rect, index) => {
-        const box = toCrop(Rects.inset(rect, -4, -3));
-        return <span key={`c${index}`} className="stage-circle" style={box} />;
+      {marks.penUnderlines.map((rect) => {
+        // The lesson's line under words, past their ends (LessonLayer: the words' box, 2 pt wider each side).
+        const box = toCrop(rect);
+        return (
+          <HandDrawnMark
+            key={`pu${rect.x},${rect.y}`}
+            style="underline"
+            rect={{ x: box.left - 2, y: box.top, width: box.width + 4, height: box.height }}
+            delay={0.05}
+          />
+        );
       })}
+      {marks.circles.map((rect) => {
+        // The lesson's ring round a value or a part, clear of every letter (LessonEvidence.ringBox).
+        const box = toCrop(rect);
+        return (
+          <HandDrawnMark
+            key={`c${rect.x},${rect.y}`}
+            style="circle"
+            rect={LessonEvidence.ringBox({ x: box.left, y: box.top, width: box.width, height: box.height })}
+            delay={0.1}
+          />
+        );
+      })}
+      {marks.answer &&
+        (() => {
+          // The option the answer names, circled on the question itself (QuestionOverlay.answerRing).
+          const box = toCrop(marks.answer);
+          return (
+            <HandDrawnMark
+              style="circle"
+              rect={{ x: box.left - 4, y: box.top - 3, width: box.width + 8, height: box.height + 6 }}
+              delay={0.35}
+            />
+          );
+        })()}
       {session && (
         <StepFocusMark
           session={session}
@@ -847,10 +889,11 @@ function FocusPointer({
           <path d={StepFocusMarks.arrowPath(place.tail, StepFocusMarks.arrowTip(place.tail, region))} pathLength={1} />
         </svg>
       ) : (
-        <span
-          className="stage-circle"
-          aria-hidden="true"
-          style={{ left: region.x - 6, top: region.y - 6, width: region.width + 12, height: region.height + 12 }}
+        <HandDrawnMark
+          key={`${region.x},${region.y}`}
+          style="circle"
+          rect={{ x: region.x - 6, y: region.y - 6, width: region.width + 12, height: region.height + 12 }}
+          delay={0.1}
         />
       )}
       {note && (
@@ -864,8 +907,14 @@ function FocusPointer({
 
 /** The marks on the question's crop, by kind (`LessonLayer`'s marks). */
 interface CropMarks {
+  /** The open step's data, each under a straight line (`StatementUnderlines`). */
   underlines: Rect[];
+  /** The lesson's words, under a pen's line. */
+  penUnderlines: Rect[];
+  /** The lesson's values and parts, in a pen's loop. */
   circles: Rect[];
+  /** The option the answer names, circled once the answer is shown. */
+  answer: Rect | null;
   /** Filled in the blue, with a blue edge. */
   highlights: Rect[];
   /** Dimmed, one line drawn through: a part that does not hold. */
@@ -898,6 +947,8 @@ function cropMarks(
   }
   // The right option, circled on the question itself, once the answer is shown.
   const circles: Rect[] = [];
+  const penUnderlines: Rect[] = [];
+  let answer: Rect | null = null;
   const part = session.part;
   const answerShown = session.mode === "solution" || session.showsAnswer;
   if (part && answerShown && session.isConfirmed) {
@@ -908,7 +959,7 @@ function cropMarks(
       for (const match of page.text.matchAll(new RegExp(`\\(?${letter}\\)`, "g"))) {
         const lines = linesOf(page, match.index, match[0].length);
         if (lines.length === 1 && inside(lines[0]!.bounds)) {
-          circles.push(lines[0]!.bounds);
+          answer = lines[0]!.bounds;
           break;
         }
       }
@@ -932,7 +983,7 @@ function cropMarks(
     else if (op === "crossOut") strikes.push(...rects);
     else if (op === "highlight") highlights.push(...rects);
     else if (op === "circle" || op === "zoom") circles.push(...rects);
-    else underlines.push(...rects);
+    else penUnderlines.push(...rects);
   };
   // The beat being said marks the words it talks about, and rings the option it names, or strikes it out.
   for (const show of lessonShows) {
@@ -1001,7 +1052,7 @@ function cropMarks(
         show.note?.trim() || null,
       );
   }
-  return { underlines, circles, highlights, strikes, pointers, tints };
+  return { underlines, penUnderlines, circles, answer, highlights, strikes, pointers, tints };
 }
 
 function ModeView({ session }: { session: QuestionSession }) {

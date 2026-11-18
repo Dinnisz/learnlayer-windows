@@ -500,28 +500,6 @@
 }
 
 /* The point a lesson's beat rings on the graph (LessonRun.graphRing): a loop in the one blue, drawn as it is said. */
-.curve-graph-ring {
-  fill: none;
-  stroke: var(--accent, #0a84ff);
-  stroke-width: 2.4;
-  animation: curve-graph-ring-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-@keyframes curve-graph-ring-in {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .curve-graph-ring {
-    animation: none;
-  }
-}
-
 /* MascotFigureFocus: the part of the figure the mascot's step adds, magnified in place a moment after the body sets
    off (spring 0.6 s, delay 0.45 s), never past the figure's edges; clipped only while magnified. */
 .figure-focus {

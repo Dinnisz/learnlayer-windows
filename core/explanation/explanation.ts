@@ -696,6 +696,15 @@ export class ExplanationSession {
       });
   }
 
+  /** How many marks were drawn before the last group of steps: the new ones are drawn one after another from there. */
+  get marksBeforeGroup(): number {
+    const keys = this.steps
+      .slice(0, this.groupStart)
+      .flatMap((step) => step.marks ?? [])
+      .map((mark) => `${mark.style}\n${mark.target}`);
+    return new Set(keys).size;
+  }
+
   /** Pieces of the equation the student can click to answer. */
   get clickableTargets(): string[] {
     const script = this.script;
