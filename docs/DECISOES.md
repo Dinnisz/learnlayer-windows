@@ -244,3 +244,4 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — O tutor de voz não reescreve o que já está no ecrã
 - **Portado do Mac (`VoiceCanvasPlan.isOnScreen`/`formulas`/`screenKey`, `QuestionSession.onScreenText`), com os testes de `MascotClickGuideTests`:** uma fórmula que já se lê no ecrã (no enunciado, nos passos à vista ou na resposta), em qualquer notação (frações ou barra, `\cdot`/×/*, índices Unicode ou `_`, vírgula ou ponto decimal, os dois lados do `=` trocados), não é escrita outra vez; as marcas ficam na pergunta. Um símbolo de um ou dois caracteres só conta como palavra inteira.
+- **Feito também (`QuestionSession.focusStepForVoice`):** quando o aluno pede um passo por voz («explica o ponto 2»), a mascote, os sublinhados, o ponto do passo e a figura vão para esse passo até ao turno seguinte, como no Mac.

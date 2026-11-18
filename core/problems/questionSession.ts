@@ -1681,6 +1681,13 @@ ${part.label}`,
     return true;
   }
 
+  /** The mascot and the figure go to one step while the voice expands it ("explica o ponto 2"). */
+  focusStepForVoice(step: number): void {
+    this.guideController?.abort();
+    this.guideController = null;
+    this.guide(step);
+  }
+
   /** The mascot goes back to rest. */
   stopGuide(): void {
     this.guideController?.abort();

@@ -47,13 +47,16 @@ const mockReply = '{"opening":null,"drawing":[{"op":"circle","term":"a"}],"spoke
 
 /** One spoken turn about the open question: the system prompt, the message and the model, as the Mac asks them. */
 async function reply(session: QuestionSession, transcript: string, signal: AbortSignal): Promise<VoiceTutorReply> {
-  if (usesMock()) return VoiceTutorReplies.decode(mockReply);
-  const language = tutorLanguage();
   const part = session.part;
   const step = StepRequests.parse(transcript);
   const cards = part?.cards ?? [];
   const lines = cards.length > 0 ? cards.map((card) => card.title) : (part?.steps ?? []);
   const index = step ? StepRequests.index(step, lines.length) : null;
+  // "Explica o ponto 1": the mascot, the underlines and the figure go to that step alone.
+  session.stopGuide();
+  if (index !== null) session.focusStepForVoice(index);
+  if (usesMock()) return VoiceTutorReplies.decode(mockReply);
+  const language = tutorLanguage();
   const directive =
     index !== null ? stepDetail(index + 1, lines.length, lines[index]!, session.solution?.figure != null) : null;
   const work = session.solution

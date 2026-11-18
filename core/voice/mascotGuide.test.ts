@@ -183,6 +183,20 @@ describe("the session's walk (QuestionSession.mascotClicked)", () => {
     expect(VoiceFormula.isOnScreen("v = 12 + 2 \\cdot 5 = 22", shown)).toBe(true);
   });
 
+  it("a step asked for by voice holds the mascot, its data and the figure there", async () => {
+    const opened = session();
+    opened.mascotClicked(true);
+    opened.focusStepForVoice(2);
+    expect(opened.mascotFocusStep).toBe(2);
+    expect(opened.underlinedStep).toBe(2);
+    expect(opened.figureStep).toBe(3);
+    // The walk that was going is over: nothing moves it on.
+    await vi.advanceTimersByTimeAsync(MascotGuide.maximumBeat * 4000);
+    expect(opened.mascotFocusStep).toBe(2);
+    opened.stopGuide();
+    expect(opened.mascotFocusStep).toBeNull();
+  });
+
   it("with nothing to explain the click goes to talk", () => {
     const opened = session();
     opened.mode = "tryIt";
