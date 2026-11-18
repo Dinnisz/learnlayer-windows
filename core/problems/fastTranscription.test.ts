@@ -1,6 +1,8 @@
 // FastTranscriptionTests.swift, the reader's cases (the race with the solve is in questionSession.test.ts): the
 // reply is read as the Mac reads it, one call per picture, a failed call is not repeated, a reading set aside is
 // asked for once more. The fast model's reply is scripted, so nothing is spent.
+// It also holds the clock cases of QuestionReadingLatencyTests.swift: the deadline that waits for the first words, the
+// stalled call given up on time, the placeholder giving way, and the first accepted reading.
 
 import { describe, expect, it } from "vitest";
 import { DiskCache, type DataFiles } from "../ai/diskCache";
