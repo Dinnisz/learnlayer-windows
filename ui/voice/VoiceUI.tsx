@@ -7,7 +7,15 @@ import { TutorLanguage } from "@core/problems/solutionRequest";
 import type { QuestionSession } from "@core/problems/questionSession";
 import { SpeechToText } from "@core/voice/speechToText";
 import { VoiceLocale } from "@core/voice/speechPlan";
-import { stepDetail, StepRequests, VoiceTutorOpener } from "@core/voice/voiceTutorOpener";
+import {
+  combineDirectives,
+  pointingDirective,
+  stepDetail,
+  StepRequests,
+  VoiceTutorOpener,
+} from "@core/voice/voiceTutorOpener";
+import { ConceptSlug, type MemoryStore } from "@core/memory/memory";
+import { memoryStore } from "../memory/memory";
 import { VoiceTutorPrompt, VoiceTutorRouting } from "@core/voice/voiceTutorPrompt";
 import { VoiceTutorReplies, type DrawingCommand, type VoiceTutorReply } from "@core/voice/voiceTutorReply";
 import { VoiceFormula } from "@core/voice/voiceFormula";
@@ -45,6 +53,9 @@ export const useVoiceState = () => useContext(VoiceContext);
 /** The Mac's mock reply: one sentence and a circle on "a", for working without the API. */
 const mockReply = '{"opening":null,"drawing":[{"op":"circle","term":"a"}],"spoken":"A letra [[0]]a é o coeficiente."}';
 
+let memory: MemoryStore | null = null;
+void memoryStore().then((store) => (memory = store));
+
 /** One spoken turn about the open question: the system prompt, the message and the model, as the Mac asks them. */
 async function reply(session: QuestionSession, transcript: string, signal: AbortSignal): Promise<VoiceTutorReply> {
   const part = session.part;
@@ -57,8 +68,20 @@ async function reply(session: QuestionSession, transcript: string, signal: Abort
   if (index !== null) session.focusStepForVoice(index);
   if (usesMock()) return VoiceTutorReplies.decode(mockReply);
   const language = tutorLanguage();
-  const directive =
-    index !== null ? stepDetail(index + 1, lines.length, lines[index]!, session.solution?.figure != null) : null;
+  // The step asked about, and how the plan read from memory wants the explanation to point (`voiceDirective`).
+  const hasFigure = session.solution?.figure != null;
+  const plan = memory?.plan({
+    question: session.question.groupText,
+    kind: "exercise",
+    area: ConceptSlug.area(session.routeSubject ?? ""),
+    concept: ConceptSlug.make(session.question.groupText),
+    utterance: session.question.groupText,
+    usesVoice: true,
+  });
+  const directive = combineDirectives([
+    index !== null ? stepDetail(index + 1, lines.length, lines[index]!, hasFigure) : null,
+    pointingDirective(plan?.pointer ?? false, hasFigure, language.startsWith("en")),
+  ]);
   const work = session.solution
     ? workContext({
         label: session.question.label,

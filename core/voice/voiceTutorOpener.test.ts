@@ -3,7 +3,7 @@
 
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { StepRequests, VoiceTutorOpener } from "./voiceTutorOpener";
+import { combineDirectives, pointingDirective, StepRequests, VoiceTutorOpener } from "./voiceTutorOpener";
 
 const exercise = "Calcula a aceleração do bloco no plano inclinado.";
 const clips = "referencia-mac/LearnLayer/Resources/OpenerClips";
@@ -131,5 +131,21 @@ describe("VoiceTutorOpener", () => {
         expect(existsSync(file), file).toBe(true);
       }
     }
+  });
+});
+
+// The pointing note of EnglishTutorTests.swift @ ref 2026-11-04, and the notes joined.
+describe("how the voice turn is told to point", () => {
+  it("in the tutor's language, only for a student who learns from figures", () => {
+    expect(pointingDirective(true, true, true)).toContain('"look at the graph"');
+    expect(pointingDirective(true, true, true)).not.toContain("olha");
+    expect(pointingDirective(true, true)).toContain('"olha para o gráfico"');
+    expect(pointingDirective(true, false)).toContain('labelled "point" on a "plot"');
+    expect(pointingDirective(false, true)).toBeNull();
+  });
+
+  it("the notes are joined, the empty ones left out", () => {
+    expect(combineDirectives([null, ""])).toBeNull();
+    expect(combineDirectives(["a", null, "b"])).toBe("a\n\nb");
   });
 });

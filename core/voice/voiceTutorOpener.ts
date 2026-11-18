@@ -97,6 +97,26 @@ export const StepRequests = {
   },
 };
 
+/**
+ * How the plan wants the explanation to point (`VoiceTutorDirective.pointing`): for a student who learns from figures,
+ * the graph or figure first, else a sketch or a labelled point on a plot. Null when the plan does not ask for it.
+ */
+export function pointingDirective(pointer: boolean, hasFigure: boolean, english = false): string | null {
+  if (!pointer) return null;
+  return hasFigure
+    ? "Pointing: this student learns from figures. Put the graph or figure first, say " +
+        (english ? '"look at the graph"' : '"olha para o gráfico"') +
+        " (or the figure) and mark the exact part before the algebra."
+    : 'Pointing: this student learns from figures. Prefer a sketch or a labelled "point" on a "plot" ' +
+        "of a function the steps use over a long formula whenever the idea can be drawn.";
+}
+
+/** The notes joined, or null when there are none (`VoiceTutorDirective.combine`). */
+export function combineDirectives(notes: readonly (string | null)[]): string | null {
+  const kept = notes.filter((note): note is string => note !== null && note !== "");
+  return kept.length === 0 ? null : kept.join("\n\n");
+}
+
 /** Expand only this step (`number` counts from 1, as the student says it): the directive of the voice turn. */
 export function stepDetail(number: number, total: number, text: string, hasFigure: boolean): string {
   let note =
