@@ -6,6 +6,7 @@ import katex from "katex";
 import { memo, useMemo } from "react";
 import { latexToUnicode, normalized } from "@core/math/latexText";
 import { CodeText } from "@core/code/codeText";
+import { NoteMath } from "@core/math/noteMath";
 import { CodeBlockView } from "./CodeBlockView";
 
 const macros: Record<string, string> = {
@@ -121,6 +122,45 @@ const InlineMath = memo(function InlineMath({ text, className }: { text: string;
     <span className={className}>
       {pieces.map((piece, index) =>
         piece.math ? <MathView key={index} latex={piece.value} /> : <span key={index}>{piece.value}</span>,
+      )}
+    </span>
+  );
+});
+
+/**
+ * A step's note (`NoteText`): a sentence with maths inside it ("f' < 0 em ]−∞, 0["), the maths typeset where it is
+ * and the words left as text (`NoteMath.pieces`); a program in it kept line for line in its own block.
+ */
+export const NoteText = memo(function NoteText({ text, className }: { text: string; className?: string }) {
+  const segments = useMemo(() => CodeText.segments(text), [text]);
+  return (
+    <span className={`prose-and-code${className ? ` ${className}` : ""}`}>
+      {segments.map((segment, index) =>
+        segment.kind === "code" ? (
+          <CodeBlockView key={index} block={segment.block} />
+        ) : (
+          <NoteWords key={index} text={segment.text} />
+        ),
+      )}
+    </span>
+  );
+});
+
+const NoteWords = memo(function NoteWords({ text }: { text: string }) {
+  const pieces = useMemo(() => NoteMath.pieces(text), [text]);
+  if (!pieces.some((piece) => piece.isMath)) {
+    // "$…$" maths as Unicode, never the marks themselves.
+    const line = NoteMath.plainText(text);
+    return <span>{/\|\^\{|_\{/.test(line) ? latexToUnicode(line) : line}</span>;
+  }
+  return (
+    <span>
+      {pieces.map((piece, index) =>
+        piece.isMath ? (
+          <MathView key={index} latex={piece.isLatex ? piece.text : NoteMath.latex(piece.text)} />
+        ) : (
+          <span key={index}>{piece.text}</span>
+        ),
       )}
     </span>
   );

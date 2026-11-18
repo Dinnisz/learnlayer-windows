@@ -49,7 +49,8 @@ import {
   visualAidProvider,
 } from "../ai/solver";
 import { Icon } from "../components/Icon";
-import { MathText, MathView, untypesetMath } from "../components/Math";
+import { MathText, MathView, NoteText, untypesetMath } from "../components/Math";
+import { NoteMath } from "@core/math/noteMath";
 import { MorphView } from "../components/MorphView";
 import { useT } from "../i18n";
 import {
@@ -969,7 +970,7 @@ function StepCard({
             <h4>
               <MathText text={card.title} />
             </h4>
-            {card.latex.trim() !== "" && (
+            {card.latex.trim() !== "" && !NoteMath.formulaRepeats(card.latex, card.note ?? "") && (
               <StepFormula part={part} index={index} latex={card.latex} advanced={advanced} />
             )}
             {card.branches && card.branches.length > 0 && (
@@ -984,13 +985,13 @@ function StepCard({
             )}
             {card.note && (
               <p className="stage-step-note">
-                <MathText text={card.note} />
+                <NoteText text={card.note} />
               </p>
             )}
           </>
         ) : (
           <p className="stage-step-note">
-            <MathText text={part.steps[index] ?? ""} />
+            <NoteText text={part.steps[index] ?? ""} />
           </p>
         )}
         {pitfall && (

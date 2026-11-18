@@ -206,3 +206,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-18 — O aviso «Cuidado» e a resposta que espera pela lição
 - **Portado do Mac (`LessonRun`, `PitfallTag`, `showsFinalAnswer`), com os testes:** o aviso de uma lição é conhecido desde o início e fica dobrado no seu passo («Cuidado»), abre-se só enquanto a frase dele é dita, e um toque abre-o ou dobra-o; enquanto a lição corre, a caixa da resposta espera até a lição chegar à linha da resposta e a transformação dela acabar (ou até ao fecho).
 - **Dúvida:** o CLAUDE.md pede só um acento azul, mas o `PitfallTag` do Mac usa um âmbar («a única cor quente do tema: um erro a evitar, não uma resposta errada»). **Escolha:** âmbar, como o Mac. **Porquê:** quando o texto e o código Swift discordam, manda o código Swift; com Alto Contraste o Windows troca as cores.
+
+## 2026-11-18 — Matemática dentro das notas dos passos
+- **Portado do Mac (`NoteMath`, `NoteText`, `formulaRepeats`), com os testes de `NoteTextTests` e os casos de `LayoutFixTests`/`LiveRunFixTests`:** numa nota como «f' < 0 em ]−∞, 0[», as fórmulas são compostas pelo KaTeX no meio das palavras; as marcas «$…$» nunca aparecem; uma fórmula de passo que só repete a frase da nota, ou só a letra de uma opção, não é desenhada.
+- **Não portado:** `NoteLayout` (o Mac dispõe palavras e fórmulas linha a linha à mão, porque o SwiftUI não junta texto e imagens numa linha); no browser o texto em linha faz isso sozinho. Os testes de `NoteLayout` ficam por isso de fora.
