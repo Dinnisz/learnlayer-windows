@@ -868,23 +868,13 @@
     top 0.55s cubic-bezier(0.3, 1.3, 0.5, 1);
 }
 
+/* The tutor at work (AnimatedMascot): drawn frame by frame, its glow and cues past its own box. */
 .mascot-alive {
   display: inline-block;
-  transform: scale(var(--mascot-scale, 1));
-  transition:
-    transform 90ms linear,
-    filter 200ms ease;
-  animation: mascot-breathe 3.6s ease-in-out infinite;
 }
 
-.mascot-alive.speaking {
-  filter: drop-shadow(0 0 12px rgb(10 132 255 / 55%));
-}
-
-@keyframes mascot-breathe {
-  50% {
-    translate: 0 -2px;
-  }
+.mascot-alive svg {
+  overflow: visible;
 }
 
 .lesson-calc,
@@ -999,14 +989,6 @@
   .stage-pitfall-chip,
   .stage-pitfall-body {
     forced-color-adjust: auto;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mascot-alive {
-    animation: none;
-    transition: filter 200ms ease;
-    transform: none;
   }
 }
 

@@ -4,6 +4,7 @@
 // instead, saying each while its data is underlined (the Mac's `readSteps`, `QuestionSession.mascotClicked`).
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { MascotPresence, MascotTransient } from "@core/voice/mascotMotion";
 import { EquationMorph } from "@core/explanation/equationMorph";
 import type { LessonBeat, LessonShow } from "@core/lesson/mascotLesson";
 import type { LessonRequest } from "@core/lesson/mascotLessonProvider";
@@ -235,6 +236,8 @@ export function LessonOverlay({
   state,
   onTap,
   voice = null,
+  presence,
+  transient = null,
   showsMascot = true,
 }: {
   player: LessonPlayer | null;
@@ -242,6 +245,10 @@ export function LessonOverlay({
   onTap(): void;
   /** The voice tutor's turn: the sphere listens, and speaks with its level. */
   voice?: { phase: string; level: number } | null;
+  /** What the sphere is doing (listening, thinking, speaking); from the lesson alone when not given. */
+  presence?: MascotPresence;
+  /** A short reaction: a hint, a right answer, a wrong one. */
+  transient?: MascotTransient | null;
   showsMascot?: boolean;
 }) {
   const t = useT();
@@ -265,7 +272,13 @@ export function LessonOverlay({
         >
           {/* Listening for the student's question: a brief word over the sphere. */}
           {listening ? <span className="lesson-tell">{t("Tell me")}</span> : null}
-          <AnimatedMascot level={level} speaking={speaking} />
+          <AnimatedMascot
+            level={level}
+            speaking={speaking}
+            presence={presence}
+            pointing={spot !== null}
+            transient={transient}
+          />
         </button>
       ) : null}
       {state?.calc ? <div className="lesson-calc">{state.calc}</div> : null}

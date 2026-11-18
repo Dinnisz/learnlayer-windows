@@ -83,6 +83,7 @@ import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import { stageInk } from "./stageInk";
 import { HandDrawnMark } from "../components/HandDrawnMark";
+import type { MascotPresence, MascotTransient } from "@core/voice/mascotMotion";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
 
 const base64Bytes = (text: string) => Uint8Array.from(atob(text), (character) => character.charCodeAt(0));
@@ -227,6 +228,38 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   const stopLesson = lesson.stop;
   const voice = useVoiceTutor(session);
   const stopVoice = voice.stop;
+  // The sphere's short reactions (MascotController.flash): a hint lights its bulb, a right answer to «Let me try» turns
+  // it green with a hop, a wrong one orange with a shake, for 1.35 s.
+  const [cue, setCue] = useState<{ cue: MascotTransient } | null>(null);
+  const cueKey = session
+    ? session.mode === "hint"
+      ? "hint"
+      : session.attemptResult === "matches"
+        ? "correct"
+        : session.attemptResult === "differs"
+          ? "wrong"
+          : null
+    : null;
+  const [lastCueKey, setLastCueKey] = useState<string | null>(null);
+  if (cueKey !== lastCueKey) {
+    setLastCueKey(cueKey);
+    if (cueKey) setCue({ cue: cueKey as MascotTransient });
+  }
+  useEffect(() => {
+    if (!cue) return;
+    const timer = window.setTimeout(() => setCue((now) => (now === cue ? null : now)), 1350);
+    return () => window.clearTimeout(timer);
+  }, [cue]);
+  // What the sphere is doing: listening or speaking with the voice, thinking while the voice or the solution is worked
+  // out, speaking with the lesson.
+  const mascotPresence: MascotPresence =
+    voice.state.phase === "listening"
+      ? "listening"
+      : voice.state.phase === "thinking" || (session?.isSolvingSolution ?? false)
+        ? "thinking"
+        : voice.state.phase === "speaking" || (lesson.state?.speaking ?? false)
+          ? "speaking"
+          : "idle";
   // A click on the sphere stops an explanation under way; otherwise it talks to the tutor: it listens, a second click
   // sends what was said, and one while the tutor answers stops it (VoiceMascotExerciseOverlay's onTap).
   const tapMascot = useCallback(() => {
@@ -380,6 +413,8 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                 state={lesson.state}
                 onTap={tapMascot}
                 voice={voice.state}
+                presence={mascotPresence}
+                transient={cue?.cue ?? null}
                 showsMascot={mascotOn && session !== null}
               />
             ) : null}
