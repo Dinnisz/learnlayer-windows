@@ -10,6 +10,9 @@ import { PenRing, type MarkRect } from "@core/explanation/handDrawn";
 import { HandDrawnMark } from "../components/HandDrawnMark";
 import { MathView } from "../components/Math";
 
+/** The mark shows a moment after its word starts, so the body has reached the symbol (HighlightTiming.lead). */
+const HighlightLead = 0.2;
+
 const plainDigits: Record<string, string> = Object.fromEntries([
   ...Array.from("₀₁₂₃₄₅₆₇₈₉").map((ch, index) => [ch, String(index)]),
   ...Array.from("⁰¹²³⁴⁵⁶⁷⁸⁹").map((ch, index) => [ch, String(index)]),
@@ -122,9 +125,9 @@ export function VoiceFormulaView({
   return (
     <div className="voice-formula" ref={box}>
       <MathView latex={latex} display />
-      {underline ? <HandDrawnMark style="underline" rect={underline} delay={0.05} /> : null}
+      {underline ? <HandDrawnMark style="underline" rect={underline} delay={HighlightLead} fades /> : null}
       {rings.map((ring) => (
-        <HandDrawnMark key={`${ring.x},${ring.y}`} style="circle" rect={ring} delay={0.1} />
+        <HandDrawnMark key={`${ring.x},${ring.y}`} style="circle" rect={ring} delay={HighlightLead} fades />
       ))}
     </div>
   );

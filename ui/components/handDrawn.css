@@ -25,11 +25,23 @@
   }
 }
 
+/* A voice mark: shown whole, fading in (0.2 s with Reduce Motion). */
+.hand-drawn.fades {
+  stroke-dashoffset: 0;
+  opacity: 0;
+  animation: hand-drawn-fade 0.25s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hand-drawn {
     stroke-dashoffset: 0;
     opacity: 0;
     animation: hand-drawn-fade 0.25s ease-in forwards;
+  }
+
+  .hand-drawn.fades {
+    animation-duration: 0.2s;
+    animation-timing-function: ease-out;
   }
 }
 
