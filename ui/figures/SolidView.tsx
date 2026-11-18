@@ -93,6 +93,7 @@ export function SolidView({
   height = 300,
   highlight = null,
   assembleStep = null,
+  yaw: targetYaw = null,
 }: {
   solid: GenericSolid;
   caption?: string;
@@ -102,8 +103,15 @@ export function SolidView({
   highlight?: string | null;
   /** How many parts are shown, in assembly order (the card's assembleStep); null shows them all. */
   assembleStep?: number | null;
+  /** A turn a lesson's beat asks for, in degrees about the vertical (`LessonFigure3D.yaw`): the solid turns to it and
+   * stops spinning; null lets it spin. */
+  yaw?: number | null;
 }) {
   const holder = useRef<HTMLDivElement>(null);
+  const turn = useRef<number | null>(null);
+  useEffect(() => {
+    turn.current = targetYaw != null && Number.isFinite(targetYaw) ? (targetYaw * Math.PI) / 180 : null;
+  }, [targetYaw]);
   /** The step's hooks and when they changed (the slice travels from then; set on mount by the effect below). */
   const hooks = useRef<{ value: StepFigureHooks; since: number }>({
     value: { highlight, assembleStep },
@@ -184,8 +192,11 @@ export function SolidView({
       renderer.render(sceneRoot, camera);
     };
     const tick = (now: number) => {
-      // It turns slowly by itself until the student takes it.
-      if (!dragging && !reduced && idle < 1) yaw += 0.003;
+      // Turned to the beat's angle, eased (at once with reduced motion); else it turns slowly by itself until the
+      // student takes it.
+      const wanted = turn.current;
+      if (wanted !== null && !dragging) yaw = reduced ? wanted : yaw + (wanted - yaw) * 0.08;
+      else if (!dragging && !reduced && idle < 1) yaw += 0.003;
       draw(now);
       frame = requestAnimationFrame(tick);
     };

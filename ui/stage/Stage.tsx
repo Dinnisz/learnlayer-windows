@@ -1241,6 +1241,7 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
           caption={session.illustration.title || undefined}
           highlight={lit}
           assembleStep={assembleStep}
+          yaw={asked?.yaw ?? null}
         />
       ) : (
         <IllustrationView scene={session.illustration} revealed={session.sawSolution} />

@@ -248,4 +248,5 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — A lição e a figura 3D
 - **Portado do Mac (`Figure3DSpec.lessonDescription`, `LessonFigure3D`):** o pedido da lição leva a figura 3D do palco descrita parte a parte (circuito, sólido ou figura no espaço), e uma frase marcada `on: "figure3d"` realça a parte que nomeia e mostra as primeiras partes montadas enquanto é dita, por cima do que o passo aberto pedia.
-- **Ainda não:** a rotação (`yaw`) e o `LessonFigurePicker` (o Mac só levanta a figura onde ela acrescenta algo, e também a partir dos passos que reduzem o circuito).
+- **Feito também:** a rotação (`yaw`) num sólido: roda suavemente para o ângulo pedido e deixa de girar sozinho.
+- **Ainda não:** a rotação nas figuras no espaço e o `LessonFigurePicker` (o Mac só levanta a figura onde ela acrescenta algo, e também a partir dos passos que reduzem o circuito).
