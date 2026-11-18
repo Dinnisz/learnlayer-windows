@@ -12,6 +12,7 @@ import { Icon } from "../../components/Icon";
 import { usePlatform, useT } from "../../i18n";
 import { PageGeometry, ReaderDocument } from "../../reader/readerDocument";
 import { ExplanationStage } from "../../explanation/ExplanationStage";
+import { onIslandCommand, publishIsland } from "../../island";
 
 /** `?open=` is read once, not again when StrictMode runs the effect twice. */
 let openedFromQuery = false;
@@ -174,6 +175,20 @@ export function ReaderWindow({ renderOverlay }: ReaderWindowProps) {
       EquationDetector.context(page, bounds);
     setEquation({ page, pageIndex: chosen.pageIndex, match: { bounds, text: normalizeText(chosen.text) }, context });
   }, [document, selection]);
+
+  // The pill's «Explain selected text» explains the reader's own selection while it has one (the Mac's
+  // `hasReaderSelection: island.reader?.selectionEnd != nil`), and asks about it here when tapped.
+  const hasSelection = selection !== null;
+  useEffect(() => {
+    void publishIsland({ hasReaderSelection: hasSelection });
+  }, [hasSelection]);
+  useEffect(() => () => void publishIsland({ hasReaderSelection: false }), []);
+  useEffect(() => {
+    const stop = onIslandCommand((command) => {
+      if (command.kind === "explainSelection") void ask();
+    });
+    return () => void stop.then((unlisten) => unlisten());
+  }, [ask]);
 
   // Enter asks about the selection, as the button's shortcut does on the Mac.
   useEffect(() => {

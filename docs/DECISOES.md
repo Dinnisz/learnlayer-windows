@@ -148,7 +148,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Texto selecionado como passagem:** esta entrada substitui a de 2026-11-15 sobre o texto selecionado. Um Alt-clique em texto selecionado, ou «Explicar texto selecionado», abre agora uma passagem própria, como a `SelectionSession` do Mac: explica-o, o que pede, ou uma pista, num só pedido TextHelp v5.
   - O gráfico que o TextHelp pode trazer aparece por baixo da resposta («Gráfico»), com o parâmetro para arrastar, como no Mac.
   - O contexto à volta da seleção vai vazio, porque a UI Automation não o dá como o `AccessibilityReader` do Mac.
-  - A seleção no leitor de PDF da própria app ainda não acende a ação da pílula (`hasReaderSelection`).
+  - A seleção no leitor de PDF da própria app ainda não acende a ação da pílula (`hasReaderSelection`). **Feito em 2026-11-18:** o leitor publica que tem texto selecionado, e a pílula explica essa seleção (o leitor responde ao comando com o mesmo pedido do botão «Ask»).
 
 ## 2026-11-17 — Primeiros testes na app real (Alt-clique, pílula)
 - **Cliques de teste:** o hook ignora eventos injetados, de propósito, para não reagir a programas que simulam cliques. Para testar sem pessoa, uma build de **desenvolvimento** lançada com `LEARNLAYER_TEST_INPUT=1` aceita-os. A release nunca lê esta variável (`cfg!(debug_assertions)`).
