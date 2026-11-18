@@ -3,7 +3,13 @@
 // crossed out or ringed, a box on the figure), its calculation and its check, then the closing sentence. The view only
 // reads this; the voice is `speak`.
 
-import type { LessonBeat, LessonShow, LessonSummary } from "@core/lesson/mascotLesson";
+import {
+  LessonShows,
+  type LessonBeat,
+  type LessonPitfall,
+  type LessonShow,
+  type LessonSummary,
+} from "@core/lesson/mascotLesson";
 import type { LessonFeed } from "@core/lesson/mascotLessonProvider";
 import { LessonMorphs, morphSeconds, MorphPacer, type LessonMorph } from "@core/lesson/morphPacer";
 
@@ -17,8 +23,12 @@ export interface LessonState {
   calc: string | null;
   check: { ask: string; options: string[] } | null;
   closing: LessonSummary | null;
-  /** A «Watch out» tag on a step. */
-  pitfall: { step: number; mistake: string; why: string } | null;
+  /** The lesson's «Watch out» tag, once its beat has arrived: folded on its step until its beat is said. */
+  pitfall: LessonPitfall | null;
+  /** The tag is open now: its beat is being said. */
+  pitfallIsActive: boolean;
+  /** The answer card waits for the lesson to work the answer out (`LessonRun.hidesAnswer`). */
+  hidesAnswer: boolean;
   /** The written solution's formula moving from the line the lesson was on to the one this beat moves to. */
   morph: LessonMorph | null;
   speaking: boolean;
@@ -36,6 +46,8 @@ const idle: LessonState = {
   check: null,
   closing: null,
   pitfall: null,
+  pitfallIsActive: false,
+  hidesAnswer: false,
   morph: null,
   speaking: false,
   level: 0,
@@ -56,6 +68,11 @@ export class LessonPlayer {
    * lines; the rows are paced across the beat's voice.
    */
   morphStages: (from: number, to: number) => number = () => 1;
+  /** The written solution's line the final answer is worked out on (its last); null for none. */
+  answerStep: number | null = null;
+  /** The lesson has been on the answer's line and moved on from it. */
+  private answerReached = false;
+  private answerTimer: number | undefined;
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -75,6 +92,7 @@ export class LessonPlayer {
   /** Stops the lesson: the voice ends, the marks go, an open check is let go. */
   stop(): void {
     this.controller.abort();
+    window.clearTimeout(this.answerTimer);
     this.answerCheck?.(null);
     this.set({ ...idle });
   }
@@ -101,12 +119,22 @@ export class LessonPlayer {
         await feed.changed();
         continue;
       }
+      this.learnPitfall(feed.beats);
       const beat = feed.beats[index]!;
       await this.playBeat(beat, index, narrate);
       index += 1;
     }
     if (!this.stopped && feed.summary) {
-      this.set({ shows: [], calc: null, step: null, pitfall: null, morph: null, closing: feed.summary });
+      window.clearTimeout(this.answerTimer);
+      this.set({
+        shows: [],
+        calc: null,
+        step: null,
+        pitfallIsActive: false,
+        hidesAnswer: false,
+        morph: null,
+        closing: feed.summary,
+      });
       await this.say(feed.summary.say, narrate);
       await this.pause(1_200);
     }
@@ -115,10 +143,11 @@ export class LessonPlayer {
 
   private async playBeat(beat: LessonBeat, index: number, narrate: Narrate): Promise<void> {
     const steps = beat.show.map((show) => show.step).filter((step): step is number => step != null && step > 0);
-    const pitfallShow = beat.show.find((show) => show.op === "pitfall" && show.step && show.mistake && show.why);
+    const pitfall = beat.show.map((show) => LessonShows.pitfall(show)).find((found) => found !== null) ?? null;
     // A beat that names no line stays on the line before it; one that moves to another line morphs that line into it.
     const previous = this.state.step;
     const step = steps.length > 0 ? steps[0]! - 1 : previous;
+    if (previous !== null && previous === this.answerStep && step !== previous) this.answerReached = true;
     let morph: LessonMorph | null = null;
     if (previous !== null && step !== null && step !== previous) {
       const pacer = new MorphPacer(
@@ -143,10 +172,9 @@ export class LessonPlayer {
       shows: beat.show.filter((show) => show.op !== "pitfall"),
       calc: beat.calc?.line ?? null,
       check: null,
-      pitfall: pitfallShow
-        ? { step: pitfallShow.step! - 1, mistake: pitfallShow.mistake!, why: pitfallShow.why! }
-        : this.state.pitfall,
+      pitfallIsActive: pitfall !== null && samePitfall(pitfall, this.state.pitfall),
     });
+    this.refreshAnswer();
     await this.say(beat.say, narrate);
     await this.settleMorph(index);
     const check = beat.check;
@@ -164,6 +192,44 @@ export class LessonPlayer {
     this.set({ check: null });
     if (tapped === null || this.stopped) return;
     await this.say(tapped === check.correct ? check.right : check.wrong, narrate);
+  }
+
+  /** The lesson's tag, from the beats arrived so far: the first one (the guards keep one at most). */
+  private learnPitfall(beats: readonly LessonBeat[]): void {
+    if (this.state.pitfall) return;
+    for (const beat of beats)
+      for (const show of beat.show) {
+        const pitfall = LessonShows.pitfall(show);
+        if (pitfall) {
+          this.set({ pitfall });
+          return;
+        }
+      }
+  }
+
+  /**
+   * While a lesson plays, the answer card waits for the lesson to work the answer out: until its line has come in (its
+   * move landed), or the closing.
+   */
+  private answerHidden(now: number): boolean {
+    const { playing, closing, step, morph } = this.state;
+    if (!playing || closing !== null || this.answerReached || this.answerStep === null) return false;
+    if (step !== this.answerStep) return true;
+    if (!morph || morph.to !== this.answerStep) return false;
+    return LessonMorphs.progress(morph, now) < 1;
+  }
+
+  /** Works out whether the answer waits, and looks again when the answer's line has landed. */
+  private refreshAnswer(): void {
+    window.clearTimeout(this.answerTimer);
+    const now = Date.now();
+    const hidden = this.answerHidden(now);
+    if (hidden !== this.state.hidesAnswer) this.set({ hidesAnswer: hidden });
+    const morph = this.state.morph;
+    if (hidden && morph && morph.to === this.answerStep && morph.frozen === null) {
+      const left = morph.started + LessonMorphs.total(morph) * 1000 - now;
+      this.answerTimer = window.setTimeout(() => this.refreshAnswer(), Math.max(0, left) + 20);
+    }
   }
 
   /** Returns once beat `index`'s formula move has played, waiting at most `MorphPacer.maximumOverrun`. */
@@ -184,3 +250,6 @@ export class LessonPlayer {
     });
   }
 }
+
+const samePitfall = (a: LessonPitfall, b: LessonPitfall | null) =>
+  b !== null && a.step === b.step && a.mistake === b.mistake && a.why === b.why;

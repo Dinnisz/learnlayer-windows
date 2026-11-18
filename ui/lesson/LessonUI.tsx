@@ -100,6 +100,7 @@ export function useLessonControl(session: QuestionSession | null) {
     const next = new LessonPlayer();
     const cards = session.part.cards ?? [];
     next.morphStages = (from, to) => EquationMorph.stages(cards[from]?.latex ?? "", cards[to]?.latex ?? "");
+    next.answerStep = cards.length > 0 ? cards.length - 1 : null;
     current.current = next;
     setPlayer(next);
     const request = lessonRequest(session);

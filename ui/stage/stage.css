@@ -713,12 +713,92 @@
   outline-offset: 2px;
 }
 
+/* The «Watch out» tag (PitfallTag): the theme's one warm colour, for a mistake to avoid, not a wrong answer. */
 .stage-pitfall {
+  --amber: rgb(255 184 71);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-top: 6px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: rgb(10 132 255 / 18%);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stage-pitfall-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 0.5px solid rgb(255 184 71 / 40%);
+  border-radius: 999px;
+  background: rgb(255 184 71 / 16%);
+  color: var(--amber);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.stage-pitfall-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 1px 0 1px 9px;
+  border-left: 2px solid rgb(255 184 71 / 80%);
+  line-height: 1.35;
+  animation: stage-pitfall-open 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.stage-pitfall-mistake {
+  color: rgb(255 255 255 / 92%);
+  font-weight: 500;
+}
+
+/* The "why" is the quieter second line: smaller than the mistake, in the secondary grey. */
+.stage-pitfall-why {
+  color: rgb(255 255 255 / 55%);
+  font-size: 11.5px;
+}
+
+@keyframes stage-pitfall-open {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+    transform-origin: top left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-pitfall-body {
+    animation-name: stage-pitfall-fade;
+  }
+}
+
+@keyframes stage-pitfall-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* While a lesson plays, the answer waits for the lesson to work it out. */
+.stage-answer {
+  transition: opacity 0.35s ease-in-out;
+}
+
+.stage-answer.waiting {
+  opacity: 0;
+}
+
+@media (forced-colors: active) {
+  .stage-pitfall-chip,
+  .stage-pitfall-body {
+    forced-color-adjust: auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

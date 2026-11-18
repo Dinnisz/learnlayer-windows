@@ -61,7 +61,7 @@ import {
   useLessonToggle,
 } from "../lesson/LessonUI";
 import { LessonGeometry } from "@core/lesson/lessonGeometry";
-import type { LessonShow } from "@core/lesson/mascotLesson";
+import type { LessonPitfall, LessonShow } from "@core/lesson/mascotLesson";
 import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
 import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
@@ -917,8 +917,14 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
 
 function AnswerBox({ part }: { part: Part }) {
   const t = useT();
+  // While a lesson plays, the answer waits for the lesson to work it out (`QuestionSession.showsFinalAnswer`).
+  const hidden = useLessonState()?.hidesAnswer === true;
   return (
-    <section className="stage-answer" aria-label={t("Answer")}>
+    <section
+      className={`stage-answer${hidden ? " waiting" : ""}`}
+      aria-label={t("Answer")}
+      aria-hidden={hidden || undefined}
+    >
       <span className="stage-answer-label">{t("Answer")}</span>
       <div className="stage-answer-value">
         {part.answerLatex ? <MathView latex={part.answerLatex} display /> : <MathText text={part.answer.text} />}
@@ -943,10 +949,10 @@ function StepCard({
 }) {
   const card: Card | null = part.cards && part.cards.length > 0 ? (part.cards[index] ?? null) : null;
   const selected = session.selectedStep === index;
-  const t = useT();
   const lesson = useLessonState();
   const lit = lesson?.step === index;
   const pitfall = lesson?.pitfall?.step === index ? lesson.pitfall : null;
+  const [pitfallOpen, setPitfallOpen] = useState(false);
   return (
     <article
       className={`stage-step${selected ? " selected" : ""}${session.revealingStep === index ? " arriving" : ""}${lit ? " lesson-lit" : ""}`}
@@ -958,11 +964,6 @@ function StepCard({
         {index + 1}
       </span>
       <div className="stage-step-body">
-        {pitfall ? (
-          <p className="stage-pitfall" role="note">
-            <strong>{t("Watch out")}</strong> {pitfall.mistake}. {pitfall.why}
-          </p>
-        ) : null}
         {card ? (
           <>
             <h4>
@@ -992,8 +993,47 @@ function StepCard({
             <MathText text={part.steps[index] ?? ""} />
           </p>
         )}
+        {pitfall && (
+          // Not dimmed with its step: the tag is there to be found while the lesson is elsewhere.
+          <PitfallTag
+            pitfall={pitfall}
+            open={lesson?.pitfallIsActive === true || pitfallOpen}
+            toggle={() => setPitfallOpen((open) => !open)}
+          />
+        )}
       </div>
     </article>
+  );
+}
+
+/**
+ * The «Watch out» tag a lesson hangs on a step (`PitfallTag`): folded to its chip until its beat is said, then the
+ * mistake and, quieter, why it is wrong; a tap opens or folds it.
+ */
+function PitfallTag({ pitfall, open, toggle }: { pitfall: LessonPitfall; open: boolean; toggle(): void }) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      className={`stage-pitfall${open ? " open" : ""}`}
+      aria-expanded={open}
+      aria-description={t("Common mistake")}
+      onClick={(event) => {
+        event.stopPropagation();
+        toggle();
+      }}
+    >
+      <span className="stage-pitfall-chip">
+        <Icon symbol="exclamationmark.triangle.fill" size={11} />
+        {t("Watch out")}
+      </span>
+      {open && (
+        <span className="stage-pitfall-body">
+          <span className="stage-pitfall-mistake">{pitfall.mistake}</span>
+          <span className="stage-pitfall-why">{pitfall.why}</span>
+        </span>
+      )}
+    </button>
   );
 }
 

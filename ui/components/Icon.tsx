@@ -26,6 +26,7 @@ const glyphs: Record<string, string> = {
   "stop.fill": "\uE71A", // Stop
   "arrow.turn.down.right": "\uE751", // ReturnKey
   lightbulb: "\uEA80", // Lightbulb
+  "exclamationmark.triangle.fill": "\uE7BA", // Warning
   xmark: "\uE711", // Cancel
   "plus.magnifyingglass": "\uE8A3", // ZoomIn
   "minus.magnifyingglass": "\uE71F", // ZoomOut
