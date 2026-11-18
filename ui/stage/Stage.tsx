@@ -1060,7 +1060,7 @@ function StepFormula({
   if (morph && morph.to === index && morph.from < cards.length)
     return (
       <MorphView
-        key={`lesson-${morph.beat}-${morph.started}`}
+        key={`lesson-${morph.beat}`}
         from={cards[morph.from]!.latex}
         to={latex}
         started={morph.started}

@@ -36,7 +36,16 @@ export interface LessonState {
   playing: boolean;
 }
 
-export type Narrate = (text: string, onLevel: (level: number) => void, signal: AbortSignal) => Promise<void>;
+/**
+ * Says one line and returns once it has been said. `onProgress`: `fraction` of the line said, `elapsed` seconds since
+ * the voice began.
+ */
+export type Narrate = (
+  text: string,
+  onLevel: (level: number) => void,
+  signal: AbortSignal,
+  onProgress?: (fraction: number, elapsed: number) => void,
+) => Promise<void>;
 
 const idle: LessonState = {
   beat: -1,
@@ -73,6 +82,11 @@ export class LessonPlayer {
   /** The lesson has been on the answer's line and moved on from it. */
   private answerReached = false;
   private answerTimer: number | undefined;
+  /** The voice is on: a move waits for it to be heard (at most `MorphPacer.voiceWait`). */
+  voiceIsOn = false;
+  private pacer: MorphPacer | null = null;
+  /** The move made by the beat being said has not heard its voice yet, and was asked for then (milliseconds). */
+  private awaitingVoice: number | null = null;
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -104,9 +118,12 @@ export class LessonPlayer {
 
   private say(text: string, narrate: Narrate): Promise<void> {
     this.set({ speaking: true });
-    return narrate(text, (level) => this.set({ level }), this.controller.signal).finally(() =>
-      this.set({ speaking: false, level: 0 }),
-    );
+    return narrate(
+      text,
+      (level) => this.set({ level }),
+      this.controller.signal,
+      (fraction, elapsed) => this.voiceProgressed(fraction, elapsed),
+    ).finally(() => this.set({ speaking: false, level: 0 }));
   }
 
   /** Plays the feed's beats as they arrive, then its closing. */
@@ -149,7 +166,11 @@ export class LessonPlayer {
     const step = steps.length > 0 ? steps[0]! - 1 : previous;
     if (previous !== null && previous === this.answerStep && step !== previous) this.answerReached = true;
     let morph: LessonMorph | null = null;
+    this.pacer = null;
+    this.awaitingVoice = null;
     if (previous !== null && step !== null && step !== previous) {
+      const asked = Date.now();
+      this.awaitingVoice = this.voiceIsOn ? asked : null;
       const pacer = new MorphPacer(
         this.morphStages(previous, step),
         morphSeconds(beat.say),
@@ -159,11 +180,13 @@ export class LessonPlayer {
         from: previous,
         to: step,
         beat: index,
-        started: Date.now(),
+        // With the voice on, the first row waits until the voice is heard (or its wait runs out).
+        started: asked + (this.voiceIsOn ? MorphPacer.voiceWait * 1000 : 0),
         duration: pacer.stageLength,
         pacing: pacer.pacing(0),
         frozen: null,
       };
+      this.pacer = pacer;
     }
     this.set({
       beat: index,
@@ -192,6 +215,33 @@ export class LessonPlayer {
     this.set({ check: null });
     if (tapped === null || this.stopped) return;
     await this.say(tapped === check.correct ? check.right : check.wrong, narrate);
+  }
+
+  /**
+   * The narrator's progress through the line being said: `fraction` of its text spoken, `elapsed` seconds since the
+   * voice began. Rows not yet begun move to when the voice reaches them.
+   */
+  voiceProgressed(fraction: number, elapsed: number): void {
+    const pacer = this.pacer;
+    let morph = this.state.morph;
+    if (!pacer || !morph || morph.frozen !== null) return;
+    const clock = Date.now();
+    // The move waited for the voice: it starts as the voice is first heard, unless its wait ran out.
+    if (this.awaitingVoice !== null) {
+      const asked = this.awaitingVoice;
+      this.awaitingVoice = null;
+      if (clock < morph.started) morph = { ...morph, started: Math.max(asked, clock - Math.max(0, elapsed) * 1000) };
+    }
+    const now = (clock - morph.started) / 1000;
+    pacer.heard(fraction, elapsed, now);
+    const pacing = pacer.pacing(now);
+    const samePacing =
+      morph.pacing !== null &&
+      morph.pacing.starts.join() === pacing.starts.join() &&
+      morph.pacing.lengths.join() === pacing.lengths.join();
+    if (samePacing && morph === this.state.morph) return;
+    this.set({ morph: { ...morph, pacing } });
+    this.refreshAnswer();
   }
 
   /** The lesson's tag, from the beats arrived so far: the first one (the guards keep one at most). */

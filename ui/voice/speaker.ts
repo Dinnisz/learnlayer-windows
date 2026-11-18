@@ -28,6 +28,9 @@ const readPreference = (key: string) => {
   }
 };
 
+/** The voice is on unless the student turns it off (Settings › General). */
+export const voiceEnabled = () => readPreference("voiceEnabled") !== "0";
+
 /** On unless the student turns it off (Settings › General), as on the Mac. */
 export const premiumVoiceEnabled = () => readPreference(premiumVoiceKey) !== "0";
 

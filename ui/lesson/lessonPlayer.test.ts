@@ -1,10 +1,12 @@
 // Port of the lesson tests of LearnLayerTests/LessonPitfallMorphTests.swift @ ref 2026-11-04 that play a lesson
 // (aBeatThatMovesToAnotherLineMorphsFromTheOneBefore, theAnswerWaitsForTheLessonToWorkItOut,
-// thePitfallIsFoldedOnItsStepAndOpenOnlyWhileItsBeatIsSaid), on the Windows `LessonPlayer`, beat by beat.
+// thePitfallIsFoldedOnItsStepAndOpenOnlyWhileItsBeatIsSaid, aMoveWaitsForItsVoiceToBeHeard and the heard voice of
+// theRunPacesItsMorphByTheKnownVoiceThenTheHeardOne), on the Windows `LessonPlayer`, beat by beat.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LessonBeat, LessonShow, MascotLesson } from "@core/lesson/mascotLesson";
 import { LessonFeed } from "@core/lesson/mascotLessonProvider";
+import { LessonMorphs, MorphPacer } from "@core/lesson/morphPacer";
 import { LessonPlayer, type Narrate } from "./lessonPlayer";
 
 const highlight = (step: number): LessonShow => ({ op: "highlight", step });
@@ -14,14 +16,20 @@ const beat = (say: string, show: LessonShow[] = []): LessonBeat => ({ kind: "exp
 function voice() {
   const lines: string[] = [];
   let finish: (() => void) | null = null;
-  const narrate: Narrate = (text) =>
+  let progress: ((fraction: number, elapsed: number) => void) | undefined;
+  const narrate: Narrate = (text, _level, _signal, onProgress) =>
     new Promise<void>((resolve) => {
       lines.push(text);
       finish = resolve;
+      progress = onProgress;
     });
   return {
     narrate,
     lines,
+    /** The voice has said `fraction` of the line, `elapsed` seconds after it began. */
+    heard(fraction: number, elapsed: number) {
+      progress?.(fraction, elapsed);
+    },
     /** Ends the line being said, and lets the lesson go on to the next one. */
     async next(ms = 0) {
       const done = finish;
@@ -161,5 +169,68 @@ describe("a lesson played beat by beat", () => {
     expect(player.state.closing).not.toBeNull();
     expect(player.state.pitfallIsActive).toBe(false);
     player.stop();
+  });
+
+  const rows: MascotLesson = {
+    beats: [beat("First line.", [highlight(1)]), beat("Now work the block out row by row.", [highlight(2)])],
+    summary: null,
+  };
+
+  it("the heard voice moves the rows not yet begun", async () => {
+    const player = new LessonPlayer();
+    player.morphStages = () => 3;
+    const said = voice();
+    void player.play(LessonFeed.of(rows), said.narrate);
+    await vi.advanceTimersByTimeAsync(0);
+    await said.next();
+    await vi.advanceTimersByTimeAsync(1_000);
+    // A quarter said after 1 s: a voice of 4 s, its last row in at 80% of it.
+    said.heard(0.25, 1);
+    expect(Math.abs((player.state.morph?.pacing?.total ?? 0) - 4 * 0.8)).toBeLessThan(1e-9);
+    player.stop();
+  });
+
+  it("a move waits for its voice to be heard", async () => {
+    const start = Date.now();
+    const player = new LessonPlayer();
+    player.morphStages = () => 3;
+    player.voiceIsOn = true;
+    const said = voice();
+    void player.play(LessonFeed.of(rows), said.narrate);
+    await vi.advanceTimersByTimeAsync(0);
+    await said.next();
+    const asked = Date.now();
+    expect(asked).toBe(start);
+    // Nothing moves until the voice is heard, and not longer than its wait.
+    expect(player.state.morph?.started).toBe(asked + MorphPacer.voiceWait * 1000);
+    expect(LessonMorphs.progress(player.state.morph!, asked + 1_000)).toBe(0);
+    // Heard 1.2 s in, 0.2 s into its audio: the first row starts with the audio.
+    await vi.advanceTimersByTimeAsync(1_200);
+    said.heard(0.02, 0.2);
+    expect(player.state.morph?.started).toBe(asked + 1_000);
+    expect(player.state.morph?.pacing?.starts[0]).toBe(0);
+    player.stop();
+
+    // A voice heard after the wait ran out: the move has begun and stays as it is.
+    const late = new LessonPlayer();
+    late.voiceIsOn = true;
+    const lateVoice = voice();
+    void late.play(LessonFeed.of(rows), lateVoice.narrate);
+    await vi.advanceTimersByTimeAsync(0);
+    await lateVoice.next();
+    const lateAsked = Date.now();
+    await vi.advanceTimersByTimeAsync((MorphPacer.voiceWait + 1) * 1000);
+    lateVoice.heard(0.02, 0.1);
+    expect(late.state.morph?.started).toBe(lateAsked + MorphPacer.voiceWait * 1000);
+    late.stop();
+
+    // The voice off: it starts at once.
+    const silent = new LessonPlayer();
+    const quiet = voice();
+    void silent.play(LessonFeed.of(rows), quiet.narrate);
+    await vi.advanceTimersByTimeAsync(0);
+    await quiet.next();
+    expect(silent.state.morph?.started).toBe(Date.now());
+    silent.stop();
   });
 });

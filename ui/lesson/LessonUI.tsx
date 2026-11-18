@@ -13,7 +13,7 @@ import { optionLinesOf, solutionWording, workContext } from "@core/voice/workCon
 import { lessonProvider } from "../ai/solver";
 import { AnimatedMascot } from "../components/Mascot";
 import { useT } from "../i18n";
-import { speak, tutorLanguage } from "../voice/speaker";
+import { speak, tutorLanguage, voiceEnabled } from "../voice/speaker";
 import { LessonPlayer, type LessonState, type Narrate } from "./lessonPlayer";
 
 export interface LessonContextValue {
@@ -39,8 +39,18 @@ export function useLessonShows(): readonly LessonShow[] {
 /** About the time it takes to read a line: when no voice can say it, the words stay that long. */
 const readingTime = (text: string) => Math.min(9_000, Math.max(1_800, Array.from(text).length * 55));
 
-const narrate: Narrate = async (text, onLevel, signal) => {
-  const result = await speak(text, { onLevel, signal });
+const narrate: Narrate = async (text, onLevel, signal, onProgress) => {
+  // The voice began with its first word heard.
+  let began: number | null = null;
+  const result = await speak(text, {
+    onLevel,
+    signal,
+    onProgress: (through, length) => {
+      const now = performance.now();
+      began ??= now;
+      onProgress?.(length > 0 ? through / length : 0, (now - began) / 1000);
+    },
+  });
   if (!result.silent || signal.aborted) return;
   await new Promise<void>((resolve) => {
     const timer = window.setTimeout(resolve, readingTime(text));
@@ -101,6 +111,7 @@ export function useLessonControl(session: QuestionSession | null) {
     const cards = session.part.cards ?? [];
     next.morphStages = (from, to) => EquationMorph.stages(cards[from]?.latex ?? "", cards[to]?.latex ?? "");
     next.answerStep = cards.length > 0 ? cards.length - 1 : null;
+    next.voiceIsOn = voiceEnabled();
     current.current = next;
     setPlayer(next);
     const request = lessonRequest(session);
