@@ -115,3 +115,11 @@ Depois, num Windows limpo:
 1. Instala e abre a app: deve aparecer o cartão de boas-vindas.
 2. Segue a introdução até à pergunta de exemplo resolvida.
 3. Liga «Abrir com o Windows» e reinicia: só devem aparecer a pílula e o ícone na área de notificação.
+
+## Etiquetas dos exames (Mac e Windows)
+Nos exames de 2026 de Biologia e Geologia, História A e Português, o detetor (o mesmo nas duas apps) dá a alguns itens de um grupo o prefixo e a outros não. Por exemplo, na Biologia: «II.1» na p. 11, e depois «2» e «3» na p. 12. Também conta os passos numerados de um procedimento (Biologia, p. 11) como itens II.2 a II.6.
+
+A causa: as regras `withoutRepeatedLabels` e `numberingRestarts` do `QuestionDetector.swift` só olham para uma página. Se quiseres corrigir, muda-as no Mac para olharem para o documento todo, e eu porto a mudança. Para ver o relatório no Windows:
+```
+EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts --silent=false
+```
