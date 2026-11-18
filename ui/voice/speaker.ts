@@ -16,7 +16,20 @@ import {
   SystemVoicePlan,
   type SpeechEngine,
 } from "@core/voice/speechPlan";
+import { VoiceMeter } from "@core/voice/voiceMeter";
 import { hasCredentials, requestSpeech, usesMock } from "../ai/solver";
+
+/** The explanations the premium voice read this month (Settings › AI & Usage). */
+export const voiceMeter = new VoiceMeter({
+  getItem: (key) => readPreference(key),
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Not counted when nothing can be kept.
+    }
+  },
+});
 
 export const premiumVoiceKey = "premiumVoiceEnabled";
 
@@ -222,12 +235,18 @@ export async function speak(text: string, options: SpeakOptions = {}): Promise<S
     const pending = sentences.map((sentence) => clip(sentence, options.signal));
     let before = 0;
     let played = true;
+    let counted = false;
     for (let index = 0; index < sentences.length && played; index += 1) {
       const audio = await pending[index]!;
       if (options.signal?.aborted) return { engine, notice: null, spoken };
       if (!audio) {
         played = false;
         break;
+      }
+      // One explanation read by the premium voice (VoiceTutorSession: `VoiceMeter.recordVoicedExplanation`).
+      if (!counted) {
+        voiceMeter.recordVoicedExplanation();
+        counted = true;
       }
       const length = sentences[index]!.length;
       played = await playAudio(

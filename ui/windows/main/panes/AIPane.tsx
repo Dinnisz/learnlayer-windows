@@ -2,7 +2,8 @@
 // counted today and this month for the plan. The model is the server's choice (CLAUDE.md 5.3); the developer key and
 // model fields are for evaluation builds and stay in the Credential Manager. The talk key is in General on Windows.
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { voiceMeter } from "../../../voice/speaker";
 import { useAccount } from "../../../account/accountStore";
 import {
   SettingsGroup,
@@ -19,6 +20,7 @@ export function AIPane() {
     void model?.refresh();
   }, [model]);
   const usage = state.snapshot?.usage;
+  const [voiced] = useState(() => voiceMeter.voicedExplanations());
   return (
     <SettingsPage title={t("AI & Usage")} subtitle={t("The key, the voice and what the month has cost.")}>
       <SettingsGroup header={t("Your plan")}>
@@ -39,9 +41,11 @@ export function AIPane() {
       </SettingsGroup>
       <SettingsGroup header={t("Voice")}>
         <SettingsRow
-          title={t("Explanations read by the premium voice. They are not part of your explanation count.")}
-          plain
-        />
+          title={t("Voiced this month")}
+          detail={t("Explanations read by the premium voice. They are not part of your explanation count.")}
+        >
+          <span className="settings-row-detail">{voiced}</span>
+        </SettingsRow>
       </SettingsGroup>
     </SettingsPage>
   );
