@@ -1229,6 +1229,10 @@ function SideFigures({ session }: { session: QuestionSession }) {
   const lessonGraphRing = useLessonState()?.shows.find((show) => LessonShows.isOnGraph(show))?.point ?? null;
   const figure = session.solutionFigure;
   const graph = session.sideGraph;
+  // The step the mascot is walking (MascotFigureFocus): the body waits above what it adds to the figure; with the plan
+  // pointing at figures, a step that adds nothing points at the figure as a whole.
+  const guided = session.mascotFocusStep;
+  const pointer = guided !== null && (questionPlan(session)?.pointer ?? false);
   return (
     <div className="stage-figures">
       {figure?.kind === "table" ? (
@@ -1242,7 +1246,13 @@ function SideFigures({ session }: { session: QuestionSession }) {
           highlight={lessonFigure3D?.highlight ?? spaceStepHighlight(session)}
         />
       ) : figure?.kind === "drawing" ? (
-        <IllustrationView scene={figure.scene} revealed={session.figureRevealed} step={session.figureStep} />
+        <IllustrationView
+          scene={figure.scene}
+          revealed={session.figureRevealed}
+          step={session.figureStep}
+          focus={guided === null ? null : { step: guided, text: session.stepText(guided), wholeFigure: pointer }}
+          bodySize={mascotSize}
+        />
       ) : session.expectsFigure && !session.showsIllustration ? (
         // The drawing on its way, or why it isn't there (the drawing's own item shows it otherwise).
         <IllustrationPanel session={session} />
@@ -1279,10 +1289,6 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
       const asked = lessonFigure3D;
       const lit = asked?.highlight ?? (step !== null && card ? (card.figureHighlight ?? plan[step] ?? null) : null);
       const assembleStep = asked?.assemble ?? card?.assembleStep ?? null;
-      // The step the mascot is walking (MascotFigureFocus): the body waits above what it adds to the figure; with the
-      // plan pointing at figures, a step that adds nothing points at the figure as a whole.
-      const guided = session.mascotFocusStep;
-      const pointer = guided !== null && (questionPlan(session)?.pointer ?? false);
       return circuit ? (
         <CircuitView
           spec={circuit}
@@ -1299,12 +1305,7 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
           yaw={asked?.yaw ?? null}
         />
       ) : (
-        <IllustrationView
-          scene={session.illustration}
-          revealed={session.sawSolution}
-          focus={guided === null ? null : { step: guided, text: session.stepText(guided), wholeFigure: pointer }}
-          bodySize={mascotSize}
-        />
+        <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
       );
     }
     case "empty":
