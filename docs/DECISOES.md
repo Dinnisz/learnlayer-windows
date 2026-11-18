@@ -271,3 +271,6 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — O Markdown do modelo na pergunta tipografada
 - **Portado do Mac (`RenderedQuestion.markup`), com os testes de `QuestionTranscriptionTests`:** na pergunta que o modelo transcreve, `**…**` passa a negrito e uma tabela escrita com `|` passa a linhas de células alinhadas, sem traços nem barras; um `**` dentro de `$…$` é matemática. As tabulações do AppKit (`tabStops`) dão lugar a uma grelha em CSS.
+
+## 2026-11-18 — A lição anela um ponto do gráfico
+- **Portado do Mac (`LessonRun.graphRing`, `pictureMarks`):** uma frase da lição com `on: "graph"` e um ponto anela esse ponto no gráfico ao lado (nas coordenadas do próprio gráfico) e não marca nada na pergunta. Falta ver no ecrã com uma lição real.

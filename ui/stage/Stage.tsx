@@ -71,7 +71,7 @@ import {
   useLessonToggle,
 } from "../lesson/LessonUI";
 import { LessonGeometry } from "@core/lesson/lessonGeometry";
-import type { LessonPitfall, LessonShow } from "@core/lesson/mascotLesson";
+import { LessonShows, type LessonPitfall, type LessonShow } from "@core/lesson/mascotLesson";
 import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
 import { VoiceFormulaView } from "../voice/VoiceFormulaView";
 import { VoiceFormula } from "@core/voice/voiceFormula";
@@ -927,6 +927,8 @@ function cropMarks(
   };
   // The beat being said marks the words it talks about, and rings the option it names, or strikes it out.
   for (const show of lessonShows) {
+    // A ring on the side graph is the graph's to draw (`LessonRun.pictureMarks`).
+    if (LessonShows.isOnGraph(show)) continue;
     // As LessonGeometry.region on a PDF page: the option it names, else a word printed in a figure (found in the page's
     // text), else the words it quotes, else a box the model drew. No mark is better than a wrong one.
     const optionLine = (() => {
@@ -1210,6 +1212,8 @@ function spaceStepHighlight(session: QuestionSession): string | null {
 /** The right column's figures: the one beside the steps (or the drawing on its way), and the solution's curve. */
 function SideFigures({ session }: { session: QuestionSession }) {
   const lessonFigure3D = useLessonState()?.figure3D ?? null;
+  // The point the beat being said rings on the graph (`LessonRun.graphRing`).
+  const lessonGraphRing = useLessonState()?.shows.find((show) => LessonShows.isOnGraph(show))?.point ?? null;
   const figure = session.solutionFigure;
   const graph = session.sideGraph;
   return (
@@ -1230,7 +1234,9 @@ function SideFigures({ session }: { session: QuestionSession }) {
         // The drawing on its way, or why it isn't there (the drawing's own item shows it otherwise).
         <IllustrationPanel session={session} />
       ) : null}
-      {session.showsGraph && graph && session.hasGraph && <CurveGraph graph={graph} session={session} height={220} />}
+      {session.showsGraph && graph && session.hasGraph && (
+        <CurveGraph graph={graph} session={session} height={220} ring={lessonGraphRing} />
+      )}
       {session.showsIllustration && <IllustrationPanel session={session} />}
     </div>
   );

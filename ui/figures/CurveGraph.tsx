@@ -79,10 +79,13 @@ export function CurveGraph({
   graph,
   session,
   height = 260,
+  ring = null,
 }: {
   graph: Graph;
   session: GraphControlling;
   height?: number;
+  /** The point a lesson's beat rings on the plot, in the graph's own x and y (`LessonRun.graphRing`). */
+  ring?: { x: number; y: number } | null;
 }) {
   const locale = useLanguage();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -282,6 +285,14 @@ export function CurveGraph({
                 })()}
             </g>
           )}
+          {drawn &&
+            ring &&
+            Number.isFinite(ring.x) &&
+            Number.isFinite(ring.y) &&
+            (() => {
+              const p = mapping.point(ring.x, ring.y);
+              return <circle key="lesson-ring" cx={p.x} cy={p.y} r={14} className="curve-graph-ring" />;
+            })()}
           {drawn &&
             visible.map((mark, index) => {
               const p = mapping.point(mark.x, mark.y);
