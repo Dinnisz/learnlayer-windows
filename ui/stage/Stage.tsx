@@ -18,6 +18,7 @@ import { linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
+import { StepFocusGeometry, StepFocusMarks } from "@core/problems/stepFocus";
 import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import type { ExamQuestion } from "@core/problems/questionDetector";
@@ -430,6 +431,8 @@ function QuestionCrop({
           page={page}
           session={session}
           label={index === regions.length - 1 ? question.text : undefined}
+          role={index === regions.length - 1 ? "question" : "statement"}
+          hasStatement={regions.length > 1}
         />
       ))}
     </div>
@@ -445,6 +448,8 @@ function CropPiece({
   page,
   session,
   label,
+  role = "question",
+  hasStatement = false,
 }: {
   document: ReaderDocument;
   pageIndex: number;
@@ -454,6 +459,9 @@ function CropPiece({
   page: PageText | null;
   session: QuestionSession | null;
   label?: string;
+  /** Which lifted crop this is: the part's question, or its group's statement above it. */
+  role?: "question" | "statement";
+  hasStatement?: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -511,6 +519,15 @@ function CropPiece({
         const box = toCrop(Rects.inset(rect, -4, -3));
         return <span key={`c${index}`} className="stage-circle" style={box} />;
       })}
+      {session && (
+        <StepFocusMark
+          session={session}
+          role={role}
+          hasStatement={hasStatement}
+          width={region.width * scale}
+          height={region.height * scale}
+        />
+      )}
       {marks.highlights.map((rect, index) => (
         <span key={`h${index}`} className="stage-highlight" style={toCrop(Rects.inset(rect, -4, -2))} />
       ))}
@@ -543,6 +560,55 @@ function CropPiece({
 }
 
 /** Where the open step's data stands in the crop (its printed lines), and the right option of a multiple choice. */
+/**
+ * The spot the open step is about (`StepFocusMarks`), on the crop the model placed it in: a ring or an arrow that draws
+ * itself, and a few words beside it, on the side where they are out of the way.
+ */
+function StepFocusMark({
+  session,
+  role,
+  hasStatement,
+  width,
+  height,
+}: {
+  session: QuestionSession;
+  role: "question" | "statement";
+  hasStatement: boolean;
+  width: number;
+  height: number;
+}) {
+  const step = session.underlinedStep;
+  const focus = step !== null ? (session.part?.cards?.[step]?.focus ?? null) : null;
+  if (!focus) return null;
+  const on = focus.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
+  if (on !== role) return null;
+  const region = StepFocusGeometry.rect(focus, { width, height });
+  if (!region) return null;
+  const note = focus.note?.trim() ? focus.note.trim() : null;
+  const arrow = StepFocusGeometry.isArrow(focus);
+  const place = StepFocusMarks.placement(note, arrow, region, { x: 0, y: 0, width, height });
+  return (
+    <>
+      {arrow ? (
+        <svg className="stage-focus-arrow" width={width} height={height} aria-hidden="true">
+          <path d={StepFocusMarks.arrowPath(place.tail, StepFocusMarks.arrowTip(place.tail, region))} pathLength={1} />
+        </svg>
+      ) : (
+        <span
+          className="stage-circle"
+          aria-hidden="true"
+          style={{ left: region.x - 6, top: region.y - 6, width: region.width + 12, height: region.height + 12 }}
+        />
+      )}
+      {note && (
+        <span className="stage-focus-note" style={{ left: place.label.x, top: place.label.y }}>
+          {note}
+        </span>
+      )}
+    </>
+  );
+}
+
 /** The marks on the question's crop, by kind (`LessonLayer`'s marks). */
 interface CropMarks {
   underlines: Rect[];

@@ -225,3 +225,8 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-18 — As marcas da lição pelo seu tipo
 - **Portado do Mac (`LessonLayer`, `StrikeOut`):** cada marca de uma frase da lição é desenhada pelo seu tipo: «crossOut» escurece a parte e passa-lhe uma linha branca por cima (uma linha só, nunca uma cruz, para continuar legível); «highlight» enche as palavras de azul com uma borda azul; «circle» e «zoom» fazem o anel; o resto sublinha. Antes, aqui, o riscado era um anel e o realce um sublinhado.
 - **Ainda não:** a seta e o anel com nota (`StepFocusMarks`) e o «tint» (as letras da citação pintadas de azul).
+
+## 2026-11-18 — O ponto de que um passo fala, no recorte
+- **Portado do Mac (`StepFocusGeometry`, `FocusArrow`, a colocação de `StepFocusMarks`), com os testes de `StepExplanationTests`:** quando um passo traz `focus` (uma caixa normalizada no recorte), aparece lá um anel ou uma seta que se desenha, e a nota curta numa etiqueta, do lado onde estorva menos e dentro do recorte.
+- **Dúvida:** no Mac isto aparece para o passo que a mascote explica quando se clica nela (`guideStep`, ainda não portado), com uma lupa. **Escolha:** aqui aparece para o passo cujos dados se sublinham (aberto, a chegar ou com o rato por cima), sem lupa (o ramo do Mac sem lupa, o de «Reduzir movimento»). **Porquê:** o guia da mascote não existe no Windows, e o ponto é útil no passo que o aluno está a ler.
+- **Falta ver no ecrã** com uma resposta real que traga `focus` (nenhum mock a tem).
