@@ -73,7 +73,7 @@ import {
 } from "../lesson/LessonUI";
 import { LessonGeometry } from "@core/lesson/lessonGeometry";
 import { LessonShows, type LessonPitfall, type LessonShow } from "@core/lesson/mascotLesson";
-import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
+import { questionPlan, useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
 import { VoiceFormulaView } from "../voice/VoiceFormulaView";
 import { VoiceFormula } from "@core/voice/voiceFormula";
 import { onIslandCommand, publishIsland } from "../island";
@@ -1279,6 +1279,10 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
       const asked = lessonFigure3D;
       const lit = asked?.highlight ?? (step !== null && card ? (card.figureHighlight ?? plan[step] ?? null) : null);
       const assembleStep = asked?.assemble ?? card?.assembleStep ?? null;
+      // The step the mascot is walking (MascotFigureFocus): the body waits above what it adds to the figure; with the
+      // plan pointing at figures, a step that adds nothing points at the figure as a whole.
+      const guided = session.mascotFocusStep;
+      const pointer = guided !== null && (questionPlan(session)?.pointer ?? false);
       return circuit ? (
         <CircuitView
           spec={circuit}
@@ -1295,7 +1299,12 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
           yaw={asked?.yaw ?? null}
         />
       ) : (
-        <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
+        <IllustrationView
+          scene={session.illustration}
+          revealed={session.sawSolution}
+          focus={guided === null ? null : { step: guided, text: session.stepText(guided), wholeFigure: pointer }}
+          bodySize={mascotSize}
+        />
       );
     }
     case "empty":

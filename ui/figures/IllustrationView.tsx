@@ -2,12 +2,14 @@
 // for each parameter. The layout and the labels are the renderer's (core); this draws its display list as SVG. With
 // "Show animations" off it stays still until the student presses Play.
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CompiledIllustration, type Illustration } from "@core/illustrations/illustration";
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "@core/illustrations/premadeFigure";
 import { formatG } from "@core/math/printf";
 import { IllustrationRenderer, type DrawOp, type Paint, type TextMeasurer } from "@core/illustrations/renderer";
 import { setMascotPreference } from "@core/illustrations/animated/mascot";
+import { FigureFocusGeometry, FigureFocusRegion } from "@core/voice/mascotFigureFocus";
+import { GuideSpots } from "../lesson/guideSpot";
 import { Icon } from "../components/Icon";
 import { useT } from "../i18n";
 import "./figures.css";
@@ -199,12 +201,17 @@ export function IllustrationView({
   step = Number.MAX_SAFE_INTEGER,
   language = "Portuguese (Portugal)",
   maxHeight = 320,
+  focus = null,
+  bodySize = 56,
 }: {
   scene: Illustration;
   revealed?: boolean;
   step?: number;
   language?: string;
   maxHeight?: number;
+  /** The step the mascot is explaining (MascotFigureFocus): the body waits above what it adds, magnified in place. */
+  focus?: { step: number; text: string | null; wholeFigure: boolean } | null;
+  bodySize?: number;
 }) {
   const t = useT();
   const [ref, available] = useWidth();
@@ -276,6 +283,38 @@ export function IllustrationView({
     return new IllustrationRenderer(compiled, scope, { width: drawnWidth, height }, scope.t!, measureText).draw();
   }, [available, animated, shownTime, revealed, step, working, values, compiled, drawnWidth, height]);
 
+  // The part of the figure the step in focus adds, magnified in place a moment after the body sets off; nothing with
+  // Reduce Motion, or when the step has nothing in the figure.
+  const picture = useRef<HTMLDivElement | null>(null);
+  const focusStep = focus?.step ?? null;
+  const focusText = focus?.text ?? null;
+  const wholeFigure = focus?.wholeFigure ?? false;
+  const focused = useMemo(() => {
+    if (focusStep === null || reducedMotion() || available === 0) return null;
+    const world = FigureFocusRegion.region(compiled, focusStep, focusText, wholeFigure);
+    const canvas = { width: drawnWidth, height };
+    const region = world ? FigureFocusGeometry.canvasRect(world, canvas, working.width, working.height) : null;
+    if (!region) return null;
+    const zoom = FigureFocusGeometry.zoom(region, canvas);
+    const tip = FigureFocusGeometry.pointerTip(FigureFocusGeometry.zoomed(region, zoom, canvas), canvas);
+    return { zoom, tip, canvas };
+  }, [focusStep, focusText, wholeFigure, compiled, available, drawnWidth, height, working]);
+  useLayoutEffect(() => {
+    const element = picture.current;
+    if (!focused || !element) return;
+    const box = element.getBoundingClientRect();
+    const frame = { x: box.left, y: box.top, width: box.width, height: box.height };
+    const shown = FigureFocusGeometry.window(focused.tip, frame, focused.canvas);
+    GuideSpots.setFigure(FigureFocusGeometry.hoverCenter(shown, bodySize));
+    return () => GuideSpots.setFigure(null);
+  }, [focused, bodySize]);
+  const zoomStyle = focused
+    ? {
+        transform: `scale(${focused.zoom.scale})`,
+        transformOrigin: `${focused.zoom.anchorX * 100}% ${focused.zoom.anchorY * 100}%`,
+      }
+    : undefined;
+
   const premade = decodePremade(working.premade ?? scene.premade);
   const recompiles = premade ? new PremadeFigures(premade).needsParameterRecompile : false;
   const change = (name: string, value: number) => {
@@ -293,7 +332,11 @@ export function IllustrationView({
     <figure className="figure" ref={ref}>
       {working.title && <figcaption className="figure-title">{working.title}</figcaption>}
       <div className="figure-canvas" style={{ height }}>
-        <DisplayList ops={ops} width={drawnWidth} height={height} label={working.title} />
+        <div className={`figure-focus${focused ? " on" : ""}`} ref={picture} style={{ width: drawnWidth, height }}>
+          <div className="figure-focus-zoom" style={zoomStyle}>
+            <DisplayList ops={ops} width={drawnWidth} height={height} label={working.title} />
+          </div>
+        </div>
       </div>
       {animated && boundaries && boundaries.length > 1 ? (
         // IllustrationStepControls: previous, play/pause, next and the step counter.

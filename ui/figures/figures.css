@@ -521,3 +521,24 @@
     animation: none;
   }
 }
+
+/* MascotFigureFocus: the part of the figure the mascot's step adds, magnified in place a moment after the body sets
+   off (spring 0.6 s, delay 0.45 s), never past the figure's edges; clipped only while magnified. */
+.figure-focus {
+  position: relative;
+}
+
+.figure-focus.on {
+  overflow: hidden;
+}
+
+.figure-focus-zoom {
+  transition: transform 0.6s cubic-bezier(0.22, 1.1, 0.36, 1) 0.45s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figure-focus-zoom {
+    transition: none;
+    transform: none !important;
+  }
+}
