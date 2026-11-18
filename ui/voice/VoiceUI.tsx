@@ -38,6 +38,8 @@ export interface VoiceState {
   lit: DrawingCommand[];
   /** The formula the answer is drawn on (`VoiceFormula.presentedFormula`), shown once its first mark lights. */
   formula: string | null;
+  /** What the answer says, markers removed: the words before a mark tell whether it means the figure. */
+  spoken: string | null;
   /** A one-time note ("the paid voice isn't available…"), a catalog key. */
   notice: string | null;
   /** The answer as text, shown while it would be said when no voice here can say it. */
@@ -45,7 +47,16 @@ export interface VoiceState {
   level: number;
 }
 
-const idle: VoiceState = { phase: "idle", heard: null, lit: [], formula: null, notice: null, shown: null, level: 0 };
+const idle: VoiceState = {
+  phase: "idle",
+  heard: null,
+  lit: [],
+  formula: null,
+  spoken: null,
+  notice: null,
+  shown: null,
+  level: 0,
+};
 
 export const VoiceContext = createContext<VoiceState>(idle);
 export const useVoiceState = () => useContext(VoiceContext);
@@ -211,6 +222,7 @@ export function useVoiceTutor(session: QuestionSession | null) {
       update({
         phase: "speaking",
         formula: VoiceFormula.presentedFormula(ready.drawing, question, ready.spoken, context),
+        spoken: ready.spoken,
       });
       const result = await speak(ready.spoken, {
         signal: controller.signal,

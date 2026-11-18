@@ -22,6 +22,7 @@ import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/step
 import { SelectionAsk } from "@core/problems/selectionAsk";
 import { markup } from "@core/problems/markup";
 import { FigureLabels } from "@core/voice/figureLabels";
+import { SpeechMarkLayout } from "@core/voice/speechMarkLayout";
 import { ExamNotation } from "@core/math/examNotation";
 import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
@@ -2132,8 +2133,13 @@ function VoiceCaption({ state, onScreen }: { state: VoiceState; onScreen: readon
       ((command.kind.op === "highlight" || command.kind.op === "circle") &&
         VoiceFormula.equationLine(command.kind.term) !== null),
   );
+  // A figure label the formula does not hold (H⁺, (B), the point D) is not ringed on it: no look-alike letter, as the
+  // Mac's SpeechMarkLayout.namesSomethingElse.
   const symbols = state.lit.flatMap((command) =>
-    command.kind.op === "circle" || command.kind.op === "highlight" ? [command.kind.term] : [],
+    (command.kind.op === "circle" || command.kind.op === "highlight") &&
+    !(formula && SpeechMarkLayout.namesSomethingElse(command, formula, state.spoken ?? ""))
+      ? [command.kind.term]
+      : [],
   );
   const phase =
     state.phase === "listening"
