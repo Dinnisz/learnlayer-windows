@@ -22,6 +22,7 @@ import {
 import { ModelClient, type ModelEnvironment, type ModelOptions } from "@core/ai/modelClient";
 import { AISettings, ModelRouting } from "@core/ai/modelRouting";
 import { MascotLessonProvider } from "@core/lesson/mascotLessonProvider";
+import { VisualAidProvider, type VisualAid } from "@core/problems/visualAid";
 import type { MascotLesson } from "@core/lesson/mascotLesson";
 import { lessonFromWork } from "@core/lesson/readSteps";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
@@ -216,6 +217,19 @@ export function illustrationProvider(): IllustrationProvider {
 /** The language the app writes into drawings and asks the model to write in. */
 export function drawingLanguage(): string {
   return TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages));
+}
+
+let visualAids: VisualAidProvider | null = null;
+
+/** Haiku's call on whether a graph or a diagram would help a solution, saved in `visual-aids.json`. */
+export function visualAidProvider(): VisualAidProvider {
+  visualAids ??= new VisualAidProvider({
+    cache: new DiskCache<VisualAid>("visual-aids.json", 100, dataFiles),
+    client: () => new ModelClient(environment, { model: AISettings.defaultModel }),
+    language: drawingLanguage,
+    usesMock: usesMock(),
+  });
+  return visualAids;
 }
 
 let lessons: MascotLessonProvider | null = null;

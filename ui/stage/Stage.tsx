@@ -46,6 +46,7 @@ import {
   solutionProvider,
   textHelpProvider,
   transcriptionRequests,
+  visualAidProvider,
 } from "../ai/solver";
 import { Icon } from "../components/Icon";
 import { MathText, MathView, untypesetMath } from "../components/Math";
@@ -106,6 +107,7 @@ export function sessionServices(): SessionServices {
       }
     })(),
     illustrate: (request) => illustrationProvider().illustration({ ...request, language: drawingLanguage() }),
+    visualAid: ({ groupText, subject, part, signal }) => visualAidProvider().aid(groupText, subject, part, signal),
     language: drawingLanguage,
   };
 }

@@ -44,6 +44,7 @@ import {
 } from "../illustrations/figureTopic";
 import { FunctionGraph } from "../illustrations/functionGraph";
 import { decodeGraph, FunctionPlot, Graphs, type Graph } from "../illustrations/graph";
+import { VisualAids, type VisualAid } from "./visualAid";
 import { GraphRelevance } from "../illustrations/graphRelevance";
 import { CompiledIllustration, gatedBySteps, type Illustration } from "../illustrations/illustration";
 import { continuityIllustration, decodeTemplate } from "../illustrations/illustrationTemplate";
@@ -93,6 +94,8 @@ export interface SessionServices {
   }): Promise<Illustration>;
   /** The language the app writes into a drawing ("Portuguese (Portugal)"). */
   language?(): string;
+  /** Haiku's call: would a graph or a diagram make this clearer (VisualAidProvider)? */
+  visualAid?(request: { groupText: string; subject: string; part: Part; signal: AbortSignal }): Promise<VisualAid>;
 }
 
 /** What goes beside the steps: the sign table (every sign checked), or a drawing. */
@@ -380,6 +383,10 @@ export class QuestionSession {
   illustrationState: IllustrationState | null = null;
   showsIllustration = false;
   private illustrationController: AbortController | null = null;
+  /** Haiku's call on whether a graph or a diagram would make this clearer; null until asked. */
+  visualAid: VisualAid | null = null;
+  private visualController: AbortController | null = null;
+  private visualForAnswer: string | null | undefined = undefined;
   private illustrationGeneration = 0;
   private readonly figureCache = new Map<string, unknown>();
 
@@ -833,6 +840,7 @@ export class QuestionSession {
 
   cancel(): void {
     this.illustrationController?.abort();
+    this.visualController?.abort();
     this.controller?.abort();
     this.fastController?.abort();
     this.variantController?.abort();
@@ -916,8 +924,17 @@ export class QuestionSession {
     // A curve the solver returned is part of the answer, shown with it.
     const side = this.sideGraph;
     if (side && Graphs.isDrawable(side)) this.showsGraph = true;
+    // A new answer is a new question for Haiku.
+    const answerText = this.part?.answer.text ?? null;
+    if (answerText !== this.visualForAnswer) {
+      this.visualController?.abort();
+      this.visualController = null;
+      this.visualAid = null;
+      this.visualForAnswer = answerText;
+    }
     this.solveClock = { ...this.solveClock, ready: true };
     this.state = { kind: "ready" };
+    if (this.mode !== null) this.considerVisual();
     this.changed();
   }
 
@@ -1123,7 +1140,40 @@ export class QuestionSession {
       )
         this.fetchIllustration();
     }
+    if (mode === "hint" || mode === "tryIt" || mode === "solution") this.considerVisual();
     this.changed();
+  }
+
+  // MARK: Haiku's visual check
+
+  /** Skipped when a curve or a drawing is already coming. */
+  private get needsVisualCheck(): boolean {
+    if (this.evidenceAnswer !== null) return false;
+    if (this.curveIsDecorative || this.shapeSketch !== null) return false;
+    const given = this.solutionGraph;
+    if (given && Graphs.isDrawable(given)) return false;
+    if (this.functionCurveIsOnStage) return false;
+    if (FunctionPlot.graph(this.question.groupText, this.solution?.subject ?? null, this.part) !== null) return false;
+    if (examPrintsCurve(this.question.groupText)) return false;
+    if (this.canDraw && this.part?.signTable == null && this.part?.continuity == null) return false;
+    return this.part !== null;
+  }
+
+  private considerVisual(): void {
+    const ask = this.services.visualAid;
+    const part = this.part;
+    const solution = this.solution;
+    if (!ask || this.visualAid || this.visualController || !this.needsVisualCheck || !part || !solution) return;
+    const controller = new AbortController();
+    this.visualController = controller;
+    void ask({ groupText: this.question.groupText, subject: solution.subject, part, signal: controller.signal })
+      .then((aid) => {
+        if (controller.signal.aborted) return;
+        this.visualAid = aid;
+        if (aid.kind === "diagram" && this.mode === "solution" && this.canDraw) this.fetchIllustration();
+        this.changed();
+      })
+      .catch(() => {});
   }
 
   // MARK: The figure beside the steps
@@ -1294,7 +1344,12 @@ ${part.label}`,
     if (given && Graphs.isDrawable(given) && agrees(Graphs.fittedToMarks(given))) return Graphs.fittedToMarks(given);
     const plain = FunctionPlot.graph(this.question.groupText, subject, this.part);
     if (plain && agrees(plain)) return plain;
-    return this.shapeSketch;
+    const sketch = this.shapeSketch;
+    if (sketch) return sketch;
+    // Haiku's curve, when it asked for one the app can plot.
+    const plot = this.visualAid ? VisualAids.plot(this.visualAid) : null;
+    if (plot && agrees(plot)) return plot;
+    return null;
   }
 
   /** The curve drawn beside the steps; null when that curve is already the figure. */
