@@ -268,3 +268,6 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-18 — Duas peças do Mac que não se portam
 - **`VectorFigure`:** no Mac redesenha a figura do PDF a partir dos seus traços, quando a pergunta é mostrada tipografada a partir de uma imagem. No Windows, quando o Alt-clique encontra o ficheiro do PDF, o palco mostra o recorte pelo pdf.js (vetorial, nítido, sem placa branca), por isso não há imagem a substituir.
 - **`SelectionAskRoute`:** no Mac uma seleção vai ao tutor de voz quando há uma conversa por voz aberta (escuta contínua no computador). No Windows o tutor é de carregar para falar, sem conversa contínua; a seleção vai sempre por escrito, que é o ramo do Mac sem conversa.
+
+## 2026-11-18 — O Markdown do modelo na pergunta tipografada
+- **Portado do Mac (`RenderedQuestion.markup`), com os testes de `QuestionTranscriptionTests`:** na pergunta que o modelo transcreve, `**…**` passa a negrito e uma tabela escrita com `|` passa a linhas de células alinhadas, sem traços nem barras; um `**` dentro de `$…$` é matemática. As tabulações do AppKit (`tabStops`) dão lugar a uma grelha em CSS.

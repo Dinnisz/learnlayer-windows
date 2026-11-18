@@ -1187,3 +1187,14 @@
     animation-name: voice-ring-fade;
   }
 }
+
+/* A table the model wrote with pipes: rows of cells lined up, no pipes or rules shown. */
+.stage-markup p {
+  margin: 0 0 4px;
+}
+
+.stage-table-row {
+  display: grid;
+  gap: 4px 16px;
+  justify-content: start;
+}

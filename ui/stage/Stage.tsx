@@ -20,6 +20,7 @@ import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { SelectionAsk } from "@core/problems/selectionAsk";
+import { markup } from "@core/problems/markup";
 import { ExamNotation } from "@core/math/examNotation";
 import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
@@ -1948,11 +1949,7 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
         const text = block.text ?? "";
         if (text.trim() === "") return null;
         if (block.type === "formula") return <MathView key={index} latex={text} display className="stage-formula" />;
-        return (
-          <p key={index}>
-            <MathText text={text} />
-          </p>
-        );
+        return <MarkupText key={index} text={text} />;
       })}
     </div>
   );
@@ -2107,6 +2104,64 @@ function VoiceCaption({ state, onScreen }: { state: VoiceState; onScreen: readon
       {plot ? <CurveGraph graph={plot} session={stillGraph} height={200} /> : null}
       {state.shown ? <p className="voice-shown">{state.shown}</p> : null}
       {state.notice ? <span className="voice-notice">{t(state.notice)}</span> : null}
+    </div>
+  );
+}
+
+/**
+ * A block of the question as the model transcribed it, its Markdown never shown as marks (`RenderedQuestion.markup`):
+ * `**…**` set bold, a pipe table's rows laid out as cells.
+ */
+function MarkupText({ text }: { text: string }) {
+  const found = useMemo(() => markup(text), [text]);
+  // Each line with where it starts in the whole text, which the bold stretches count in.
+  const split = found.text.split("\n");
+  const lines = split.map((line, index) => ({
+    line,
+    start: split.slice(0, index).reduce((sum, before) => sum + before.length + 1, 0),
+  }));
+  // The line cut at its bold stretches, each piece typeset with its maths.
+  const pieces = (line: string, start: number) => {
+    const cuts = new Set([0, line.length]);
+    for (const [from, to] of found.bold) {
+      if (to > start && from < start + line.length) {
+        cuts.add(Math.max(0, from - start));
+        cuts.add(Math.min(line.length, to - start));
+      }
+    }
+    const points = [...cuts].sort((a, b) => a - b);
+    return points.slice(0, -1).map((at, index) => {
+      const piece = line.slice(at, points[index + 1]);
+      const bold = found.bold.some(([from, to]) => start + at >= from && start + at < to);
+      return bold ? (
+        <strong key={index}>
+          <MathText text={piece} />
+        </strong>
+      ) : (
+        <MathText key={index} text={piece} />
+      );
+    });
+  };
+  if (!found.hasTable && !found.text.includes("\n")) return <p>{pieces(found.text, 0)}</p>;
+  return (
+    <div className="stage-markup">
+      {lines.map(({ line, start }, index) =>
+        line.includes("\t") ? (
+          <div
+            key={index}
+            className="stage-table-row"
+            style={{ gridTemplateColumns: `repeat(${line.split("\t").length}, auto)` }}
+          >
+            {line.split("\t").map((cell, column) => (
+              <span key={column}>
+                <MathText text={cell} />
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p key={index}>{pieces(line, start)}</p>
+        ),
+      )}
     </div>
   );
 }
