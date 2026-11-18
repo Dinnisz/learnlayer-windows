@@ -136,6 +136,17 @@
   }
 }
 
+/* Quoted words coloured in place: the crop's own letters, recoloured, laid exactly over them (the Mac's QuoteTint). It
+   is inverted like the crop, so its ink comes out in the blue. */
+.stage-crop canvas.stage-tint {
+  position: absolute;
+  left: 0;
+  top: 0;
+  filter: invert(1);
+  pointer-events: none;
+  animation: stage-fade 250ms ease-out;
+}
+
 /* A lesson's highlight: the words filled in the blue, with a blue edge. */
 .stage-highlight {
   position: absolute;
@@ -634,6 +645,11 @@
   .stage-highlight {
     border-color: Highlight;
     background: transparent;
+  }
+
+  /* The crop is not inverted here, so the recoloured letters would not come out blue. */
+  .stage-crop canvas.stage-tint {
+    display: none;
   }
 
   .stage-strike::after {

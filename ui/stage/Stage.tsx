@@ -19,6 +19,7 @@ import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
+import { LessonEvidence } from "@core/lesson/lessonEvidence";
 import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import type { ExamQuestion } from "@core/problems/questionDetector";
@@ -464,9 +465,13 @@ function CropPiece({
   hasStatement?: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  // Bumped once the page is drawn, so the tinted letters are copied from the drawn crop.
+  const [drawn, setDrawn] = useState(0);
   useEffect(() => {
     if (!canvas.current || !ready) return;
-    void document.renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1);
+    void document
+      .renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1)
+      .then(() => setDrawn((count) => count + 1));
   }, [document, pageIndex, region, scale, ready]);
   const version = session?.version;
   const lessonShows = useLessonShows();
@@ -476,7 +481,7 @@ function CropPiece({
       ...lessonShows,
       ...voiceLit.flatMap((command): LessonShow[] =>
         command.kind.op === "highlight" || command.kind.op === "circle"
-          ? [{ op: command.kind.op === "circle" ? "circle" : "underline", quote: command.kind.term }]
+          ? [{ op: command.kind.op === "circle" ? "circle" : "underline", quote: command.kind.term, on: "voice" }]
           : [],
       ),
     ],
@@ -486,7 +491,7 @@ function CropPiece({
     () =>
       page && session
         ? cropMarks(page, region, session, shows)
-        : { underlines: [], circles: [], highlights: [], strikes: [], pointers: [] },
+        : { underlines: [], circles: [], highlights: [], strikes: [], pointers: [], tints: [] },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, region, session, version, shows],
   );
@@ -526,6 +531,15 @@ function CropPiece({
           hasStatement={hasStatement}
           width={region.width * scale}
           height={region.height * scale}
+        />
+      )}
+      {marks.tints.length > 0 && (
+        <TintLayer
+          base={canvas}
+          drawn={drawn}
+          width={region.width * scale}
+          height={region.height * scale}
+          boxes={marks.tints.map((rect) => toCrop(Rects.inset(rect, -1, -1)))}
         />
       )}
       {marks.highlights.map((rect, index) => (
@@ -574,6 +588,59 @@ function CropPiece({
 }
 
 /** Where the open step's data stands in the crop (its printed lines), and the right option of a multiple choice. */
+/**
+ * Quoted words coloured in place (the Mac's QuoteTint): the crop's own letters inside each box are copied and
+ * recoloured, so exactly the glyphs turn blue, crisp, with nothing drawn round them. The crop is drawn as dark ink and
+ * inverted on screen, so the letters are painted the colour the inversion turns into the blue.
+ */
+function TintLayer({
+  base,
+  drawn,
+  width,
+  height,
+  boxes,
+}: {
+  base: React.RefObject<HTMLCanvasElement | null>;
+  drawn: number;
+  width: number;
+  height: number;
+  boxes: { left: number; top: number; width: number; height: number }[];
+}) {
+  const layer = useRef<HTMLCanvasElement>(null);
+  const key = JSON.stringify(boxes);
+  useEffect(() => {
+    const source = base.current;
+    const target = layer.current;
+    if (!source || !target || source.width === 0 || width <= 0) return;
+    target.width = source.width;
+    target.height = source.height;
+    const context = target.getContext("2d");
+    if (!context) return;
+    const ratio = source.width / width;
+    context.clearRect(0, 0, target.width, target.height);
+    for (const box of JSON.parse(key) as typeof boxes) {
+      const x = Math.max(0, box.left * ratio);
+      const y = Math.max(0, box.top * ratio);
+      const w = Math.min(target.width - x, box.width * ratio);
+      const h = Math.min(target.height - y, box.height * ratio);
+      if (w > 0 && h > 0) context.drawImage(source, x, y, w, h, x, y, w, h);
+    }
+    const accent = getComputedStyle(target).getPropertyValue("--stage-accent").trim() || "#0a84ff";
+    context.globalCompositeOperation = "source-atop";
+    context.fillStyle = invertedColour(accent);
+    context.fillRect(0, 0, target.width, target.height);
+    context.globalCompositeOperation = "source-over";
+  }, [base, drawn, width, key]);
+  return <canvas ref={layer} className="stage-tint" style={{ width, height }} aria-hidden="true" />;
+}
+
+/** The colour that `filter: invert(1)` turns into `colour` (a hex colour; anything else is the system blue's). */
+function invertedColour(colour: string): string {
+  const hex = /^#([0-9a-f]{6})$/i.exec(colour)?.[1] ?? "0a84ff";
+  const [r, g, b] = [0, 2, 4].map((at) => 255 - parseInt(hex.slice(at, at + 2), 16));
+  return `rgb(${r} ${g} ${b})`;
+}
+
 /**
  * The spot the open step is about (`StepFocusMarks`), on the crop the model placed it in: a ring or an arrow that draws
  * itself, and a few words beside it, on the side where they are out of the way.
@@ -654,6 +721,8 @@ interface CropMarks {
   strikes: Rect[];
   /** An arrow to a spot, or a ring with a note (`StepFocusMarks`): the lesson's "arrow", and "circle" with a note. */
   pointers: { rect: Rect; arrow: boolean; note: string | null }[];
+  /** Quoted words with their own letters coloured in the blue. */
+  tints: Rect[];
 }
 
 function cropMarks(
@@ -698,6 +767,7 @@ function cropMarks(
   const strikes: Rect[] = [];
   /** Where a beat's mark goes, by its op: a ring, a line through, a fill, or a line under. */
   const pointers: CropMarks["pointers"] = [];
+  const tints: Rect[] = [];
   const place = (op: string, rects: Rect[], note: string | null = null) => {
     if ((op === "arrow" || (op === "circle" && note)) && rects.length > 0) {
       pointers.push({
@@ -707,7 +777,8 @@ function cropMarks(
       });
       return;
     }
-    if (op === "crossOut") strikes.push(...rects);
+    if (op === "tint") tints.push(...rects);
+    else if (op === "crossOut") strikes.push(...rects);
     else if (op === "highlight") highlights.push(...rects);
     else if (op === "circle" || op === "zoom") circles.push(...rects);
     else underlines.push(...rects);
@@ -732,12 +803,18 @@ function cropMarks(
       );
       continue;
     }
-    const range =
-      (show.label?.trim() ? firstInside(show.label.trim()) : undefined) ??
-      (show.quote?.trim() ? firstInside(show.quote.trim()) : undefined);
+    const labelRange = show.label?.trim() ? firstInside(show.label.trim()) : undefined;
+    const range = labelRange ?? (show.quote?.trim() ? firstInside(show.quote.trim()) : undefined);
+    // Marked in place as the Mac's LessonEvidence does on a question that reads clearly (a PDF does): words tinted,
+    // a lone value or a part of a figure ringed. The voice's own marks keep their verb.
+    const inPlace = (quote: string | null, onFigure: boolean) =>
+      show.on === "voice"
+        ? show.op
+        : LessonEvidence.inPlaceOp({ op: show.op, quote, note: show.note?.trim() || null, onFigure }, true);
     if (range) {
+      const onFigure = labelRange !== undefined;
       place(
-        show.op,
+        inPlace(onFigure ? show.label!.trim() : (show.quote?.trim() ?? null), onFigure),
         linesOf(page, range.start, range.end - range.start).map((line) => line.bounds),
         show.note?.trim() || null,
       );
@@ -747,7 +824,7 @@ function cropMarks(
     if (box)
       // As shares of the question's picture, from its top-left corner.
       place(
-        show.op,
+        inPlace(null, false),
         [
           {
             x: region.x + box.x * region.width,
@@ -759,7 +836,7 @@ function cropMarks(
         show.note?.trim() || null,
       );
   }
-  return { underlines, circles, highlights, strikes, pointers };
+  return { underlines, circles, highlights, strikes, pointers, tints };
 }
 
 function ModeView({ session }: { session: QuestionSession }) {
