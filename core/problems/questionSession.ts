@@ -45,6 +45,7 @@ import {
 import { FunctionGraph } from "../illustrations/functionGraph";
 import { decodeGraph, FunctionPlot, Graphs, type Graph } from "../illustrations/graph";
 import { VisualAids, type VisualAid } from "./visualAid";
+import { MascotGuide } from "../voice/mascotGuide";
 import { GraphRelevance } from "../illustrations/graphRelevance";
 import { CompiledIllustration, gatedBySteps, type Illustration } from "../illustrations/illustration";
 import { continuityIllustration, decodeTemplate } from "../illustrations/illustrationTemplate";
@@ -400,6 +401,9 @@ export class QuestionSession {
   private lastAttempt = "";
   private followUpID = 0;
   private cascadeKey: string | null = null;
+  /** The step the mascot is on while it walks the steps after a click on it (`MascotGuide`); null at rest. */
+  guideStep: number | null = null;
+  private guideController: AbortController | null = null;
   private cascadeShown = 0;
   private cascadeDone = false;
   private evidenceCache: { label: string; answerText: string; answer: EvidenceAnswer | null } | null = null;
@@ -839,6 +843,7 @@ export class QuestionSession {
   }
 
   cancel(): void {
+    this.stopGuide();
     this.illustrationController?.abort();
     this.visualController?.abort();
     this.controller?.abort();
@@ -1510,6 +1515,8 @@ ${part.label}`,
   }
 
   select(step: number): void {
+    // The student picked a step themselves: the mascot's tour gives way.
+    this.stopGuide();
     this.selectedStep = this.selectedStep === step ? null : step;
     this.changed();
   }
@@ -1532,11 +1539,16 @@ ${part.label}`,
     );
     const spoken =
       this.spokenStep !== null && this.spokenStep >= 0 && this.spokenStep < this.stepCount ? this.spokenStep : null;
-    return StatementQuotes.shownStep(spoken ?? this.revealingStep ?? open, this.hoveredStep);
+    // The mascot's step is underlined the moment it gets there, in step with it.
+    const explained = this.mascotFocusStep ?? spoken;
+    return StatementQuotes.shownStep(explained ?? this.revealingStep ?? open, this.hoveredStep);
   }
 
   /** The step the figure is drawn at. */
   get figureStep(): number {
+    // The mascot on a step of the whole solution: the figure is drawn up to that step.
+    const guided = this.mascotFocusStep;
+    if (this.mode === "solution" && guided !== null) return guided + 1;
     const cascading = this.cascadingCount;
     if (cascading !== null) return cascading;
     if (this.mode === "solution") return this.selectedStep === null ? Number.MAX_SAFE_INTEGER : this.selectedStep + 1;
@@ -1545,6 +1557,7 @@ ${part.label}`,
 
   /** The figure shows the answer: in the solution unless a step is picked. */
   get figureRevealed(): boolean {
+    if (this.mode === "solution" && this.mascotFocusStep !== null) return false;
     if (this.cascadingCount !== null) return false;
     return this.mode === "solution" ? this.selectedStep === null : this.showsAnswer;
   }
@@ -1588,6 +1601,147 @@ ${part.label}`,
       return card ? [card.title, latexToUnicode(card.latex), card.note ?? ""].join(" ") : null;
     }
     return part.steps[step] ?? null;
+  }
+
+  // MARK: The mascot walking the steps (MascotGuide)
+
+  /** The mascot is walking the steps. */
+  get isGuiding(): boolean {
+    return this.guideStep !== null;
+  }
+
+  /** The step the mascot explains: only after a click on it, in the hint or the solution. */
+  get mascotFocusStep(): number | null {
+    const step = this.guideStep;
+    if ((this.mode !== "hint" && this.mode !== "solution") || step === null || step < 0 || step >= this.stepCount)
+      return null;
+    return step;
+  }
+
+  /** The steps a click on the mascot explains. */
+  get guideSteps(): number[] {
+    if (!this.part) return [];
+    return MascotGuide.steps(
+      this.mode === "solution",
+      this.mode === "hint",
+      this.selectedStep,
+      this.revealedSteps,
+      this.stepCount,
+    );
+  }
+
+  /**
+   * The student clicked the mascot. With steps on the stage it explains them one at a time, then rests; a click while
+   * it explains stops it. Returns false when there is nothing here to explain, so the click goes to the voice tutor.
+   * `narrate` says one step and returns once it is said.
+   */
+  mascotClicked(reduceMotion: boolean, narrate?: (step: number, signal: AbortSignal) => Promise<void>): boolean {
+    if (this.guideStep !== null) {
+      this.stopGuide();
+      return true;
+    }
+    const steps = this.guideSteps;
+    if (steps.length === 0) return false;
+    this.guideController?.abort();
+    const controller = new AbortController();
+    this.guideController = controller;
+    const beats = steps.map((step) =>
+      MascotGuide.beat(
+        Array.from((this.hasSpokenExplanation(step) ? this.spokenStepText(step) : this.stepText(step)) ?? "").length,
+        this.verifiedQuotes(step).length,
+        reduceMotion,
+      ),
+    );
+    this.guide(steps[0]!);
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        controller.signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+    void (async () => {
+      for (const [offset, step] of steps.entries()) {
+        if (offset > 0) this.guide(step);
+        // The step is said while the body is on it and its data is underlined; its beat is the least time it stays.
+        const started = Date.now();
+        if (narrate) await narrate(step, controller.signal);
+        if (controller.signal.aborted) return;
+        const left = beats[offset]! * 1000 - (Date.now() - started);
+        if (left > 0) await wait(left);
+        if (controller.signal.aborted) return;
+      }
+      if (this.guideController === controller) {
+        this.guideController = null;
+        this.guideStep = null;
+        this.changed();
+      }
+    })();
+    return true;
+  }
+
+  /** The mascot goes back to rest. */
+  stopGuide(): void {
+    this.guideController?.abort();
+    this.guideController = null;
+    if (this.guideStep === null) return;
+    this.guideStep = null;
+    this.changed();
+  }
+
+  /** The mascot on `step`: a step still to come in is brought on screen first. */
+  private guide(step: number): void {
+    if (this.cascadingCount !== null) {
+      if (this.cascadeKey !== this.solutionKey) {
+        this.cascadeKey = this.solutionKey;
+        this.cascadeShown = 0;
+        this.cascadeDone = false;
+      }
+      this.cascadeShown = Math.max(this.cascadeShown, Math.min(this.stepCount, step + 1));
+    }
+    this.guideStep = step;
+    this.changed();
+  }
+
+  /** What the mascot says for a step: its title and why, in words (a formula alone when that is all the step has). */
+  spokenStepText(step: number): string | null {
+    const part = this.part;
+    if (!part) return null;
+    if (part.cards && part.cards.length > 0) {
+      const card = part.cards[step];
+      if (!card) return null;
+      // The model's own spoken explanation: the idea, not the written text read back.
+      const said = card.say?.trim();
+      if (said) return said;
+      const words = [card.title, card.note ?? ""]
+        .map((text) => text.trim())
+        .filter((text) => text !== "")
+        .map((text) => (text.endsWith(".") || text.endsWith(":") ? text : text + "."))
+        .join(" ");
+      return words === "" ? latexToUnicode(card.latex) : words;
+    }
+    return part.steps[step] ?? null;
+  }
+
+  /** The model wrote what to say for this step (`Card.say`). */
+  hasSpokenExplanation(step: number): boolean {
+    return (this.part?.cards?.[step]?.say?.trim() ?? "") !== "";
+  }
+
+  /** What the mascot says for a step: a cue to what to look at, then the step itself. */
+  narratedStep(step: number, pointer: boolean, hasFigure: boolean, english = false): string | null {
+    const text = this.spokenStepText(step);
+    if (text === null) return null;
+    // An explanation already says what to look at; the cue is for steps read from the card.
+    if (this.hasSpokenExplanation(step)) return text;
+    return MascotGuide.narration(
+      text,
+      this.verifiedQuotes(step).map((quote) => quote.quote),
+      hasFigure,
+      pointer,
+      english,
+    );
   }
 
   // MARK: The solution coming in

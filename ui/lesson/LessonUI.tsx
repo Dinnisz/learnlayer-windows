@@ -1,12 +1,12 @@
 // «Explica-me» on the stage (the Mac's QuestionSession+Lesson and LessonLayer, @ ref 2026-11-04): the mascot teaches
 // the question from the written solution, beat by beat, with the voice; each beat lights its step of the solution and
-// marks the question while it is said. With no lesson (no session, offline) the steps on screen are said one by one.
+// marks the question while it is said. With no lesson (no session, offline) the mascot walks the steps on screen
+// instead, saying each while its data is underlined (the Mac's `readSteps`, `QuestionSession.mascotClicked`).
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { EquationMorph } from "@core/explanation/equationMorph";
-import { MascotLessons, type LessonShow } from "@core/lesson/mascotLesson";
-import { LessonFeed, type LessonRequest } from "@core/lesson/mascotLessonProvider";
-import { lessonFromWork } from "@core/lesson/readSteps";
+import type { LessonShow } from "@core/lesson/mascotLesson";
+import type { LessonRequest } from "@core/lesson/mascotLessonProvider";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import type { QuestionSession } from "@core/problems/questionSession";
 import { optionLinesOf, solutionWording, workContext } from "@core/voice/workContext";
@@ -14,7 +14,7 @@ import { lessonProvider } from "../ai/solver";
 import { AnimatedMascot } from "../components/Mascot";
 import { useT } from "../i18n";
 import { speak, tutorLanguage, voiceEnabled } from "../voice/speaker";
-import { LessonPlayer, type LessonState, type Narrate } from "./lessonPlayer";
+import { idleLessonState, LessonPlayer, type LessonState, type Narrate } from "./lessonPlayer";
 
 export interface LessonContextValue {
   state: LessonState | null;
@@ -89,20 +89,42 @@ function lessonRequest(session: QuestionSession): LessonRequest {
   };
 }
 
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 /** Owns the lesson of one stage: started by «Explica-me», stopped by a second press, by Esc or by closing. */
 export function useLessonControl(session: QuestionSession | null) {
   const [player, setPlayer] = useState<LessonPlayer | null>(null);
   const current = useRef<LessonPlayer | null>(null);
-  const state = useSyncExternalStore(
+  const played = useSyncExternalStore(
     useCallback((listener: () => void) => player?.subscribe(listener) ?? (() => {}), [player]),
     () => player?.state ?? null,
   );
+  // The mascot walking the steps: its voice, for the mascot and the pill.
+  const [voice, setVoice] = useState({ speaking: false, level: 0 });
+  const guiding = session?.isGuiding === true;
+  const state: LessonState | null =
+    played ?? (guiding ? { ...idleLessonState, playing: true, step: session.mascotFocusStep, ...voice } : null);
 
   const stop = useCallback(() => {
     current.current?.stop();
     current.current = null;
     setPlayer(null);
-  }, []);
+    session?.stopGuide();
+  }, [session]);
+
+  /** Each step on screen said while the mascot is on it and its data is underlined; a second press stops it. */
+  const readSteps = useCallback(() => {
+    if (!session) return;
+    const english = tutorLanguage().startsWith("en");
+    const hasFigure = session.solution?.figure != null;
+    session.mascotClicked(reducedMotion(), async (step, signal) => {
+      const text = session.narratedStep(step, false, hasFigure, english);
+      if (!text) return;
+      setVoice({ speaking: true, level: 0 });
+      await narrate(text, (level) => setVoice({ speaking: true, level }), signal);
+      setVoice({ speaking: false, level: 0 });
+    });
+  }, [session]);
 
   const start = useCallback(() => {
     if (!session?.part) return;
@@ -119,24 +141,26 @@ export function useLessonControl(session: QuestionSession | null) {
       const feed = lessonProvider().feed(request);
       while (feed.beats.length === 0 && !feed.isFinished && !next.stopped) await feed.changed();
       if (next.stopped) return;
-      // No lesson could be made: the steps on screen are said one by one instead.
-      const played =
-        feed.beats.length > 0
-          ? feed
-          : LessonFeed.of(
-              MascotLessons.sanitized(lessonFromWork(request.work), { hasOptions: request.optionLetters.length > 0 }),
-            );
-      await next.play(played, narrate);
+      // No lesson could be made: the mascot walks the steps on screen instead.
+      if (feed.beats.length === 0) {
+        if (current.current === next) {
+          current.current = null;
+          setPlayer(null);
+        }
+        readSteps();
+        return;
+      }
+      await next.play(feed, narrate);
       if (current.current === next) {
         current.current = null;
         setPlayer(null);
       }
     })();
-  }, [session, stop]);
+  }, [session, stop, readSteps]);
 
   useEffect(() => stop, [session, stop]);
 
-  const toggle = useCallback(() => (current.current ? stop() : start()), [start, stop]);
+  const toggle = useCallback(() => (current.current || session?.isGuiding ? stop() : start()), [start, stop, session]);
 
   return { player, state, start, stop, toggle };
 }

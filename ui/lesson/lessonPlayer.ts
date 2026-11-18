@@ -47,7 +47,7 @@ export type Narrate = (
   onProgress?: (fraction: number, elapsed: number) => void,
 ) => Promise<void>;
 
-const idle: LessonState = {
+export const idleLessonState: LessonState = {
   beat: -1,
   step: null,
   shows: [],
@@ -67,7 +67,7 @@ const idle: LessonState = {
 const checkPatience = 20_000;
 
 export class LessonPlayer {
-  state: LessonState = idle;
+  state: LessonState = idleLessonState;
   version = 0;
   private readonly controller = new AbortController();
   private readonly listeners = new Set<() => void>();
@@ -108,7 +108,7 @@ export class LessonPlayer {
     this.controller.abort();
     window.clearTimeout(this.answerTimer);
     this.answerCheck?.(null);
-    this.set({ ...idle });
+    this.set({ ...idleLessonState });
   }
 
   /** The student's tap on one of the check's two answers. */
@@ -155,7 +155,7 @@ export class LessonPlayer {
       await this.say(feed.summary.say, narrate);
       await this.pause(1_200);
     }
-    if (!this.stopped) this.set({ ...idle });
+    if (!this.stopped) this.set({ ...idleLessonState });
   }
 
   private async playBeat(beat: LessonBeat, index: number, narrate: Narrate): Promise<void> {
