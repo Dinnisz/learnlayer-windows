@@ -302,3 +302,23 @@ export class MascotBodyState {
     };
   }
 }
+
+/** Which corner of the stage the sphere rests in (the Mac's MascotCorner); the student drags it to another. */
+export type MascotCorner = "bottomTrailing" | "bottomLeading" | "topTrailing" | "topLeading";
+
+export const MascotCorners = {
+  all: ["bottomTrailing", "bottomLeading", "topTrailing", "topLeading"] as const,
+  /** The corner nearest where the sphere was dropped. */
+  nearest(size: { width: number; height: number }, point: MascotPoint): MascotCorner {
+    const right = point.x > size.width / 2;
+    const below = point.y > size.height / 2;
+    if (below) return right ? "bottomTrailing" : "bottomLeading";
+    return right ? "topTrailing" : "topLeading";
+  },
+  /** A stored corner, or the bottom right. */
+  parse(stored: string | null): MascotCorner {
+    return (MascotCorners.all as readonly string[]).includes(stored ?? "")
+      ? (stored as MascotCorner)
+      : "bottomTrailing";
+  },
+};

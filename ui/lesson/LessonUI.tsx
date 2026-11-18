@@ -4,7 +4,7 @@
 // instead, saying each while its data is underlined (the Mac's `readSteps`, `QuestionSession.mascotClicked`).
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { MascotPresence, MascotTransient } from "@core/voice/mascotMotion";
+import { MascotCorners, type MascotCorner, type MascotPresence, type MascotTransient } from "@core/voice/mascotMotion";
 import { EquationMorph } from "@core/explanation/equationMorph";
 import type { LessonBeat, LessonShow } from "@core/lesson/mascotLesson";
 import type { LessonRequest } from "@core/lesson/mascotLessonProvider";
@@ -231,6 +231,8 @@ export function useLessonControl(session: QuestionSession | null) {
  * tutor (`onTap`). It goes beside the step's datum while it walks the steps, and just above the voice's mark while that
  * is said. With the mascot off in Settings, only what the lesson brings is shown.
  */
+const cornerKey = "mascotCorner";
+
 export function LessonOverlay({
   player,
   state,
@@ -259,14 +261,57 @@ export function LessonOverlay({
   const level = voiceSpeaks ? voice.level : (state?.level ?? 0);
   const listening = voice?.phase === "listening";
   const label = state?.playing ? t("Stop Explaining") : t("Talk to the Tutor");
+  // Drag the sphere to move its corner (VoiceMascotExerciseOverlay's drag, MascotController.snapCorner); kept.
+  const [corner, setCorner] = useState<MascotCorner>(() => {
+    try {
+      return MascotCorners.parse(localStorage.getItem(cornerKey));
+    } catch {
+      return "bottomTrailing";
+    }
+  });
+  const [drag, setDrag] = useState<{ x: number; y: number; dx: number; dy: number; moved: boolean } | null>(null);
+  // When a drag last ended: the click that follows it is not a tap.
+  const droppedAt = useRef(0);
+  const dragging = drag?.moved ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined;
   return (
-    <aside className="lesson-overlay" aria-live="polite">
+    <aside className={`lesson-overlay corner-${corner}`} aria-live="polite">
       {showsMascot ? (
         <button
           type="button"
-          className={`lesson-mascot${speaking ? " speaking" : ""}${spot ? " beside" : ""}${listening ? " listening" : ""}`}
-          style={spot ? { left: spot.x - stageMascotSize / 2, top: spot.y - stageMascotSize / 2 } : undefined}
-          onClick={onTap}
+          className={`lesson-mascot${speaking ? " speaking" : ""}${spot ? " beside" : ""}${listening ? " listening" : ""}${drag?.moved ? " dragging" : ""}`}
+          style={spot ? { left: spot.x - stageMascotSize / 2, top: spot.y - stageMascotSize / 2 } : dragging}
+          onPointerDown={(event) => {
+            if (spot || event.button !== 0) return;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setDrag({ x: event.clientX, y: event.clientY, dx: 0, dy: 0, moved: false });
+          }}
+          onPointerMove={(event) => {
+            if (!drag) return;
+            const dx = event.clientX - drag.x;
+            const dy = event.clientY - drag.y;
+            setDrag({ ...drag, dx, dy, moved: drag.moved || Math.hypot(dx, dy) >= 4 });
+          }}
+          onPointerUp={(event) => {
+            if (!drag) return;
+            if (drag.moved) {
+              const next = MascotCorners.nearest(
+                { width: window.innerWidth, height: window.innerHeight },
+                { x: event.clientX, y: event.clientY },
+              );
+              setCorner(next);
+              droppedAt.current = performance.now();
+              try {
+                localStorage.setItem(cornerKey, next);
+              } catch {
+                // Kept for this stage only.
+              }
+            }
+            setDrag(null);
+          }}
+          onPointerCancel={() => setDrag(null)}
+          onClick={() => {
+            if (performance.now() - droppedAt.current > 300) onTap();
+          }}
           aria-label={label}
           title={label}
         >

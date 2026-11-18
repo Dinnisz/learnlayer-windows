@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   MascotBodyState,
   MascotConfetti,
+  MascotCorners,
   MascotKinematics,
   SmoothPoint,
   SmoothValue,
@@ -154,5 +155,18 @@ describe("how the mascot moves", () => {
       "curious",
     );
     expect(VoiceMascot.frame({ presence: "idle", level: 0, reduceMotion: true }).animates).toBe(false);
+  });
+});
+
+describe("the sphere's corner", () => {
+  it("a drop goes to the nearest corner, which is kept", () => {
+    // ExplanationLayoutTests.draggingTheBodyAwayKeepsItInItsCornerUntilTheStageCloses: dropped at (50, 50) of 1000×800.
+    expect(MascotCorners.nearest({ width: 1000, height: 800 }, { x: 50, y: 50 })).toBe("topLeading");
+    expect(MascotCorners.nearest({ width: 1000, height: 800 }, { x: 900, y: 700 })).toBe("bottomTrailing");
+    expect(MascotCorners.nearest({ width: 1000, height: 800 }, { x: 100, y: 700 })).toBe("bottomLeading");
+    expect(MascotCorners.nearest({ width: 1000, height: 800 }, { x: 900, y: 100 })).toBe("topTrailing");
+    expect(MascotCorners.parse("topLeading")).toBe("topLeading");
+    expect(MascotCorners.parse(null)).toBe("bottomTrailing");
+    expect(MascotCorners.parse("middle")).toBe("bottomTrailing");
   });
 });

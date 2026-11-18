@@ -826,6 +826,34 @@
   pointer-events: none;
 }
 
+/* The corner the student dragged the sphere to (MascotCorner); the bottom right by default. */
+.lesson-overlay.corner-bottomLeading {
+  right: auto;
+  left: 28px;
+  align-items: flex-start;
+}
+
+.lesson-overlay.corner-topTrailing,
+.lesson-overlay.corner-topLeading {
+  bottom: auto;
+  top: 28px;
+}
+
+.lesson-overlay.corner-topLeading {
+  right: auto;
+  left: 28px;
+  align-items: flex-start;
+}
+
+.lesson-mascot {
+  touch-action: none;
+}
+
+.lesson-mascot.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
 .lesson-overlay > * {
   pointer-events: auto;
 }
