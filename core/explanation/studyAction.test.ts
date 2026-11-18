@@ -7,7 +7,7 @@ import type { ModelClient } from "../ai/modelClient";
 import mockExplanation from "../mocks/MockExplanation.json";
 import { CompiledIllustration } from "../illustrations/illustration";
 import { decodeExplanationScript, ExplanationPrompt, ExplanationProvider, ExplanationSession } from "./explanation";
-import { EquationStudyActions, ExplanationFigure, ParsedStandaloneMath } from "./studyAction";
+import { EquationStudyActions, ExplanationFigure, explicitProducts, ParsedStandaloneMath } from "./studyAction";
 
 describe("the study menu of a clicked function or equation", () => {
   it("parses a function definition", () => {
@@ -56,6 +56,15 @@ describe("the study menu of a clicked function or equation", () => {
     expect(ExplanationFigure.localPremade("solveEquation", equation, null)?.params["steps"]).toEqual([
       { line: "2x + 3 = 11" },
     ]);
+  });
+
+  it("a function read with implicit products is drawn (the figures put the variable in by name)", () => {
+    expect(explicitProducts("x^2-4x+3")).toBe("x^2-4*x+3");
+    expect(explicitProducts("2(x+1) - 3.5x")).toBe("2*(x+1) - 3.5*x");
+    expect(explicitProducts("log10(x) + 1e5 + x2")).toBe("log10(x) + 1e5 + x2");
+    const text = "f(x) = x^2 - 4x + 3";
+    expect(ExplanationFigure.compiled(null, "graph", text, "Portuguese (Portugal)", true)).not.toBeNull();
+    expect(ExplanationFigure.compiled(null, "integral", text, "Portuguese (Portugal)", true)).not.toBeNull();
   });
 
   it("the task goes into the message, after the equation and before the plan (ExplanationPrompt.user)", () => {

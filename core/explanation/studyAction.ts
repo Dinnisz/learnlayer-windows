@@ -137,12 +137,22 @@ export const EquationStudyActions = {
 
 const parses = (expression: string) => tryParseExpression(expression) !== null;
 
+/**
+ * A number written against a name or a bracket ("4x", "2(x + 1)") as an explicit product ("4*x"). The figures put the
+ * curve variable in by name, and "4x" would keep its x (on the Mac too, docs/DECISOES.md); the value is the same.
+ */
+export function explicitProducts(expression: string): string {
+  // A number that is not the end of a name ("log10") and not a power of ten ("1e5").
+  return expression.replace(/(?<![A-Za-z_\d.])(\d+(?:\.\d+)?)\s*(?=[A-Za-z(])(?!e[+-]?\d)/g, "$1*");
+}
+
 function functionGraphPremade(
   parsed: ParsedStandaloneMath | null,
   script: ExplanationScript | null,
 ): PremadeFigure | null {
   const graph = script?.graph ?? null;
-  const expression = parsed?.expression ?? graph?.expression ?? null;
+  const read = parsed?.expression ?? graph?.expression ?? null;
+  const expression = read === null ? null : explicitProducts(read);
   if (expression === null || !parses(expression)) return null;
   const xMin = graph?.xMin ?? -5;
   const xMax = graph?.xMax ?? 5;
@@ -154,7 +164,8 @@ function functionGraphPremade(
 }
 
 function integralPremade(parsed: ParsedStandaloneMath | null, script: ExplanationScript | null): PremadeFigure | null {
-  const expression = parsed?.expression ?? script?.graph?.expression ?? null;
+  const read = parsed?.expression ?? script?.graph?.expression ?? null;
+  const expression = read === null ? null : explicitProducts(read);
   if (expression === null || !parses(expression)) return null;
   const area = script?.graph?.area ?? null;
   const a = area?.from ?? script?.graph?.xMin ?? 0;
