@@ -253,14 +253,19 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   }, [cue]);
   // What the sphere is doing: listening or speaking with the voice, thinking while the voice or the solution is worked
   // out, speaking with the lesson.
+  // The voice decides first; the solution being worked out only makes it think while it is otherwise idle and silent
+  // (VoiceMascotExerciseOverlay: `isThinking, phase == .idle, !speaking`).
+  const speakingNow = voice.state.phase === "speaking" || (lesson.state?.speaking ?? false);
   const mascotPresence: MascotPresence =
     voice.state.phase === "listening"
       ? "listening"
-      : voice.state.phase === "thinking" || (session?.isSolvingSolution ?? false)
+      : voice.state.phase === "thinking"
         ? "thinking"
-        : voice.state.phase === "speaking" || (lesson.state?.speaking ?? false)
+        : speakingNow
           ? "speaking"
-          : "idle";
+          : (session?.isSolvingSolution ?? false)
+            ? "thinking"
+            : "idle";
   // A click on the sphere stops an explanation under way; otherwise it talks to the tutor: it listens, a second click
   // sends what was said, and one while the tutor answers stops it (VoiceMascotExerciseOverlay's onTap).
   const tapMascot = useCallback(() => {
