@@ -24,7 +24,8 @@ import type { ExamQuestion } from "@core/problems/questionDetector";
 import { QuestionPages } from "@core/problems/questionPages";
 import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
 import { QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
-import { CurveGraph } from "../figures/CurveGraph";
+import { CurveGraph, type GraphControlling } from "../figures/CurveGraph";
+import { FunctionPlot } from "@core/illustrations/graph";
 import { ConceptSlug } from "@core/memory/memory";
 import { memoryStore } from "../memory/memory";
 import { detectTimingDiagram, timingPath, TimingDiagrams, type GreyBitmap } from "@core/timing/timing";
@@ -1583,6 +1584,17 @@ function TalkButton() {
   );
 }
 
+/** A curve shown as it is: nothing to drag, no car. */
+const stillGraph: GraphControlling = {
+  parameterValue: 0,
+  areaEnd: null,
+  runID: 0,
+  graphStep: Number.MAX_SAFE_INTEGER,
+  setParameterValue: () => {},
+  setAreaEnd: () => {},
+  replayCar: () => {},
+};
+
 /** What the voice is doing, and the formula of the answer while it is said. */
 function VoiceCaption({ state }: { state: VoiceState }) {
   const t = useT();
@@ -1592,6 +1604,15 @@ function VoiceCaption({ state }: { state: VoiceState }) {
     state.lit.length > 0
       ? (state.formula ?? (written && written.kind.op === "formula" ? written.kind.latex : null))
       : null;
+  // A curve the tutor asks for, once it is said; one that does not plot is dropped.
+  const asked = state.lit.find((command) => command.kind.op === "plot")?.kind;
+  const curve = asked && asked.op === "plot" ? asked : null;
+  const plotKey = curve ? JSON.stringify([curve.expression, curve.variable, curve.xMin, curve.xMax]) : "";
+  const plot = useMemo(() => {
+    if (plotKey === "") return null;
+    const [expression, variable, xMin, xMax] = JSON.parse(plotKey) as [string, string, number, number];
+    return FunctionPlot.make(expression, variable, xMin, xMax);
+  }, [plotKey]);
   const symbols = state.lit.flatMap((command) =>
     command.kind.op === "circle" || command.kind.op === "highlight" ? [command.kind.term] : [],
   );
@@ -1603,12 +1624,13 @@ function VoiceCaption({ state }: { state: VoiceState }) {
         : state.phase === "speaking"
           ? t("Speaking…")
           : null;
-  if (!phase && !state.notice && !formula && !state.shown) return null;
+  if (!phase && !state.notice && !formula && !plot && !state.shown) return null;
   return (
     <div className="voice-caption" role="status" aria-live="polite">
       {phase ? <span className="voice-phase">{phase}</span> : null}
       {state.heard && state.phase !== "listening" ? <span className="voice-heard">«{state.heard}»</span> : null}
       {formula ? <VoiceFormulaView latex={formula} symbols={symbols} /> : null}
+      {plot ? <CurveGraph graph={plot} session={stillGraph} height={200} /> : null}
       {state.shown ? <p className="voice-shown">{state.shown}</p> : null}
       {state.notice ? <span className="voice-notice">{t(state.notice)}</span> : null}
     </div>
