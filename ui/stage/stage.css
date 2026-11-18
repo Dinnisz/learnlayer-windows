@@ -92,6 +92,23 @@
   }
 }
 
+/* The datum magnified while the mascot is on its step (QuoteLoupe): a soft dark ground hides the ink under it, so the
+   datum shows once, larger. */
+.stage-lens {
+  position: absolute;
+  overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--stage-accent) 60%, transparent);
+  border-radius: 10px;
+  background: rgb(28 28 30 / 92%);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 35%);
+  pointer-events: none;
+  animation: stage-fade 250ms ease-in-out;
+}
+
+.stage-crop .stage-lens canvas {
+  filter: invert(1);
+}
+
 /* The spot a step is about: an arrow that draws itself, and its few words in a chip beside it. */
 .stage-focus-arrow {
   position: absolute;
@@ -650,6 +667,15 @@
   /* The crop is not inverted here, so the recoloured letters would not come out blue. */
   .stage-crop canvas.stage-tint {
     display: none;
+  }
+
+  .stage-lens {
+    border-color: Highlight;
+    background: Canvas;
+  }
+
+  .stage-crop .stage-lens canvas {
+    filter: none;
   }
 
   .stage-strike::after {

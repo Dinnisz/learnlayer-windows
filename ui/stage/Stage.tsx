@@ -495,6 +495,24 @@ function CropPiece({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, region, session, version, shows],
   );
+  // While the mascot walks the steps, the step's datum magnified in a lens (QuoteLoupe): its spot on the crop, else
+  // the first of its data underlined. Not with Reduce Motion.
+  const lens = useMemo(() => {
+    const width = region.width * scale;
+    const height = region.height * scale;
+    if (!session || session.mascotFocusStep === null || reducedMotion() || width <= 1 || height <= 1) return null;
+    const crop = { width, height };
+    const focus = session.part?.cards?.[session.mascotFocusStep]?.focus ?? null;
+    const on = focus?.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
+    const spot = focus && on === role ? StepFocusGeometry.rect(focus, crop) : null;
+    const line = marks.underlines[0];
+    const target = spot ?? (line ? cropBox(line, region, scale) : null);
+    if (!target) return null;
+    const zoom = spot ? StepFocusGeometry.zoom(spot, crop) : QuoteLoupeScale;
+    const box = StepFocusGeometry.lens(target, zoom, { x: 0, y: 0, width, height });
+    return { box, zoom, anchor: StepFocusGeometry.zoomAnchor(target, box, zoom) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, version, marks, region, scale, role, hasStatement]);
   const toCrop = (rect: Rect) => ({
     left: (rect.x - region.x) * scale,
     top: (region.y + region.height - (rect.y + rect.height)) * scale,
@@ -531,8 +549,10 @@ function CropPiece({
           hasStatement={hasStatement}
           width={region.width * scale}
           height={region.height * scale}
+          lens={lens?.box ?? null}
         />
       )}
+      {lens && <LensLayer base={canvas} drawn={drawn} width={region.width * scale} lens={lens} />}
       {marks.tints.length > 0 && (
         <TintLayer
           base={canvas}
@@ -588,6 +608,73 @@ function CropPiece({
 }
 
 /** Where the open step's data stands in the crop (its printed lines), and the right option of a multiple choice. */
+/** How far a quoted datum is magnified in the lens (`QuoteLoupe.scale`). */
+const QuoteLoupeScale = 1.7;
+
+/** A page rectangle (PDF points, y up) as a box of the crop drawn at `scale` (pixels, y down). */
+function cropBox(rect: Rect, region: Rect, scale: number): Box {
+  return {
+    x: (rect.x - region.x) * scale,
+    y: (region.y + region.height - (rect.y + rect.height)) * scale,
+    width: rect.width * scale,
+    height: rect.height * scale,
+  };
+}
+
+/**
+ * The datum magnified in a lens over the crop (the Mac's QuoteLoupe): a dark ground hides the ink under it, so the datum
+ * shows once, larger, scaled about the point that carries it to the lens' centre.
+ */
+function LensLayer({
+  base,
+  drawn,
+  width,
+  lens,
+}: {
+  base: React.RefObject<HTMLCanvasElement | null>;
+  drawn: number;
+  width: number;
+  lens: { box: Box; zoom: number; anchor: { x: number; y: number } };
+}) {
+  const layer = useRef<HTMLCanvasElement>(null);
+  const { box, zoom, anchor } = lens;
+  useEffect(() => {
+    const source = base.current;
+    const target = layer.current;
+    if (!source || !target || source.width === 0 || width <= 0) return;
+    const ratio = source.width / width;
+    target.width = Math.max(1, Math.round(box.width * ratio));
+    target.height = Math.max(1, Math.round(box.height * ratio));
+    const context = target.getContext("2d");
+    if (!context) return;
+    // A point x of the crop is drawn at anchor + zoom·(x − anchor): the lens shows the crop from there.
+    const sx = anchor.x + (box.x - anchor.x) / zoom;
+    const sy = anchor.y + (box.y - anchor.y) / zoom;
+    context.clearRect(0, 0, target.width, target.height);
+    context.imageSmoothingQuality = "high";
+    context.drawImage(
+      source,
+      sx * ratio,
+      sy * ratio,
+      (box.width / zoom) * ratio,
+      (box.height / zoom) * ratio,
+      0,
+      0,
+      target.width,
+      target.height,
+    );
+  }, [base, drawn, width, box, zoom, anchor]);
+  return (
+    <div
+      className="stage-lens"
+      aria-hidden="true"
+      style={{ left: box.x, top: box.y, width: box.width, height: box.height }}
+    >
+      <canvas ref={layer} style={{ width: box.width, height: box.height }} />
+    </div>
+  );
+}
+
 /**
  * Quoted words coloured in place (the Mac's QuoteTint): the crop's own letters inside each box are copied and
  * recoloured, so exactly the glyphs turn blue, crisp, with nothing drawn round them. The crop is drawn as dark ink and
@@ -651,12 +738,15 @@ function StepFocusMark({
   hasStatement,
   width,
   height,
+  lens = null,
 }: {
   session: QuestionSession;
   role: "question" | "statement";
   hasStatement: boolean;
   width: number;
   height: number;
+  /** The lens showing the spot magnified: it is the spot's one mark, and the label keeps clear of it. */
+  lens?: Box | null;
 }) {
   const step = session.underlinedStep;
   const focus = step !== null ? (session.part?.cards?.[step]?.focus ?? null) : null;
@@ -667,7 +757,15 @@ function StepFocusMark({
   if (!region) return null;
   const note = focus.note?.trim() ? focus.note.trim() : null;
   return (
-    <FocusPointer region={region} arrow={StepFocusGeometry.isArrow(focus)} note={note} width={width} height={height} />
+    <FocusPointer
+      region={lens ?? region}
+      arrow={StepFocusGeometry.isArrow(focus)}
+      note={note}
+      width={width}
+      height={height}
+      showsMark={lens === null}
+      avoiding={lens}
+    />
   );
 }
 
@@ -679,6 +777,8 @@ function FocusPointer({
   width,
   height,
   overshoot = 0,
+  showsMark = true,
+  avoiding = null,
 }: {
   region: Box;
   arrow: boolean;
@@ -687,11 +787,22 @@ function FocusPointer({
   height: number;
   /** How far past the crop's bottom the label may reach (the lesson's 60: the room under a question is free). */
   overshoot?: number;
+  /** False when the spot is already shown in a lens: only the label is drawn. */
+  showsMark?: boolean;
+  /** A lens the label must never cover. */
+  avoiding?: Box | null;
 }) {
-  const place = StepFocusMarks.placement(note, arrow, region, { x: 0, y: 0, width, height }, overshoot);
+  const place = StepFocusMarks.placement(
+    note,
+    arrow && showsMark,
+    region,
+    { x: 0, y: 0, width, height },
+    overshoot,
+    avoiding,
+  );
   return (
     <>
-      {arrow ? (
+      {!showsMark ? null : arrow ? (
         <svg className="stage-focus-arrow" width={width} height={height} aria-hidden="true">
           <path d={StepFocusMarks.arrowPath(place.tail, StepFocusMarks.arrowTip(place.tail, region))} pathLength={1} />
         </svg>
