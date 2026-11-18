@@ -4,6 +4,7 @@
 // draws.
 
 import { Rects, type PageText, type Rect } from "../pdf/page";
+import { repairedDraft } from "./localRepair";
 import { looksFlattened } from "../problems/flattenedMath";
 import { transcriptionLooksGarbled } from "../problems/textChecks";
 import { normalizeText, unsafeCharacters } from "../problems/textNormalizer";
@@ -153,11 +154,14 @@ export function regionAround(
   };
 }
 
-/** What the stage shows while the model reads the picture: the computer's own reading, when it is readable. */
+/**
+ * What the stage shows while the model reads the picture: the computer's own reading, when it is readable, with the
+ * units and small formulas it garbles repaired by rule (`Repair`, the Mac's LocalTranscriptionRepair).
+ */
 export function draftText(ocrText: string): string | null {
   const text = ocrText.trim();
   if (text === "" || transcriptionLooksGarbled(text) || looksFlattened(text)) return null;
-  return text;
+  return repairedDraft(text);
 }
 
 /** The text as the stage shows it when nothing is to be read from a picture: normalised, never garbled. */

@@ -1887,7 +1887,9 @@ function ScreenQuestionView({
       ) : source.draft ? (
         <div className="stage-typeset stage-draft">
           {source.draft.split("\n").map((line, index) => (
-            <p key={index}>{line}</p>
+            <p key={index}>
+              <MathText text={line} />
+            </p>
           ))}
         </div>
       ) : (

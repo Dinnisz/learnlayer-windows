@@ -259,3 +259,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — A notação do exame (sen, sin)
 - **Portado do Mac (`ExamNotation`), com o teste de `LayoutFixTests`:** nos passos, nos ramos, nas transformações e na resposta, `\sin` passa a `\sen` (e «sin» a «sen» nas notas, sem tocar «sinal») quando o tutor fala português, e o contrário em inglês; um programa nas notas fica como foi escrito.
+
+## 2026-11-18 — O rascunho do OCR corrigido por regra
+- **Portado do Mac (`LocalTranscriptionRepair` / `Repair`, `LocalTranscriber.Context` e `Cell.label`), com o teste de `LocalTranscriberTests`:** o rascunho que o palco mostra enquanto o modelo lê a imagem (a leitura do próprio Windows) passa pelas regras do Mac: letras cirílicas parecidas, o selo do item, numerais romanos, «kQ», «kD» e afins como kΩ (e «kg» só numa pergunta de circuitos), equações de um circuito («R1 = 4 kQ» → R₁ = 4 kΩ) e fórmulas de uma opção como matemática, composta no ecrã.
+- **Ainda não:** o resto do `LocalTranscriber` (refazer a disposição a partir das posições das palavras: linhas, grelha de opções, figuras recortadas da tinta que não é texto). O OCR do Windows dá linhas com posições, e o rascunho continua linha a linha.
