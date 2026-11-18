@@ -1,7 +1,7 @@
 // Port of LearnLayer/Voice/VoiceTutorReply.swift (decoding, the opening, the markers, unlit marks) and of the word
 // helpers of LearnLayer/Voice/SpeechSync.swift @ ref 2026-11-04. What the tutor says, and the marks drawn while it is
-// said: each mark lights on the word its `[[n]]` stood before. The Mac also fills in the formula a symbol belongs to
-// and checks the reply against the page (VoiceCheckPlan, VoiceTutorGuard); those come with the figures (phase 6).
+// said: each mark lights on the word its `[[n]]` stood before. The reply is checked against the page in
+// `voiceTutorGuard.ts`; the Mac also fills in the formula a symbol belongs to (VoiceCheckPlan), not ported yet.
 
 import { PartialJSON } from "../ai/partialJSON";
 import { SpeechMarkers, SpokenText } from "./spokenText";

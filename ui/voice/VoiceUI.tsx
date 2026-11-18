@@ -10,6 +10,7 @@ import { VoiceLocale } from "@core/voice/speechPlan";
 import { stepDetail, StepRequests, VoiceTutorOpener } from "@core/voice/voiceTutorOpener";
 import { VoiceTutorPrompt, VoiceTutorRouting } from "@core/voice/voiceTutorPrompt";
 import { VoiceTutorReplies, type DrawingCommand, type VoiceTutorReply } from "@core/voice/voiceTutorReply";
+import { VoiceTutorGuard } from "@core/voice/voiceTutorGuard";
 import { voiceSend, voiceTurn } from "@core/voice/voiceTurn";
 import { workContext } from "@core/voice/workContext";
 import { modelClient, usesMock } from "../ai/solver";
@@ -52,27 +53,34 @@ async function reply(session: QuestionSession, transcript: string, signal: Abort
   const index = step ? StepRequests.index(step, lines.length) : null;
   const directive =
     index !== null ? stepDetail(index + 1, lines.length, lines[index]!, session.solution?.figure != null) : null;
+  const work = session.solution
+    ? workContext({
+        label: session.question.label,
+        groupLabels: session.question.groupLabels,
+        solution: session.solution,
+        part,
+        figureNote: session.figureNote,
+      })
+    : null;
   const user = VoiceTutorPrompt.user({
     transcript,
     question: session.statementText,
     page: "",
     subject: session.routeSubject,
     questionLabel: session.question.label,
-    workContext: session.solution
-      ? workContext({
-          label: session.question.label,
-          groupLabels: session.question.groupLabels,
-          solution: session.solution,
-          part,
-          figureNote: session.figureNote,
-        })
-      : null,
+    workContext: work,
     focus: { kind: "openItem" },
     directive,
   });
   const system = VoiceTutorPrompt.system(VoiceLocale.promptLanguage(TutorLanguage.locale(language)));
   const client = modelClient({ model: VoiceTutorRouting.modelID(session.route === "strong") });
-  return voiceTurn(user, voiceSend(client, system, signal), language);
+  const answer = await voiceTurn(user, voiceSend(client, system, signal), language);
+  // Checked against what is on screen (`VoiceTutorProvider.completed`): a curve of a function the steps never use is
+  // not drawn; what looks invented is logged, never shown.
+  const sources = [session.statementText, work ?? "", transcript].join("\n");
+  const issues = VoiceTutorGuard.issues(answer.spoken, sources);
+  if (issues.length > 0) console.info(`voice reply issues: ${issues.join("; ")}`);
+  return VoiceTutorGuard.droppingUnusedPlots(answer, sources);
 }
 
 /** Owns the voice of one stage: listening while the key is held, then the answer with its marks. */

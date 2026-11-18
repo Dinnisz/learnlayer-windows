@@ -210,3 +210,8 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-18 — Matemática dentro das notas dos passos
 - **Portado do Mac (`NoteMath`, `NoteText`, `formulaRepeats`), com os testes de `NoteTextTests` e os casos de `LayoutFixTests`/`LiveRunFixTests`:** numa nota como «f' < 0 em ]−∞, 0[», as fórmulas são compostas pelo KaTeX no meio das palavras; as marcas «$…$» nunca aparecem; uma fórmula de passo que só repete a frase da nota, ou só a letra de uma opção, não é desenhada.
 - **Não portado:** `NoteLayout` (o Mac dispõe palavras e fórmulas linha a linha à mão, porque o SwiftUI não junta texto e imagens numa linha); no browser o texto em linha faz isso sozinho. Os testes de `NoteLayout` ficam por isso de fora.
+
+## 2026-11-18 — O guarda das respostas do tutor de voz
+- **Portado do Mac (`VoiceTutorGuard`), com os testes de `MascotCouncilFixTests` e `OptionFiguresAndAngleGuardTests`:** uma curva de uma função que os passos nunca usam não é desenhada; relações geométricas, ângulos que mudam de vértice e autocorreções que nada no ecrã sustenta ficam registados na consola (o Mac regista-os no log, sem os mostrar).
+- **Dúvida:** o ICU aceita `(?i:…)` dentro de uma expressão; o JavaScript só nas versões mais recentes. **Escolha:** os nomes dos ângulos e as palavras são escritos com as duas caixas (`[aA][lL]…`). **Porquê:** o mesmo comportamento sem depender da versão do WebView2.
+- **Ainda não:** `holdingTheSymbol` e `namingTheFormula` (dependem de `VoiceCheckPlan`).
