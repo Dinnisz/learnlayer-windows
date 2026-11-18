@@ -9,6 +9,11 @@ import { spokenAtoms } from "@core/voice/voiceFormula";
 import { PenRing, type MarkRect } from "@core/explanation/handDrawn";
 import { HandDrawnMark } from "../components/HandDrawnMark";
 import { MathView } from "../components/Math";
+import { GuideSpots } from "../lesson/guideSpot";
+import { VoicePerch } from "@core/voice/voicePerch";
+
+/** The mascot's side on the stage (`AnimatedMascot`). */
+const mascotSize = 56;
 
 /** The mark shows a moment after its word starts, so the body has reached the symbol (HighlightTiming.lead). */
 const HighlightLead = 0.2;
@@ -121,6 +126,23 @@ export function VoiceFormulaView({
       setUnderline({ x: left - origin.left, y: bottom - origin.top, width: right - left, height: 0 });
     } else setUnderline(null);
   }, [latex, key, underlined]);
+
+  // The sphere goes just above the mark being said (OrbAim): the first ring, else the line under the formula. With
+  // Reduce Motion it stays where it is.
+  useLayoutEffect(() => {
+    const root = box.current;
+    const ring = rings[0];
+    const covered = ring
+      ? VoicePerch.covered("circle", ring)
+      : underline
+        ? VoicePerch.covered("underline", underline)
+        : null;
+    if (!root || !covered || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const origin = root.getBoundingClientRect();
+    const spot = VoicePerch.perch(covered, origin.width, mascotSize);
+    GuideSpots.setVoice({ x: origin.left + spot.x + spot.width / 2, y: origin.top + spot.y + spot.height / 2 });
+    return () => GuideSpots.setVoice(null);
+  }, [rings, underline]);
 
   return (
     <div className="voice-formula" ref={box}>

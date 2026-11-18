@@ -837,6 +837,28 @@
   cursor: pointer;
 }
 
+.lesson-mascot {
+  position: relative;
+}
+
+/* Listening: a brief word over the sphere ("Tell me"), until the second click sends what was said. */
+.lesson-tell {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  translate: -50% 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  backdrop-filter: blur(12px);
+  color: rgb(255 255 255 / 85%);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: stage-fade 200ms ease-out;
+}
+
 /* Beside the step's datum while it walks the steps: it travels there, and from one datum to the next, with a spring. */
 .lesson-mascot.beside {
   position: fixed;

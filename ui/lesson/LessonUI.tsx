@@ -224,31 +224,50 @@ export function useLessonControl(session: QuestionSession | null) {
   return { player, state, start, stop, toggle };
 }
 
-/** The mascot beside the stage, and what the beat being said brings: its calculation, its check, the closing. */
+/**
+ * The tutor on the stage (VoiceMascotExerciseOverlay), and what the beat being said brings: its calculation, its check,
+ * the closing. The sphere rests in its corner and breathes; a click stops an explanation under way, else talks to the
+ * tutor (`onTap`). It goes beside the step's datum while it walks the steps, and just above the voice's mark while that
+ * is said. With the mascot off in Settings, only what the lesson brings is shown.
+ */
 export function LessonOverlay({
   player,
   state,
   onTap,
+  voice = null,
+  showsMascot = true,
 }: {
   player: LessonPlayer | null;
   state: LessonState | null;
   onTap(): void;
+  /** The voice tutor's turn: the sphere listens, and speaks with its level. */
+  voice?: { phase: string; level: number } | null;
+  showsMascot?: boolean;
 }) {
   const t = useT();
   // While it walks the steps, the sphere waits beside the step's datum (MascotGuide.spot).
   const spot = useSyncExternalStore(GuideSpots.subscribe, GuideSpots.get);
+  const voiceSpeaks = voice?.phase === "speaking";
+  const speaking = voiceSpeaks || (state?.speaking ?? false);
+  const level = voiceSpeaks ? voice.level : (state?.level ?? 0);
+  const listening = voice?.phase === "listening";
+  const label = state?.playing ? t("Stop Explaining") : t("Talk to the Tutor");
   return (
     <aside className="lesson-overlay" aria-live="polite">
-      <button
-        type="button"
-        className={`lesson-mascot${state?.speaking ? " speaking" : ""}${spot ? " beside" : ""}`}
-        style={spot ? { left: spot.x - 28, top: spot.y - 28 } : undefined}
-        onClick={onTap}
-        aria-label={state?.playing ? t("Stop Explaining") : t("Explain It to Me")}
-        title={state?.playing ? t("Stop Explaining") : t("Explain It to Me")}
-      >
-        <AnimatedMascot level={state?.level ?? 0} speaking={state?.speaking ?? false} />
-      </button>
+      {showsMascot ? (
+        <button
+          type="button"
+          className={`lesson-mascot${speaking ? " speaking" : ""}${spot ? " beside" : ""}${listening ? " listening" : ""}`}
+          style={spot ? { left: spot.x - 28, top: spot.y - 28 } : undefined}
+          onClick={onTap}
+          aria-label={label}
+          title={label}
+        >
+          {/* Listening for the student's question: a brief word over the sphere. */}
+          {listening ? <span className="lesson-tell">{t("Tell me")}</span> : null}
+          <AnimatedMascot level={level} speaking={speaking} />
+        </button>
+      ) : null}
       {state?.calc ? <div className="lesson-calc">{state.calc}</div> : null}
       {state?.check && player ? (
         <div className="lesson-check" role="group" aria-label={state.check.ask}>

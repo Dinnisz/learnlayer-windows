@@ -227,6 +227,25 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   const stopLesson = lesson.stop;
   const voice = useVoiceTutor(session);
   const stopVoice = voice.stop;
+  // A click on the sphere stops an explanation under way; otherwise it talks to the tutor: it listens, a second click
+  // sends what was said, and one while the tutor answers stops it (VoiceMascotExerciseOverlay's onTap).
+  const tapMascot = useCallback(() => {
+    if (lesson.state?.playing || session?.isGuiding) {
+      stopLesson();
+      return;
+    }
+    const phase = voice.state.phase;
+    if (phase === "listening") void voice.end();
+    else if (phase === "idle") void voice.begin();
+    else stopVoice();
+  }, [lesson.state, session, stopLesson, voice, stopVoice]);
+  const mascotOn = useMemo(() => {
+    try {
+      return localStorage.getItem("mascotEnabled") !== "0";
+    } catch {
+      return true;
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -354,7 +373,16 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                 <ModeView session={session} />
               )}
             </div>
-            {showsLesson ? <LessonOverlay player={lesson.player} state={lesson.state} onTap={lesson.toggle} /> : null}
+            {/* Every stage has the tutor (QuestionOverlay): the sphere, when the mascot is on; the lesson's card. */}
+            {(session && mascotOn) || showsLesson ? (
+              <LessonOverlay
+                player={lesson.player}
+                state={lesson.state}
+                onTap={tapMascot}
+                voice={voice.state}
+                showsMascot={mascotOn && session !== null}
+              />
+            ) : null}
             <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
             {session && <SelectionAskPill session={session} />}
           </div>
