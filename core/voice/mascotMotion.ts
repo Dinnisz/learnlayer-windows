@@ -64,6 +64,14 @@ export class SmoothPoint {
     return Math.hypot(this.secondX.velocity, this.secondY.velocity);
   }
 
+  /** Moves everything by the same amount, for a drag that has ended. */
+  shift(dx: number, dy: number): void {
+    this.firstX.value += dx;
+    this.secondX.value += dx;
+    this.firstY.value += dy;
+    this.secondY.value += dy;
+  }
+
   advance(target: MascotPoint, smoothTime: number, dt: number): void {
     this.firstX.advance(target.x, smoothTime, dt);
     this.firstY.advance(target.y, smoothTime, dt);
@@ -320,5 +328,69 @@ export const MascotCorners = {
     return (MascotCorners.all as readonly string[]).includes(stored ?? "")
       ? (stored as MascotCorner)
       : "bottomTrailing";
+  },
+};
+
+/** The body following its goal through the springs (the Mac's MascotChaser), with a short trail while it travels. */
+export class MascotChaser {
+  /** How long a trail piece stays, in seconds. */
+  static readonly trailLength = 0.5;
+  private follower: SmoothPoint | null = null;
+  private lastTime: number | null = null;
+  trail: { time: number; point: MascotPoint }[] = [];
+
+  get position(): MascotPoint | null {
+    return this.follower?.position ?? null;
+  }
+
+  get speed(): number {
+    return this.follower?.speed ?? 0;
+  }
+
+  /** Moves toward `goal` and returns where it is now. `snap` jumps there at once. */
+  advance(goal: MascotPoint, smoothTime: number, now: number, snap: boolean): MascotPoint {
+    if (!this.follower || snap) {
+      this.follower = new SmoothPoint(goal);
+      this.lastTime = now;
+      this.trail = [];
+      return goal;
+    }
+    const dt = Math.min(Math.max(now - (this.lastTime ?? now), 0), 1 / 20);
+    this.lastTime = now;
+    if (dt <= 0) return this.follower.position;
+    this.follower.advance(goal, smoothTime, dt);
+    const position = this.follower.position;
+    if (this.follower.speed > 25) this.trail.push({ time: now, point: position });
+    this.trail = this.trail.filter((sample) => now - sample.time <= MascotChaser.trailLength);
+    return position;
+  }
+
+  shift(dx: number, dy: number): void {
+    this.follower?.shift(dx, dy);
+    this.trail = this.trail.map((sample) => ({
+      time: sample.time,
+      point: { x: sample.point.x + dx, y: sample.point.y + dy },
+    }));
+  }
+}
+
+export const MascotHome = {
+  /** The body's centre at rest in its corner of a stage of `size` (MascotHome.point with no anchor). */
+  point(corner: MascotCorner, size: { width: number; height: number }, mascotSize: number): MascotPoint {
+    const inset = 20 + mascotSize / 2;
+    const left = inset;
+    const right = size.width - inset;
+    const top = inset;
+    const bottom = size.height - inset;
+    switch (corner) {
+      case "bottomTrailing":
+        return { x: right, y: bottom };
+      case "bottomLeading":
+        return { x: left, y: bottom };
+      case "topTrailing":
+        return { x: right, y: top };
+      case "topLeading":
+        return { x: left, y: top };
+    }
   },
 };

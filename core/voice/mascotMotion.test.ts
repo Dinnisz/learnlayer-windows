@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import {
   MascotBodyState,
   MascotConfetti,
+  MascotChaser,
   MascotCorners,
+  MascotHome,
   MascotKinematics,
   SmoothPoint,
   SmoothValue,
@@ -168,5 +170,40 @@ describe("the sphere's corner", () => {
     expect(MascotCorners.parse("topLeading")).toBe("topLeading");
     expect(MascotCorners.parse(null)).toBe("bottomTrailing");
     expect(MascotCorners.parse("middle")).toBe("bottomTrailing");
+  });
+});
+
+describe("the body on its way", () => {
+  it("a return home is slower than a trip out", () => {
+    expect(MascotKinematics.travelSmoothTime(100, true)).toBeGreaterThan(MascotKinematics.travelSmoothTime(100));
+  });
+
+  it("the chaser eases, leaves a trail and snaps when asked", () => {
+    const chaser = new MascotChaser();
+    const start = chaser.advance({ x: 10, y: 10 }, 0.4, 0, false);
+    expect(start).toEqual({ x: 10, y: 10 });
+    let now = 0;
+    let last = 10;
+    let trailed = false;
+    for (let frame = 0; frame < 60 * 6; frame += 1) {
+      now += 1 / 60;
+      const position = chaser.advance({ x: 310, y: 10 }, 0.4, now, false);
+      expect(position.x).toBeGreaterThanOrEqual(last - 1e-9);
+      expect(position.x).toBeLessThanOrEqual(310 + 1e-9);
+      last = position.x;
+      if (chaser.trail.length > 0) trailed = true;
+    }
+    expect(trailed).toBe(true);
+    expect(Math.abs(last - 310)).toBeLessThan(0.5);
+    expect(chaser.trail).toEqual([]);
+    const jumped = chaser.advance({ x: 0, y: 0 }, 0.4, now + 0.01, true);
+    expect(jumped).toEqual({ x: 0, y: 0 });
+    chaser.shift(5, 7);
+    expect(chaser.position).toEqual({ x: 5, y: 7 });
+  });
+
+  it("rests in its corner, clear of the edges", () => {
+    expect(MascotHome.point("bottomTrailing", { width: 1000, height: 800 }, 84)).toEqual({ x: 938, y: 738 });
+    expect(MascotHome.point("topLeading", { width: 1000, height: 800 }, 84)).toEqual({ x: 62, y: 62 });
   });
 });

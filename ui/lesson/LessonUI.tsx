@@ -3,8 +3,26 @@
 // marks the question while it is said. With no lesson (no session, offline) the mascot walks the steps on screen
 // instead, saying each while its data is underlined (the Mac's `readSteps`, `QuestionSession.mascotClicked`).
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { MascotCorners, type MascotCorner, type MascotPresence, type MascotTransient } from "@core/voice/mascotMotion";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  MascotChaser,
+  MascotCorners,
+  MascotHome,
+  MascotKinematics,
+  type MascotCorner,
+  type MascotPoint,
+  type MascotPresence,
+  type MascotTransient,
+} from "@core/voice/mascotMotion";
 import { EquationMorph } from "@core/explanation/equationMorph";
 import type { LessonBeat, LessonShow } from "@core/lesson/mascotLesson";
 import type { LessonRequest } from "@core/lesson/mascotLessonProvider";
@@ -225,14 +243,55 @@ export function useLessonControl(session: QuestionSession | null) {
   return { player, state, start, stop, toggle };
 }
 
+const cornerKey = "mascotCorner";
+
+/**
+ * Where the sphere is, frame by frame: it follows its goal through two springs (MascotChaser), slowly on purpose, and
+ * more slowly still on its way home, leaving a short trail. With Reduce Motion it is simply there.
+ */
+function useSphere(goal: () => MascotPoint, returning: boolean, still: boolean) {
+  const latest = useRef({ goal, returning });
+  useEffect(() => {
+    latest.current = { goal, returning };
+  });
+  const chaser = useRef<MascotChaser | null>(null);
+  const [scene, setScene] = useState<{ at: MascotPoint; trail: MascotChaser["trail"]; now: number } | null>(null);
+  useEffect(() => {
+    const body = new MascotChaser();
+    chaser.current = body;
+    let id = 0;
+    const tick = () => {
+      const now = performance.now() / 1000;
+      const target = latest.current.goal();
+      const here = body.position ?? target;
+      const distance = Math.hypot(target.x - here.x, target.y - here.y);
+      const at = body.advance(
+        target,
+        MascotKinematics.travelSmoothTime(distance, latest.current.returning),
+        now,
+        still,
+      );
+      const trail = [...body.trail];
+      // Nothing to redraw once it rests where it is.
+      setScene((last) =>
+        last && last.trail.length === 0 && trail.length === 0 && Math.hypot(last.at.x - at.x, last.at.y - at.y) < 0.05
+          ? last
+          : { at, trail, now },
+      );
+      id = requestAnimationFrame(tick);
+    };
+    id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(id);
+  }, [still]);
+  return { scene, chaser };
+}
+
 /**
  * The tutor on the stage (VoiceMascotExerciseOverlay), and what the beat being said brings: its calculation, its check,
  * the closing. The sphere rests in its corner and breathes; a click stops an explanation under way, else talks to the
- * tutor (`onTap`). It goes beside the step's datum while it walks the steps, and just above the voice's mark while that
- * is said. With the mascot off in Settings, only what the lesson brings is shown.
+ * tutor (`onTap`). It travels beside the step's datum while it walks the steps, and just above the voice's mark while
+ * that is said. With the mascot off in Settings, only what the lesson brings is shown.
  */
-const cornerKey = "mascotCorner";
-
 export function LessonOverlay({
   player,
   state,
@@ -272,14 +331,54 @@ export function LessonOverlay({
   const [drag, setDrag] = useState<{ x: number; y: number; dx: number; dy: number; moved: boolean } | null>(null);
   // When a drag last ended: the click that follows it is not a tap.
   const droppedAt = useRef(0);
-  const dragging = drag?.moved ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined;
+  const still = useMemo(() => {
+    try {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return false;
+    }
+  }, []);
+  const half = stageMascotSize / 2;
+  const { scene, chaser } = useSphere(
+    () => spot ?? MascotHome.point(corner, { width: window.innerWidth, height: window.innerHeight }, stageMascotSize),
+    spot === null,
+    still,
+  );
+  const offset = drag?.moved ? { x: drag.dx, y: drag.dy } : { x: 0, y: 0 };
+  const placed = scene
+    ? { left: scene.at.x - half + offset.x, top: scene.at.y - half + offset.y }
+    : { visibility: "hidden" as const };
   return (
     <aside className={`lesson-overlay corner-${corner}`} aria-live="polite">
+      {showsMascot ? (
+        <span className="lesson-mascot-room" style={{ width: stageMascotSize, height: stageMascotSize }} />
+      ) : null}
+      {showsMascot
+        ? scene?.trail.map((sample) => {
+            // A soft trail of the places the body has just been, fading away.
+            const life = 1 - (scene.now - sample.time) / MascotChaser.trailLength;
+            if (life <= 0) return null;
+            const radius = half * (0.3 + 0.45 * life);
+            return (
+              <span
+                key={sample.time}
+                className="lesson-mascot-trail"
+                style={{
+                  left: sample.point.x - radius,
+                  top: sample.point.y - radius,
+                  width: radius * 2,
+                  height: radius * 2,
+                  opacity: 0.2 * life * life,
+                }}
+              />
+            );
+          })
+        : null}
       {showsMascot ? (
         <button
           type="button"
           className={`lesson-mascot${speaking ? " speaking" : ""}${spot ? " beside" : ""}${listening ? " listening" : ""}${drag?.moved ? " dragging" : ""}`}
-          style={spot ? { left: spot.x - stageMascotSize / 2, top: spot.y - stageMascotSize / 2 } : dragging}
+          style={placed}
           onPointerDown={(event) => {
             if (spot || event.button !== 0) return;
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -299,6 +398,8 @@ export function LessonOverlay({
                 { x: event.clientX, y: event.clientY },
               );
               setCorner(next);
+              // It goes on from where it was dropped to its new corner.
+              chaser.current?.shift(drag.dx, drag.dy);
               droppedAt.current = performance.now();
               try {
                 localStorage.setItem(cornerKey, next);

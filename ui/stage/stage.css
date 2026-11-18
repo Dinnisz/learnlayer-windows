@@ -865,10 +865,6 @@
   cursor: pointer;
 }
 
-.lesson-mascot {
-  position: relative;
-}
-
 /* Listening: a brief word over the sphere ("Tell me"), until the second click sends what was said. */
 .lesson-tell {
   position: absolute;
@@ -887,13 +883,25 @@
   animation: stage-fade 200ms ease-out;
 }
 
-/* Beside the step's datum while it walks the steps: it travels there, and from one datum to the next, with a spring. */
-.lesson-mascot.beside {
+/* The sphere goes where its springs put it (MascotChaser): its corner, beside the step's datum, over the voice's
+   mark. Its room in the column keeps the lesson's cards clear of it at rest. */
+.lesson-mascot {
   position: fixed;
   z-index: 10;
-  transition:
-    left 0.55s cubic-bezier(0.3, 1.3, 0.5, 1),
-    top 0.55s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+
+.lesson-mascot-room {
+  display: block;
+  pointer-events: none;
+}
+
+.lesson-mascot-trail {
+  position: fixed;
+  z-index: 9;
+  border-radius: 50%;
+  background: var(--stage-accent, #0a84ff);
+  filter: blur(5px);
+  pointer-events: none;
 }
 
 /* The tutor at work (AnimatedMascot): drawn frame by frame, its glow and cues past its own box. */
