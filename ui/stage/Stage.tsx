@@ -64,6 +64,7 @@ import {
 import { LessonGeometry } from "@core/lesson/lessonGeometry";
 import type { LessonPitfall, LessonShow } from "@core/lesson/mascotLesson";
 import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
+import { VoiceFormulaView } from "../voice/VoiceFormulaView";
 import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
@@ -1585,7 +1586,15 @@ function TalkButton() {
 /** What the voice is doing, and the formula of the answer while it is said. */
 function VoiceCaption({ state }: { state: VoiceState }) {
   const t = useT();
-  const formula = state.lit.find((command) => command.kind.op === "formula");
+  const written = state.lit.find((command) => command.kind.op === "formula");
+  // Shown once the first mark lights; the symbols lit on it are ringed.
+  const formula =
+    state.lit.length > 0
+      ? (state.formula ?? (written && written.kind.op === "formula" ? written.kind.latex : null))
+      : null;
+  const symbols = state.lit.flatMap((command) =>
+    command.kind.op === "circle" || command.kind.op === "highlight" ? [command.kind.term] : [],
+  );
   const phase =
     state.phase === "listening"
       ? t("Listening…")
@@ -1599,7 +1608,7 @@ function VoiceCaption({ state }: { state: VoiceState }) {
     <div className="voice-caption" role="status" aria-live="polite">
       {phase ? <span className="voice-phase">{phase}</span> : null}
       {state.heard && state.phase !== "listening" ? <span className="voice-heard">«{state.heard}»</span> : null}
-      {formula && formula.kind.op === "formula" ? <MathView latex={formula.kind.latex} display /> : null}
+      {formula ? <VoiceFormulaView latex={formula} symbols={symbols} /> : null}
       {state.shown ? <p className="voice-shown">{state.shown}</p> : null}
       {state.notice ? <span className="voice-notice">{t(state.notice)}</span> : null}
     </div>

@@ -10,6 +10,7 @@ import { VoiceLocale } from "@core/voice/speechPlan";
 import { stepDetail, StepRequests, VoiceTutorOpener } from "@core/voice/voiceTutorOpener";
 import { VoiceTutorPrompt, VoiceTutorRouting } from "@core/voice/voiceTutorPrompt";
 import { VoiceTutorReplies, type DrawingCommand, type VoiceTutorReply } from "@core/voice/voiceTutorReply";
+import { VoiceFormula } from "@core/voice/voiceFormula";
 import { VoiceTutorGuard } from "@core/voice/voiceTutorGuard";
 import { voiceSend, voiceTurn } from "@core/voice/voiceTurn";
 import { workContext } from "@core/voice/workContext";
@@ -27,6 +28,8 @@ export interface VoiceState {
   heard: string | null;
   /** The marks lit now, on the words being said. */
   lit: DrawingCommand[];
+  /** The formula the answer is drawn on (`VoiceFormula.presentedFormula`), shown once its first mark lights. */
+  formula: string | null;
   /** A one-time note ("the paid voice isn't available…"), a catalog key. */
   notice: string | null;
   /** The answer as text, shown while it would be said when no voice here can say it. */
@@ -34,7 +37,7 @@ export interface VoiceState {
   level: number;
 }
 
-const idle: VoiceState = { phase: "idle", heard: null, lit: [], notice: null, shown: null, level: 0 };
+const idle: VoiceState = { phase: "idle", heard: null, lit: [], formula: null, notice: null, shown: null, level: 0 };
 
 export const VoiceContext = createContext<VoiceState>(idle);
 export const useVoiceState = () => useContext(VoiceContext);
@@ -166,7 +169,13 @@ export function useVoiceTutor(session: QuestionSession | null) {
       const ready = VoiceTutorReplies.droppingUnlitMarks(
         saidOpener ? { ...answer, opening: null } : VoiceTutorReplies.speakingTheOpening(answer),
       );
-      update({ phase: "speaking" });
+      // The formula that holds the symbol explained, from the question, when the answer writes none.
+      const question = session.statementText;
+      const context = VoiceFormula.holdingTheSymbol(ready, question, "");
+      update({
+        phase: "speaking",
+        formula: VoiceFormula.presentedFormula(ready.drawing, question, ready.spoken, context),
+      });
       const result = await speak(ready.spoken, {
         signal: controller.signal,
         onLevel: (level) => update({ level }),

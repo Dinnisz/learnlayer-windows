@@ -939,3 +939,43 @@
   font-size: 19px;
   line-height: 1.5;
 }
+
+/* The formula a spoken answer is drawn on: the symbol being said tinted and ringed in the one blue. */
+.voice-formula {
+  position: relative;
+}
+
+.voice-formula .katex-display {
+  margin: 4px 0;
+}
+
+.voice-symbol {
+  color: var(--accent);
+}
+
+.voice-ring {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: voice-ring-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes voice-ring-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-12deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-ring {
+    animation-name: voice-ring-fade;
+  }
+}
+
+@keyframes voice-ring-fade {
+  from {
+    opacity: 0;
+  }
+}
