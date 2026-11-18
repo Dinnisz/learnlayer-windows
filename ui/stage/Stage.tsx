@@ -18,7 +18,7 @@ import { linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
-import { StepFocusGeometry, StepFocusMarks } from "@core/problems/stepFocus";
+import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import type { ExamQuestion } from "@core/problems/questionDetector";
@@ -486,7 +486,7 @@ function CropPiece({
     () =>
       page && session
         ? cropMarks(page, region, session, shows)
-        : { underlines: [], circles: [], highlights: [], strikes: [] },
+        : { underlines: [], circles: [], highlights: [], strikes: [], pointers: [] },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, region, session, version, shows],
   );
@@ -534,6 +534,20 @@ function CropPiece({
       {marks.strikes.map((rect, index) => (
         <span key={`s${index}`} className="stage-strike" style={toCrop(Rects.inset(rect, -4, -2))} />
       ))}
+      {marks.pointers.map((pointer, index) => {
+        const box = toCrop(pointer.rect);
+        return (
+          <FocusPointer
+            key={`p${index}`}
+            region={{ x: box.left, y: box.top, width: box.width, height: box.height }}
+            arrow={pointer.arrow}
+            note={pointer.note}
+            width={region.width * scale}
+            height={region.height * scale}
+            overshoot={60}
+          />
+        );
+      })}
       {session?.showsTiming && session.timing && session.timingLevels && (
         // The filled-in rows, in blue exactly on the printed diagram, one row after another like a pen.
         <svg className="stage-timing" width={region.width * scale} height={region.height * scale} aria-hidden="true">
@@ -585,8 +599,29 @@ function StepFocusMark({
   const region = StepFocusGeometry.rect(focus, { width, height });
   if (!region) return null;
   const note = focus.note?.trim() ? focus.note.trim() : null;
-  const arrow = StepFocusGeometry.isArrow(focus);
-  const place = StepFocusMarks.placement(note, arrow, region, { x: 0, y: 0, width, height });
+  return (
+    <FocusPointer region={region} arrow={StepFocusGeometry.isArrow(focus)} note={note} width={width} height={height} />
+  );
+}
+
+/** A ring or a self-drawing arrow on a spot of the crop (crop pixels), and its note where it is out of the way. */
+function FocusPointer({
+  region,
+  arrow,
+  note,
+  width,
+  height,
+  overshoot = 0,
+}: {
+  region: Box;
+  arrow: boolean;
+  note: string | null;
+  width: number;
+  height: number;
+  /** How far past the crop's bottom the label may reach (the lesson's 60: the room under a question is free). */
+  overshoot?: number;
+}) {
+  const place = StepFocusMarks.placement(note, arrow, region, { x: 0, y: 0, width, height }, overshoot);
   return (
     <>
       {arrow ? (
@@ -617,6 +652,8 @@ interface CropMarks {
   highlights: Rect[];
   /** Dimmed, one line drawn through: a part that does not hold. */
   strikes: Rect[];
+  /** An arrow to a spot, or a ring with a note (`StepFocusMarks`): the lesson's "arrow", and "circle" with a note. */
+  pointers: { rect: Rect; arrow: boolean; note: string | null }[];
 }
 
 function cropMarks(
@@ -660,7 +697,16 @@ function cropMarks(
   const highlights: Rect[] = [];
   const strikes: Rect[] = [];
   /** Where a beat's mark goes, by its op: a ring, a line through, a fill, or a line under. */
-  const place = (op: string, rects: Rect[]) => {
+  const pointers: CropMarks["pointers"] = [];
+  const place = (op: string, rects: Rect[], note: string | null = null) => {
+    if ((op === "arrow" || (op === "circle" && note)) && rects.length > 0) {
+      pointers.push({
+        rect: rects.reduce<Rect>((all, rect) => Rects.union(all, rect) ?? all, rects[0]!),
+        arrow: op === "arrow",
+        note,
+      });
+      return;
+    }
     if (op === "crossOut") strikes.push(...rects);
     else if (op === "highlight") highlights.push(...rects);
     else if (op === "circle" || op === "zoom") circles.push(...rects);
@@ -679,7 +725,11 @@ function cropMarks(
       return null;
     })();
     if (optionLine) {
-      place(show.op === "crossOut" ? "crossOut" : "circle", [optionLine]);
+      place(
+        show.op === "crossOut" || show.op === "arrow" ? show.op : "circle",
+        [optionLine],
+        show.note?.trim() || null,
+      );
       continue;
     }
     const range =
@@ -689,22 +739,27 @@ function cropMarks(
       place(
         show.op,
         linesOf(page, range.start, range.end - range.start).map((line) => line.bounds),
+        show.note?.trim() || null,
       );
       continue;
     }
     const box = show.box ? LessonGeometry.box(show.box) : null;
     if (box)
       // As shares of the question's picture, from its top-left corner.
-      place(show.op, [
-        {
-          x: region.x + box.x * region.width,
-          y: region.y + region.height - (box.y + box.height) * region.height,
-          width: box.width * region.width,
-          height: box.height * region.height,
-        },
-      ]);
+      place(
+        show.op,
+        [
+          {
+            x: region.x + box.x * region.width,
+            y: region.y + region.height - (box.y + box.height) * region.height,
+            width: box.width * region.width,
+            height: box.height * region.height,
+          },
+        ],
+        show.note?.trim() || null,
+      );
   }
-  return { underlines, circles, highlights, strikes };
+  return { underlines, circles, highlights, strikes, pointers };
 }
 
 function ModeView({ session }: { session: QuestionSession }) {
