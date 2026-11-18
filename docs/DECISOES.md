@@ -109,7 +109,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **O que ficou mais simples do que no Mac (por agora):**
   - A resposta falada porta a leitura do JSON, a abertura, as marcas e as continuações. Falta o que depende das figuras: a fórmula que contém o símbolo explicado (`holdingTheSymbol`, `namingTheFormula`), as verificações do `VoiceTutorGuard` e os gráficos da resposta. Entram na fase 6.
   - A lição desenha passo aceso, citações sublinhadas ou circuladas, opções, conta, verificação e frase final. A lupa, os chips que voam e a figura 3D (`LessonLayer`, `LessonGeometry`) entram com as figuras.
-  - A mascote respira, cresce com a voz e brilha quando fala. Olhar e apontar (`MascotMotion`) fica para depois.
+  - A mascote respira, cresce com a voz e brilha quando fala. Olhar e apontar (`MascotMotion`) fica para depois. *(Feito depois; ver `docs/PROGRESSO.md`.)*
 
 ## 2026-11-15 — Figuras no Windows (fase 6)
 - **Desenho:** o renderizador do Mac (`IllustrationRenderer`) foi portado sem DOM: produz uma lista de desenho (caminhos e caixas de texto em pontos) que a interface desenha em SVG. A colocação dos rótulos é a do Mac, com o texto medido pelo canvas (Segoe UI Variable). Nos testes mede-se com 0,5 em por carácter (média do Segoe UI); com 0,56 em o rótulo de g(0) da figura de Bolzano não cabia a 170 px.
@@ -166,7 +166,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-17 — Sólidos em 3D
 - **Portado do Mac:** a leitura segura das fórmulas (`SafeFormula`), o sólido genérico (premade `solid3d`: revolução, superfície, paramétrica, sólido limitado, secções), o construtor das malhas (`GenericSolidBuilder`) e a verificação do volume contra a resposta (`SolidCheck`), com os testes do Mac. Como no Mac, um sólido que não se pode desenhar honestamente (atravessa o eixo, topo abaixo da base, pouco definido) não é aceite, e um sólido cujo volume não é o da resposta é pedido outra vez e depois não aparece.
 - **Desenho:** com three.js (0.186) em vez do SceneKit, a partir das mesmas malhas. O exterior é branco translúcido, o buraco e as paredes mais ténues, e a região, a secção e as curvas no único azul. Roda devagar sozinho até o aluno o arrastar; com o movimento reduzido fica parado.
-- **Ainda não:** as figuras 3D fixas (`solid_cone` e as outras de `Figure3D.swift`), a montagem passo a passo e o realce das partes pela mascote (`Figure3DSteps`, `GenericFigure3DController`), e a fatia que percorre o intervalo.
+- **Ainda não:** as figuras 3D fixas (`solid_cone` e as outras de `Figure3D.swift`), a montagem passo a passo e o realce das partes pela mascote (`Figure3DSteps`, `GenericFigure3DController`), e a fatia que percorre o intervalo. *(Feito depois; ver `docs/PROGRESSO.md`.)*
 - Demonstração: `overlay.html?demo=circuit` mostra também três sólidos.
 
 ## 2026-11-17 — O passo comanda o sólido: integral, fatia e montagem
@@ -175,7 +175,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-17 — Figuras pré-feitas animadas e seleção no leitor
 - **Portado do Mac, com os testes:** a base das figuras animadas (`FigureCanvas`, `PremadeFrame`, `Anim`, `LabelBoard`), as 10 de Cálculo 1, as séries e curvas (4) e as cenas de física (3, com a viagem da mascote que se transforma no objeto). O renderizador já animava com `t` e `duration`, por isso o porte é só lógica. As figuras que o Mac oferece e o Windows ainda não desenha continuam a devolver `null`: o fornecedor pede um template e uma figura que não se pode desenhar nunca aparece.
-- **Ainda não:** os passos discretos (`stepPlayback`) não têm controlos na interface; as figuras repetem em ciclo, como as outras animadas. A preferência «mascote desligada» não chega às cenas de física (a mascote aparece sempre na viagem).
+- **Ainda não:** os passos discretos (`stepPlayback`) não têm controlos na interface; as figuras repetem em ciclo, como as outras animadas. A preferência «mascote desligada» não chega às cenas de física (a mascote aparece sempre na viagem). *(Feito depois; ver `docs/PROGRESSO.md`.)*
 - **Seleção no leitor:** camada de texto do pdf.js (CSS adaptado de `pdf_viewer.css`), botão «Ask» junto ao fim da seleção e Enter, como o `AskButton` do Mac. Uma linha de matemática abre o explicador de fórmulas com o contexto «o aluno selecionou este passo…» do Mac; prosa abre o painel do excerto. Um arrasto sobre uma etiqueta de pergunta seleciona texto e não abre a pergunta (`isPlainClick`).
 
 ## 2026-11-17 — Mais figuras animadas
@@ -214,7 +214,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-18 — O guarda das respostas do tutor de voz
 - **Portado do Mac (`VoiceTutorGuard`), com os testes de `MascotCouncilFixTests` e `OptionFiguresAndAngleGuardTests`:** uma curva de uma função que os passos nunca usam não é desenhada; relações geométricas, ângulos que mudam de vértice e autocorreções que nada no ecrã sustenta ficam registados na consola (o Mac regista-os no log, sem os mostrar).
 - **Dúvida:** o ICU aceita `(?i:…)` dentro de uma expressão; o JavaScript só nas versões mais recentes. **Escolha:** os nomes dos ângulos e as palavras são escritos com as duas caixas (`[aA][lL]…`). **Porquê:** o mesmo comportamento sem depender da versão do WebView2.
-- **Ainda não:** `holdingTheSymbol` e `namingTheFormula` (dependem de `VoiceCheckPlan`).
+- **Ainda não:** `holdingTheSymbol` e `namingTheFormula` (dependem de `VoiceCheckPlan`). *(Feito depois; ver `docs/PROGRESSO.md`.)*
 
 ## 2026-11-18 — A fórmula da resposta do tutor de voz e o anel no símbolo
 - **Portado do Mac (`VoiceCheckPlan.presentedFormula`/`contextFormula`/`writtenEquations`/`inlineEquation`, `VoiceTutorReply.holdingTheSymbol`), com os testes de `VoiceFlowTests` e `VoiceTutorTests`:** a resposta é desenhada sobre a sua própria fórmula, senão sobre uma equação da pergunta, senão sobre a equação do enunciado que tem o símbolo explicado («o que significa a letra a» mostra x(t) = x₀ + v₀t + ½at²). A fórmula aparece quando a primeira marca acende.
@@ -229,7 +229,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — O ponto de que um passo fala, no recorte
 - **Portado do Mac (`StepFocusGeometry`, `FocusArrow`, a colocação de `StepFocusMarks`), com os testes de `StepExplanationTests`:** quando um passo traz `focus` (uma caixa normalizada no recorte), aparece lá um anel ou uma seta que se desenha, e a nota curta numa etiqueta, do lado onde estorva menos e dentro do recorte.
-- **Dúvida:** no Mac isto aparece para o passo que a mascote explica quando se clica nela (`guideStep`, ainda não portado), com uma lupa. **Escolha:** aqui aparece para o passo cujos dados se sublinham (aberto, a chegar ou com o rato por cima), sem lupa (o ramo do Mac sem lupa, o de «Reduzir movimento»). **Porquê:** o guia da mascote não existe no Windows, e o ponto é útil no passo que o aluno está a ler.
+- **Dúvida:** no Mac isto aparece para o passo que a mascote explica quando se clica nela (`guideStep`, ainda não portado), com uma lupa. **Escolha:** aqui aparece para o passo cujos dados se sublinham (aberto, a chegar ou com o rato por cima), sem lupa (o ramo do Mac sem lupa, o de «Reduzir movimento»). **Porquê:** o guia da mascote não existe no Windows, e o ponto é útil no passo que o aluno está a ler. *(Feito depois; ver `docs/PROGRESSO.md`.)*
 - **Falta ver no ecrã** com uma resposta real que traga `focus` (nenhum mock a tem).
 
 ## 2026-11-18 — A mascote percorre os passos
@@ -250,7 +250,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Portado do Mac (`Figure3DSpec.lessonDescription`, `LessonFigure3D`):** o pedido da lição leva a figura 3D do palco descrita parte a parte (circuito, sólido ou figura no espaço), e uma frase marcada `on: "figure3d"` realça a parte que nomeia e mostra as primeiras partes montadas enquanto é dita, por cima do que o passo aberto pedia.
 - **Feito também:** a rotação (`yaw`) num sólido: roda suavemente para o ângulo pedido e deixa de girar sozinho.
 - **Feito também (`LessonFigurePicker`, com os testes de `LessonFigure3DTests`):** a figura só se levanta onde mostra algo novo: primeiro a mudança que o passo faz (a redução do circuito lida pela app), depois uma parte nomeada, cada uma uma vez. Num circuito, as resistências novas acendem com o bloco anterior ainda junto, e a junção acontece aos 40 % da frase (pelo progresso da voz, ou por um temporizador).
-- **Ainda não:** a rotação nas figuras no espaço (o Mac só levanta a figura onde ela acrescenta algo, e também a partir dos passos que reduzem o circuito).
+- **Ainda não:** a rotação nas figuras no espaço (o Mac só levanta a figura onde ela acrescenta algo, e também a partir dos passos que reduzem o circuito). *(Feito depois; ver `docs/PROGRESSO.md`.)*
 
 ## 2026-11-18 — Perguntar sobre texto selecionado no palco
 - **Portado do Mac (`SelectableText`, `SelectionAskButton`, `SelectionAsk.helpRequest`, `QuestionSession.ask(about:)`), com os testes de `SelectionAskRequestTests`:** as palavras do passo aberto, a pista, as respostas escritas para o aluno e a pergunta tipografada podem ser selecionadas; aparece «Perguntar» no fim da seleção e a resposta vem como pergunta de seguimento «Sobre «…»», com a seleção como passagem. Os outros passos continuam texto simples, para um clique os abrir.
@@ -278,7 +278,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — As marcas do tutor de voz nas legendas da figura
 - **Portado do Mac (a parte de texto de `FigureLabels`), com os testes de `FigureMarksTests`:** uma marca do tutor de voz procura o termo como a página o escreve (H+ → H⁺, SO42- → SO₄²⁻, (B) → B), e uma legenda isolada numa linha curta ganha às mesmas letras dentro de uma palavra ou do texto corrido. As palavras ditas antes de uma marca («o ponto B», «o ângulo alfa») ficam reconhecidas (`saidAboutTheFigure`).
-- **Ainda não:** decidir entre a figura e a fórmula (`SpeechMarkLayout.namesSomethingElse`, `isPointInsideAName`); aqui a marca procura sempre primeiro na pergunta.
+- **Ainda não:** decidir entre a figura e a fórmula (`SpeechMarkLayout.namesSomethingElse`, `isPointInsideAName`); aqui a marca procura sempre primeiro na pergunta. *(Feito depois; ver `docs/PROGRESSO.md`.)*
 - **Feito depois (2026-11-18):** a escolha entre figura e fórmula (`core/voice/speechMarkLayout.ts`, com os casos do Mac). Quando a legenda escreve uma fórmula, uma marca num símbolo dela fica só na fórmula. Um rótulo que ela não tem, ou que é dito depois de «ponto», «ângulo», etc., vai para a página e não anela uma letra parecida na fórmula. Falta ver com uma resposta de voz real.
 
 ## 2026-11-18 — Etiquetas dos exames comparadas com as regras do Mac
