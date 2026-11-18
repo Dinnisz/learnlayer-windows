@@ -58,6 +58,7 @@ import {
   useLessonState,
   useLessonToggle,
 } from "../lesson/LessonUI";
+import { LessonGeometry } from "@core/lesson/lessonGeometry";
 import type { LessonShow } from "@core/lesson/mascotLesson";
 import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
 import { onIslandCommand, publishIsland } from "../island";
@@ -566,21 +567,38 @@ function cropMarks(
   }
   // The beat being said marks the words it talks about, and rings the option it names (struck out or not).
   for (const show of lessonShows) {
-    if (show.quote) {
-      const range = firstInside(show.quote);
-      if (!range) continue;
+    // As LessonGeometry.region on a PDF page: the option it names, else a word printed in a figure (found in the page's
+    // text), else the words it quotes, else a box the model drew. No mark is better than a wrong one.
+    const optionLine = (() => {
+      if (!show.option) return null;
+      for (const match of page.text.matchAll(new RegExp(`\\(?${show.option.toUpperCase()}[.)]`, "g"))) {
+        const lines = linesOf(page, match.index, match[0].length);
+        if (lines.length === 1 && inside(lines[0]!.bounds)) return lines[0]!.bounds;
+      }
+      return null;
+    })();
+    if (optionLine) {
+      circles.push(optionLine);
+      continue;
+    }
+    const range =
+      (show.label?.trim() ? firstInside(show.label.trim()) : undefined) ??
+      (show.quote?.trim() ? firstInside(show.quote.trim()) : undefined);
+    if (range) {
       const lines = linesOf(page, range.start, range.end - range.start).map((line) => line.bounds);
       if (show.op === "circle" || show.op === "zoom" || show.op === "crossOut") circles.push(...lines);
       else underlines.push(...lines);
-    } else if (show.option) {
-      for (const match of page.text.matchAll(new RegExp(`\\(?${show.option.toUpperCase()}[.)]`, "g"))) {
-        const lines = linesOf(page, match.index, match[0].length);
-        if (lines.length === 1 && inside(lines[0]!.bounds)) {
-          circles.push(lines[0]!.bounds);
-          break;
-        }
-      }
+      continue;
     }
+    const box = show.box ? LessonGeometry.box(show.box) : null;
+    if (box)
+      // As shares of the question's picture, from its top-left corner.
+      circles.push({
+        x: region.x + box.x * region.width,
+        y: region.y + region.height - (box.y + box.height) * region.height,
+        width: box.width * region.width,
+        height: box.height * region.height,
+      });
   }
   return { underlines, circles };
 }
