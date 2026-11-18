@@ -12,6 +12,7 @@ import {
 } from "@core/lesson/mascotLesson";
 import type { LessonFeed } from "@core/lesson/mascotLessonProvider";
 import { LessonMorphs, morphSeconds, MorphPacer, type LessonMorph } from "@core/lesson/morphPacer";
+import { lessonFigure, type LessonFigure3D } from "@core/lesson/lessonFigure";
 
 export interface LessonState {
   /** The beat being said, from 0; -1 before the first. */
@@ -31,6 +32,8 @@ export interface LessonState {
   hidesAnswer: boolean;
   /** The written solution's formula moving from the line the lesson was on to the one this beat moves to. */
   morph: LessonMorph | null;
+  /** What the beat asks of the 3D figure: a part standing out, the first parts assembled (`LessonFigure3D`). */
+  figure3D: LessonFigure3D | null;
   speaking: boolean;
   level: number;
   playing: boolean;
@@ -58,6 +61,7 @@ export const idleLessonState: LessonState = {
   pitfallIsActive: false,
   hidesAnswer: false,
   morph: null,
+  figure3D: null,
   speaking: false,
   level: 0,
   playing: false,
@@ -150,6 +154,7 @@ export class LessonPlayer {
         pitfallIsActive: false,
         hidesAnswer: false,
         morph: null,
+        figure3D: null,
         closing: feed.summary,
       });
       await this.say(feed.summary.say, narrate);
@@ -192,6 +197,7 @@ export class LessonPlayer {
       beat: index,
       step,
       morph,
+      figure3D: lessonFigure(beat.show),
       shows: beat.show.filter((show) => show.op !== "pitfall"),
       calc: beat.calc?.line ?? null,
       check: null,

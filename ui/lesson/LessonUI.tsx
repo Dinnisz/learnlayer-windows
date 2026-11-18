@@ -8,6 +8,11 @@ import { EquationMorph } from "@core/explanation/equationMorph";
 import type { LessonShow } from "@core/lesson/mascotLesson";
 import type { LessonRequest } from "@core/lesson/mascotLessonProvider";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
+import { circuitOf } from "@core/illustrations/circuit";
+import { solidOf } from "@core/illustrations/solid";
+import { GenericSolidBuilder } from "@core/illustrations/solidBuilder";
+import { Space3D } from "@core/illustrations/spaceSteps";
+import { LessonFigureText } from "@core/lesson/lessonFigure";
 import type { QuestionSession } from "@core/problems/questionSession";
 import { optionLinesOf, solutionWording, workContext } from "@core/voice/workContext";
 import { lessonProvider } from "../ai/solver";
@@ -62,6 +67,24 @@ const narrate: Narrate = async (text, onLevel, signal, onProgress) => {
   });
 };
 
+/** The 3D figure on the stage as a lesson is told about it (`Figure3DSpec.lessonDescription`); null without one. */
+function figureDescription(session: QuestionSession): string | null {
+  const illustration = session.illustration;
+  const circuit = illustration ? circuitOf(illustration) : null;
+  if (circuit) return LessonFigureText.circuit(circuit);
+  const solid = illustration ? solidOf(illustration) : null;
+  if (solid) {
+    const built = GenericSolidBuilder.build(solid);
+    return built ? LessonFigureText.solid(illustration?.title ?? "", GenericSolidBuilder.order(built)) : null;
+  }
+  const figure = session.solutionFigure;
+  if (figure?.kind === "space") {
+    const parts = Space3D.parts(figure.figure);
+    return parts ? LessonFigureText.space(parts) : null;
+  }
+  return null;
+}
+
 /** What the lesson is told about the question and what the student already read (`lessonRequest`). */
 function lessonRequest(session: QuestionSession): LessonRequest {
   const part = session.part;
@@ -87,6 +110,8 @@ function lessonRequest(session: QuestionSession): LessonRequest {
     needsStrongModel: session.route === "strong",
     // The answer is written on screen: the lesson may reach it, so nothing is held back.
     correctOption: null,
+    // The 3D figure beside the steps, part by part, so a beat can name what it shows.
+    figure3D: figureDescription(session),
   };
 }
 

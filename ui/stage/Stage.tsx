@@ -1178,6 +1178,7 @@ function spaceStepHighlight(session: QuestionSession): string | null {
 
 /** The right column's figures: the one beside the steps (or the drawing on its way), and the solution's curve. */
 function SideFigures({ session }: { session: QuestionSession }) {
+  const lessonFigure3D = useLessonState()?.figure3D ?? null;
   const figure = session.solutionFigure;
   const graph = session.sideGraph;
   return (
@@ -1187,7 +1188,11 @@ function SideFigures({ session }: { session: QuestionSession }) {
           <SignTableView table={figure.table} />
         </div>
       ) : figure?.kind === "space" ? (
-        <SpaceFigureView figure={figure.figure} step={session.figureStep} highlight={spaceStepHighlight(session)} />
+        <SpaceFigureView
+          figure={figure.figure}
+          step={session.figureStep}
+          highlight={lessonFigure3D?.highlight ?? spaceStepHighlight(session)}
+        />
       ) : figure?.kind === "drawing" ? (
         <IllustrationView scene={figure.scene} revealed={session.figureRevealed} step={session.figureStep} />
       ) : session.expectsFigure && !session.showsIllustration ? (
@@ -1203,6 +1208,7 @@ function SideFigures({ session }: { session: QuestionSession }) {
 /** The question's drawing, or what is happening with it: never a spinner with nothing behind it. */
 function IllustrationPanel({ session }: { session: QuestionSession }) {
   const t = useT();
+  const lessonFigure3D = useLessonState()?.figure3D ?? null;
   switch (session.illustrationState) {
     case "ready": {
       if (!session.illustration) return null;
@@ -1219,8 +1225,10 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
       const step = session.selectedStep;
       const card = step !== null ? cards[step] : undefined;
       const plan = circuit ? circuitHighlightPlan(circuit, steps) : solid ? solidStepPlan(solid, steps) : [];
-      const lit = step !== null && card ? (card.figureHighlight ?? plan[step] ?? null) : null;
-      const assembleStep = card?.assembleStep ?? null;
+      // The lesson's beat asks for a part or an assembly: it wins while it is said (LessonFigure3D).
+      const asked = lessonFigure3D;
+      const lit = asked?.highlight ?? (step !== null && card ? (card.figureHighlight ?? plan[step] ?? null) : null);
+      const assembleStep = asked?.assemble ?? card?.assembleStep ?? null;
       return circuit ? (
         <CircuitView
           spec={circuit}
