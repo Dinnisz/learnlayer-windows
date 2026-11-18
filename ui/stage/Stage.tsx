@@ -20,6 +20,8 @@ import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { SelectionAsk } from "@core/problems/selectionAsk";
+import { ExamNotation } from "@core/math/examNotation";
+import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
 import { GuideSpots } from "../lesson/guideSpot";
 import { LessonEvidence } from "@core/lesson/lessonEvidence";
@@ -1059,7 +1061,7 @@ function HintView({ session }: { session: QuestionSession }) {
         <MathText text={part.hint} />
       </p>
       {shown > 0 && <StepCard part={part} index={shown - 1} session={session} advanced={moved.forward} />}
-      {session.showsAnswer && <AnswerBox part={part} />}
+      {session.showsAnswer && <AnswerBox part={part} language={session.notationLanguage} />}
       <div className="stage-stepper">
         <span className="stage-dots" aria-hidden="true">
           {Array.from({ length: count + 1 }, (_, index) => (
@@ -1162,7 +1164,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
           <MathText text={solution.figure} />
         </details>
       )}
-      <AnswerBox part={part} />
+      <AnswerBox part={part} language={session.notationLanguage} />
       {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
         <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
       )}
@@ -1297,7 +1299,7 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
   }
 }
 
-function AnswerBox({ part }: { part: Part }) {
+function AnswerBox({ part, language }: { part: Part; language: string }) {
   const t = useT();
   // While a lesson plays, the answer waits for the lesson to work it out (`QuestionSession.showsFinalAnswer`).
   const hidden = useLessonState()?.hidesAnswer === true;
@@ -1309,7 +1311,11 @@ function AnswerBox({ part }: { part: Part }) {
     >
       <span className="stage-answer-label">{t("Answer")}</span>
       <div className="stage-answer-value">
-        {part.answerLatex ? <MathView latex={part.answerLatex} display /> : <MathText text={part.answer.text} />}
+        {part.answerLatex ? (
+          <MathView latex={ExamNotation.trigInLatex(part.answerLatex, language)} display />
+        ) : (
+          <MathText text={part.answer.text} />
+        )}
       </div>
     </section>
   );
@@ -1352,21 +1358,31 @@ function StepCard({
               <MathText text={card.title} />
             </h4>
             {card.latex.trim() !== "" && !NoteMath.formulaRepeats(card.latex, card.note ?? "") && (
-              <StepFormula part={part} index={index} latex={card.latex} advanced={advanced} />
+              <StepFormula
+                part={part}
+                index={index}
+                latex={ExamNotation.trigInLatex(card.latex, session.notationLanguage)}
+                advanced={advanced}
+                language={session.notationLanguage}
+              />
             )}
             {card.branches && card.branches.length > 0 && (
               <div className="stage-branches">
                 {card.branches.map((branch, position) => (
                   <div key={position}>
                     <span>{branch.title}</span>
-                    <MathView latex={branch.latex} />
+                    <MathView latex={ExamNotation.trigInLatex(branch.latex, session.notationLanguage)} />
                   </div>
                 ))}
               </div>
             )}
             {card.note && (
               <p className="stage-step-note">
-                <NoteText text={card.note} />
+                <NoteText
+                  text={CodeText.mapProse(card.note, (prose) =>
+                    ExamNotation.trigInProse(prose, session.notationLanguage),
+                  )}
+                />
               </p>
             )}
           </>
@@ -1431,11 +1447,14 @@ function StepFormula({
   index,
   latex,
   advanced,
+  language,
 }: {
   part: Part;
   index: number;
   latex: string;
   advanced: boolean;
+  /** The exam's notation ("sen" in Portuguese) the line before is written in too. */
+  language: string;
 }) {
   const morph = useLessonState()?.morph ?? null;
   const cards = part.cards ?? [];
@@ -1443,7 +1462,7 @@ function StepFormula({
     return (
       <MorphView
         key={`lesson-${morph.beat}`}
-        from={cards[morph.from]!.latex}
+        from={ExamNotation.trigInLatex(cards[morph.from]!.latex, language)}
         to={latex}
         started={morph.started}
         duration={morph.duration}
@@ -1452,7 +1471,7 @@ function StepFormula({
         className="stage-step-latex"
       />
     );
-  const previous = index >= 1 ? (cards[index - 1]?.latex ?? "") : "";
+  const previous = index >= 1 ? ExamNotation.trigInLatex(cards[index - 1]?.latex ?? "", language) : "";
   if (advanced && previous.trim() !== "")
     return (
       <MorphView

@@ -1307,6 +1307,11 @@ ${part.label}`,
     });
   }
 
+  /** The language the exam's notation follows ("sen" in Portuguese, `ExamNotation`): the tutor's. */
+  get notationLanguage(): string {
+    return this.drawingLanguage;
+  }
+
   private get drawingLanguage(): string {
     return this.services.language?.() ?? "Portuguese (Portugal)";
   }

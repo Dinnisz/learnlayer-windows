@@ -256,3 +256,6 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Portado do Mac (`SelectableText`, `SelectionAskButton`, `SelectionAsk.helpRequest`, `QuestionSession.ask(about:)`), com os testes de `SelectionAskRequestTests`:** as palavras do passo aberto, a pista, as respostas escritas para o aluno e a pergunta tipografada podem ser selecionadas; aparece «Perguntar» no fim da seleção e a resposta vem como pergunta de seguimento «Sobre «…»», com a seleção como passagem. Os outros passos continuam texto simples, para um clique os abrir.
 - **Ainda não:** o Mac manda a seleção ao tutor de voz quando há uma conversa por voz aberta (`SelectionAskRoute`); aqui vai sempre por escrito.
 - **Feito também (`MascotGuide.spot`):** enquanto a mascote percorre os passos, desloca-se para junto do dado do passo (ao nível dele, para lá da margem do recorte, sem tapar palavras) e salta de um dado para o seguinte; com «Reduzir movimento» fica no seu lugar. Falta ver no ecrã com uma lição sem resposta do modelo (o recurso do «Explica-me»).
+
+## 2026-11-18 — A notação do exame (sen, sin)
+- **Portado do Mac (`ExamNotation`), com o teste de `LayoutFixTests`:** nos passos, nos ramos, nas transformações e na resposta, `\sin` passa a `\sen` (e «sin» a «sen» nas notas, sem tocar «sinal») quando o tutor fala português, e o contrário em inglês; um programa nas notas fica como foi escrito.
