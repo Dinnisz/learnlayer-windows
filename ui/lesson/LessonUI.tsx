@@ -42,6 +42,7 @@ import { speak, tutorLanguage, voiceEnabled } from "../voice/speaker";
 import { questionPlan } from "../voice/VoiceUI";
 import { idleLessonState, LessonPlayer, type LessonState, type Narrate } from "./lessonPlayer";
 import { GuideSpots } from "./guideSpot";
+import { MascotBody } from "./mascotBody";
 
 export interface LessonContextValue {
   state: LessonState | null;
@@ -344,6 +345,22 @@ export function LessonOverlay({
     spot === null,
     still,
   );
+  // Where it rests, for a figure's sphere to set off from (MascotController.restingCenter); hidden while a figure's
+  // sphere is this body out on its trip (figureHoldsBody).
+  useEffect(() => {
+    if (!showsMascot) return;
+    const update = () =>
+      MascotBody.setResting(
+        MascotHome.point(corner, { width: window.innerWidth, height: window.innerHeight }, stageMascotSize),
+      );
+    update();
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      MascotBody.setResting(null);
+    };
+  }, [corner, showsMascot]);
+  const held = useSyncExternalStore(MascotBody.subscribe, MascotBody.held);
   const offset = drag?.moved ? { x: drag.dx, y: drag.dy } : { x: 0, y: 0 };
   const placed = scene
     ? { left: scene.at.x - half + offset.x, top: scene.at.y - half + offset.y }
@@ -377,7 +394,7 @@ export function LessonOverlay({
       {showsMascot ? (
         <button
           type="button"
-          className={`lesson-mascot${speaking ? " speaking" : ""}${spot ? " beside" : ""}${listening ? " listening" : ""}${drag?.moved ? " dragging" : ""}`}
+          className={`lesson-mascot${speaking ? " speaking" : ""}${spot ? " beside" : ""}${listening ? " listening" : ""}${drag?.moved ? " dragging" : ""}${held ? " held" : ""}`}
           style={placed}
           onPointerDown={(event) => {
             if (spot || event.button !== 0) return;

@@ -890,6 +890,16 @@
   z-index: 10;
 }
 
+/* A figure's sphere is this body on a trip: it waits unseen meanwhile. */
+.lesson-mascot {
+  transition: opacity 0.35s ease-in-out;
+}
+
+.lesson-mascot.held {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .lesson-mascot-room {
   display: block;
   pointer-events: none;

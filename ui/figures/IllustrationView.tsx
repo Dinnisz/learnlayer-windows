@@ -2,7 +2,18 @@
 // for each parameter. The layout and the labels are the renderer's (core); this draws its display list as SVG. With
 // "Show animations" off it stays still until the student presses Play.
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import { MascotStart } from "@core/illustrations/mascotStart";
+import { MascotBody } from "../lesson/mascotBody";
 import { CompiledIllustration, type Illustration } from "@core/illustrations/illustration";
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "@core/illustrations/premadeFigure";
 import { formatG } from "@core/math/printf";
@@ -16,13 +27,14 @@ import { useT } from "../i18n";
 import "./figures.css";
 
 // The physics scenes bring the mascot in only when the student keeps it on (Settings › General, "mascotEnabled").
-setMascotPreference(() => {
+const mascotShown = () => {
   try {
     return localStorage.getItem("mascotEnabled") !== "0";
   } catch {
     return true;
   }
-});
+};
+setMascotPreference(mascotShown);
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -242,6 +254,10 @@ export function IllustrationView({
   const boundaries = (working as { stepPlayback?: { boundaries: number[] } | null }).stepPlayback?.boundaries ?? null;
   const [stepped, setStepped] = useState<number | null>(null);
   const shownTime = stepped !== null && boundaries ? (boundaries[stepped] ?? 0) : time;
+  // A scene whose sphere is the stage's body on a trip: until this second it stands in the figure.
+  const holdsUntil = (working as { mascotHoldsUntil?: number | null }).mascotHoldsUntil ?? null;
+  const resting = useSyncExternalStore(MascotBody.subscribe, MascotBody.resting);
+  const [start, setStart] = useState<{ x: number; y: number } | null>(null);
   /** The step the picture is at: the one picked, else the last one the running clock has passed. */
   const currentStep =
     stepped ??
@@ -280,9 +296,38 @@ export function IllustrationView({
       revealed: revealed ? 1 : 0,
       step: step === Number.MAX_SAFE_INTEGER ? 1000 : step,
     };
+    // A figure's sphere sets off from where the stage's body rests (MascotStart).
+    if (start) {
+      scope.mascotX = start.x;
+      scope.mascotY = start.y;
+    }
     for (const parameter of working.parameters ?? []) scope[parameter.name] = values[parameter.name] ?? parameter.value;
     return new IllustrationRenderer(compiled, scope, { width: drawnWidth, height }, scope.t!, measureText).draw();
-  }, [available, animated, shownTime, revealed, step, working, values, compiled, drawnWidth, height]);
+  }, [available, animated, shownTime, revealed, step, working, values, compiled, drawnWidth, height, start]);
+
+  // While the sphere is the tutor's body out on its trip, the stage keeps its own body hidden (holdMascot).
+  const holding = holdsUntil !== null && animated && shownTime < holdsUntil && mascotShown();
+  const holder = useId();
+  useEffect(() => {
+    MascotBody.hold(holder, holding);
+  }, [holder, holding]);
+  useEffect(() => () => MascotBody.hold(holder, false), [holder]);
+
+  useLayoutEffect(() => {
+    const element = picture.current;
+    if (holdsUntil === null || !element) {
+      setStart(null);
+      return;
+    }
+    const box = element.getBoundingClientRect();
+    const next = MascotStart.world(
+      resting,
+      { x: box.left, y: box.top, width: box.width, height: box.height },
+      working.width,
+      working.height,
+    );
+    setStart((last) => (last && next && last.x === next.x && last.y === next.y ? last : next));
+  }, [holdsUntil, resting, working.width, working.height, drawnWidth, height]);
 
   // The part of the figure the step in focus adds, magnified in place a moment after the body sets off; nothing with
   // Reduce Motion, or when the step has nothing in the figure.

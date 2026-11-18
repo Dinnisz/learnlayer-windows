@@ -145,10 +145,10 @@ export function AnimatedDemo() {
       className="stage"
       style={{ flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: 24, overflow: "auto" }}
     >
-      {animatedGallery.map((figure) => {
+      {animatedGallery.map((figure, index) => {
         const scene = new PremadeFigures(figure).compile(figure.type, "Portuguese (Portugal)");
         return scene ? (
-          <div key={figure.type} style={{ width: 520 }} data-type={figure.type}>
+          <div key={`${figure.type}-${index}`} style={{ width: 520 }} data-type={figure.type}>
             <IllustrationView scene={scene} />
           </div>
         ) : null;

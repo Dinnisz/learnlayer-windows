@@ -308,3 +308,6 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-18 — «Com voz este mês» (VoiceMeter)
 - **Feito:** a página IA e utilização mostra quantas explicações a voz premium leu este mês, como o Mac (`VoiceMeter`, contado por mês em UTC e guardado um ano; `core/voice/voiceMeter.ts` com o teste de `CostSavingsTests`). Conta-se uma por explicação dita com a voz premium, quando a primeira frase chega.
 - **Diferença:** o Mac mostra também quanto a voz custou, do registo local de uso (`UsageLog`) que só existe com a chave de desenvolvimento. Aqui o servidor é que conta o custo, e só se mostra o número.
+
+## 2026-11-18 — Uma só mascote nas cenas de física (MascotStart, figureHoldsBody)
+- **Feito:** a esfera de uma cena de física (carro, lançamento, plano inclinado) parte agora de onde a esfera do palco repousa, levada para as unidades da cena e mantida dentro da imagem (`MascotStart.world`, `core/illustrations/mascotStart.ts`, com os casos de `FinalUXFixTests`), e não de um canto fixo. Enquanto a esfera da cena está em viagem, a do palco esconde-se (0,35 s), para haver sempre um só corpo; com várias figuras, fica escondida enquanto alguma o tiver.
