@@ -2079,8 +2079,11 @@ ${part.label}`,
     this.changed();
   }
 
-  /** Answers a question about the exercise. `context` is built by TextHelp (`TextHelpContext.followUp`). */
-  ask(heading: string, context: string): void {
+  /**
+   * Answers a question about the exercise. `context` is built by TextHelp (`TextHelpContext.followUp`); `passage`
+   * is what it is about (the question, or a selection the student asked about).
+   */
+  ask(heading: string, context: string, passage: string = this.question.text): void {
     const trimmed = heading.trim();
     if (trimmed === "") return;
     this.mode = "followUp";
@@ -2094,9 +2097,7 @@ ${part.label}`,
     void (async () => {
       let answer: string[] | null;
       try {
-        answer = help
-          ? await help({ heading: trimmed, passage: this.question.text, context, image: this.images[0] ?? null })
-          : null;
+        answer = help ? await help({ heading: trimmed, passage, context, image: this.images[0] ?? null }) : null;
       } catch {
         answer = null;
       }

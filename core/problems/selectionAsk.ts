@@ -1,6 +1,8 @@
 // Port of SelectionSource and SelectionAsk (cleaning, capping, what is sent) in
 // LearnLayer/Problems/SelectionAsk.swift @ ref 2026-11-04: a selection the student asked about, cleaned and capped.
 
+import { TextHelpContext } from "./textHelp";
+
 /** Where the student selected the text they ask about. */
 export type SelectionSource = "question" | "statement" | "explanation";
 
@@ -86,6 +88,25 @@ export class SelectionAsk {
   /** The student's question, in the prompt's words, on one line. */
   get studentQuestion(): string {
     return `What does this selected text from the ${this.source} mean here, and why does it matter for this part: "${this.oneLine}"?`;
+  }
+
+  /**
+   * The follow-up request for this selection, with the exercise and its open part (`helpRequest`): the selection is
+   * the passage, and the context says where it was selected before the usual follow-up context.
+   */
+  helpRequest(options: {
+    exercise: string;
+    partLabel: string;
+    partAsks: string;
+    partAnswer: string;
+    solution?: string;
+  }): { passage: string; context: string; languageText: string } {
+    const context =
+      `Selected text (from the ${this.source}):\n${this.text}\n\n` +
+      TextHelpContext.followUp({ studentQuestion: this.studentQuestion, ...options });
+    // A short selection ("f'(x)") can't name a language; the exercise can.
+    const languageText = options.exercise.trim() === "" ? this.text : options.exercise;
+    return { passage: this.text, context, languageText };
   }
 
   /** What a voice turn says it heard. The tutor always speaks pt-PT. */

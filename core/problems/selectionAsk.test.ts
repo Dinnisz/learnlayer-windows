@@ -2,7 +2,7 @@
 // request suite comes with asking about a selection inside an exercise.
 
 import { describe, expect, it } from "vitest";
-import { SelectionAsk } from "./selectionAsk";
+import { SelectionAsk, type SelectionSource } from "./selectionAsk";
 
 describe("SelectionAsk", () => {
   it("blank or punctuation is not asked", () => {
@@ -70,5 +70,54 @@ describe("SelectionAsk", () => {
     const ask = SelectionAsk.make("Considere a\nfunção f", "statement")!;
     expect(ask.studentQuestion).toContain("from the statement");
     expect(ask.studentQuestion).toContain('"Considere a função f"');
+  });
+});
+
+// SelectionAskRequestTests (LearnLayerTests/SelectionAskTests.swift @ ref 2026-11-04): what is sent for a selection.
+describe("the follow-up request for a selection", () => {
+  const exercise = "2. Considere a função f(x) = e^{2x} − 3x.\n(a) Determine f'(x).";
+  const request = (text: string, source: SelectionSource = "question") =>
+    SelectionAsk.make(text, source)!.helpRequest({
+      exercise,
+      partLabel: "(a)",
+      partAsks: "Determine f'(x).",
+      partAnswer: "f'(x) = 2e^{2x} − 3",
+    });
+
+  it("the selection is the passage and leads the context", () => {
+    const built = request("e^{2x}");
+    expect(built.passage).toBe("e^{2x}");
+    expect(built.context.startsWith("Selected text (from the question):\ne^{2x}\n\n")).toBe(true);
+    expect(built.context).toContain(`The whole exercise:\n${exercise}`);
+    expect(built.context).toContain("Current part (a): Determine f'(x).");
+    expect(built.context).toContain("Its answer: f'(x) = 2e^{2x} − 3");
+  });
+
+  it("each source is named", () => {
+    for (const source of ["question", "statement", "explanation"] as const)
+      expect(request("f'(x)", source).context.startsWith(`Selected text (from the ${source}):`)).toBe(true);
+  });
+
+  it("the language is read from the exercise", () => {
+    expect(request("f'(x)").languageText).toBe(exercise);
+    const alone = SelectionAsk.make("derivada", "explanation")!.helpRequest({
+      exercise: "  ",
+      partLabel: "",
+      partAsks: "",
+      partAnswer: "",
+    });
+    expect(alone.languageText).toBe("derivada");
+  });
+
+  it("the written solution goes with it when there is one", () => {
+    const solution = "Step 1: Derivar. f'(x) = 2e^{2x} − 3";
+    const selected = SelectionAsk.make("e^{2x}", "explanation")!.helpRequest({
+      exercise,
+      partLabel: "(a)",
+      partAsks: "",
+      partAnswer: "",
+      solution,
+    });
+    expect(selected.context).toContain(solution);
   });
 });

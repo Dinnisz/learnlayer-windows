@@ -251,3 +251,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Feito também:** a rotação (`yaw`) num sólido: roda suavemente para o ângulo pedido e deixa de girar sozinho.
 - **Feito também (`LessonFigurePicker`, com os testes de `LessonFigure3DTests`):** a figura só se levanta onde mostra algo novo: primeiro a mudança que o passo faz (a redução do circuito lida pela app), depois uma parte nomeada, cada uma uma vez. Num circuito, as resistências novas acendem com o bloco anterior ainda junto, e a junção acontece aos 40 % da frase (pelo progresso da voz, ou por um temporizador).
 - **Ainda não:** a rotação nas figuras no espaço (o Mac só levanta a figura onde ela acrescenta algo, e também a partir dos passos que reduzem o circuito).
+
+## 2026-11-18 — Perguntar sobre texto selecionado no palco
+- **Portado do Mac (`SelectableText`, `SelectionAskButton`, `SelectionAsk.helpRequest`, `QuestionSession.ask(about:)`), com os testes de `SelectionAskRequestTests`:** as palavras do passo aberto, a pista, as respostas escritas para o aluno e a pergunta tipografada podem ser selecionadas; aparece «Perguntar» no fim da seleção e a resposta vem como pergunta de seguimento «Sobre «…»», com a seleção como passagem. Os outros passos continuam texto simples, para um clique os abrir.
+- **Ainda não:** o Mac manda a seleção ao tutor de voz quando há uma conversa por voz aberta (`SelectionAskRoute`); aqui vai sempre por escrito.

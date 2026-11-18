@@ -19,6 +19,7 @@ import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
+import { SelectionAsk } from "@core/problems/selectionAsk";
 import { LessonEvidence } from "@core/lesson/lessonEvidence";
 import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
@@ -345,6 +346,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
             </div>
             {showsLesson ? <LessonOverlay player={lesson.player} state={lesson.state} onTap={lesson.toggle} /> : null}
             <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
+            {session && <SelectionAskPill session={session} />}
           </div>
         </TalkContext.Provider>
       </VoiceContext.Provider>
@@ -1931,6 +1933,70 @@ function TalkButton() {
       onPointerLeave={() => state.phase === "listening" && talk.end()}
     >
       <Icon symbol="mic.fill" size={16} />
+    </button>
+  );
+}
+
+/**
+ * Text selected on the stage, in the question or the explanation, can be asked about (`SelectableText` and
+ * `SelectionAskButton`): a small "Ask" pill at the end of the selection; the answer comes as a follow-up about it.
+ */
+function SelectionAskPill({ session }: { session: QuestionSession }) {
+  const t = useT();
+  const [picked, setPicked] = useState<{ ask: SelectionAsk; x: number; y: number } | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || selection.rangeCount === 0) return setPicked(null);
+      const range = selection.getRangeAt(0);
+      const node = range.commonAncestorContainer;
+      const element = node instanceof Element ? node : node.parentElement;
+      if (!element || element.closest("input, textarea, button")) return setPicked(null);
+      const source = element.closest(".stage-panel")
+        ? "explanation"
+        : element.closest(".stage-question, .stage-typeset, .stage-screen-question")
+          ? "question"
+          : null;
+      const ask = source ? SelectionAsk.make(selection.toString(), source) : null;
+      if (!ask) return setPicked(null);
+      const rects = range.getClientRects();
+      const last = rects[rects.length - 1] ?? range.getBoundingClientRect();
+      setPicked({ ask, x: last.right, y: last.bottom });
+    };
+    const settle = () => window.setTimeout(read, 0);
+    document.addEventListener("mouseup", settle);
+    document.addEventListener("keyup", settle);
+    return () => {
+      document.removeEventListener("mouseup", settle);
+      document.removeEventListener("keyup", settle);
+    };
+  }, []);
+  if (!picked) return null;
+  const ask = () => {
+    const part = session.part;
+    const request = picked.ask.helpRequest({
+      exercise: session.question.groupText,
+      partLabel: part?.label ?? "",
+      partAsks: part?.asks ?? "",
+      partAnswer: part?.answer.text ?? "",
+      solution: part ? describePart(part).join("\n") : "",
+    });
+    window.getSelection()?.removeAllRanges();
+    setPicked(null);
+    session.ask(t("About “%@”", picked.ask.preview), request.context, request.passage);
+  };
+  return (
+    <button
+      type="button"
+      className="stage-selection-ask"
+      style={{ left: picked.x + 6, top: picked.y + 4 }}
+      title={t("Ask about the selected text")}
+      // Kept from taking the focus, so the selection stays while it is pressed.
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={ask}
+    >
+      <Icon symbol="questionmark.bubble" size={12} />
+      {t("Ask")}
     </button>
   );
 }

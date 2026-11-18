@@ -109,6 +109,37 @@
   filter: invert(1);
 }
 
+/* What can be selected and asked about (SelectableText): the open step's words, the hint, the answers written for the
+   student and the question typeset from its reading. Other steps stay plain, so a click still opens them. */
+.stage-step.selected .stage-step-note,
+.stage-panel > .stage-step .stage-step-note,
+.stage-hint,
+.stage-paragraph,
+.stage-typeset p {
+  user-select: text;
+  cursor: text;
+}
+
+/* The "Ask" pill at the end of a selection on the stage. */
+.stage-selection-ask {
+  position: fixed;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--stage-accent);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  animation: stage-fade 150ms ease-out;
+}
+
 /* The spot a step is about: an arrow that draws itself, and its few words in a chip beside it. */
 .stage-focus-arrow {
   position: absolute;
