@@ -31,5 +31,13 @@
   "Start with Windows": "Abrir com o Windows",
   "Opens LearnLayer in the background when you sign in to Windows.": "Abre o LearnLayer em segundo plano quando inicias sessão no Windows.",
   "A new version of LearnLayer is ready.": "Está pronta uma nova versão do LearnLayer.",
-  "Restart to update": "Reiniciar para atualizar"
+  "Restart to update": "Reiniciar para atualizar",
+  "What would you like to do?": "O que pretende fazer?",
+  "Zeros": "Zeros",
+  "Maxima and minima / monotonicity": "Máximos e mínimos / monotonia",
+  "Derivative": "Derivada",
+  "Integral / area": "Integral / área",
+  "Domain and asymptotes": "Domínio e assíntotas",
+  "Sign chart": "Quadro de sinal",
+  "Solve": "Resolver"
 }

@@ -2,8 +2,8 @@
 // AI/ExplanationPrompt.swift (v14), AI/ExplanationProvider.swift, Explanation/EquationDetector.swift and
 // Explanation/ExplanationSession.swift @ ref 2026-11-04.
 //
-// Not here yet (docs/DECISOES.md): the Portuguese study menu (EquationStudyAction), the plan block the Memory adds
-// to the prompt (phase 7), the equation morph animation, and the 3D premades.
+// The study menu of a clicked function (EquationStudyAction) is in studyAction.ts. Not here yet (docs/DECISOES.md): the
+// equation morph animation.
 
 import { cacheKey, type DiskCache } from "../ai/diskCache";
 import type { ModelClient } from "../ai/modelClient";
@@ -14,6 +14,7 @@ import { Verifier, type Check, type SolvingLine } from "../math/verifier";
 import type { PageText, Rect } from "../pdf/page";
 import { swiftSchema, swiftText, type JSONSchema } from "../prompts/swiftText";
 import { normalizeText as normalize } from "../problems/textNormalizer";
+import { EquationStudyActions, ParsedStandaloneMath, type EquationStudyAction } from "./studyAction";
 
 export type StepKind = "question" | "hint" | "step" | "animation";
 
@@ -206,8 +207,16 @@ export const ExplanationPrompt = {
   },
 
   /** With a plan from the memory, its block replaces "what the student studied recently". */
-  user(equation: string, context: string, history = "", plan: string | null = null): string {
+  user(
+    equation: string,
+    context: string,
+    history = "",
+    plan: string | null = null,
+    study: EquationStudyAction | null = null,
+  ): string {
     let message = swiftText("ExplanationPrompt", "message#0", { equation, context });
+    // A task from the study menu, with the function read from the click.
+    if (study) message += "\n\n" + EquationStudyActions.promptAddendum(study, ParsedStandaloneMath.parse(equation));
     if (plan) message += swiftText("ExplanationPrompt", "plan#0") + plan;
     else if (history !== "") message += swiftText("ExplanationPrompt", "plan#1") + history;
     return message;
@@ -232,31 +241,42 @@ export interface ExplanationServices {
 export class ExplanationProvider {
   constructor(readonly services: ExplanationServices) {}
 
-  private key(equation: string, context: string, model: string): Promise<string> {
+  private key(equation: string, context: string, model: string, study: EquationStudyAction | null): Promise<string> {
     const token = this.services.mock ? "" : (this.services.plan?.(equation)?.token ?? "");
     return cacheKey(
       (this.services.mock ? "mock-" : "") + ExplanationPrompt.version,
       model,
       this.services.language(),
-      "",
+      study ?? "",
       token,
       equation,
       context,
     );
   }
 
-  async cached(equation: string, context: string, model: string): Promise<ExplanationScript | null> {
-    return this.services.cache.cached(await this.key(equation, context, model));
+  async cached(
+    equation: string,
+    context: string,
+    model: string,
+    study: EquationStudyAction | null = null,
+  ): Promise<ExplanationScript | null> {
+    return this.services.cache.cached(await this.key(equation, context, model, study));
   }
 
-  async script(equation: string, context: string, model: string, signal?: AbortSignal): Promise<ExplanationScript> {
-    const key = await this.key(equation, context, model);
+  async script(
+    equation: string,
+    context: string,
+    model: string,
+    signal?: AbortSignal,
+    study: EquationStudyAction | null = null,
+  ): Promise<ExplanationScript> {
+    const key = await this.key(equation, context, model, study);
     return this.services.cache.script(key, async () => {
       if (this.services.mock) return this.services.mock();
       const plan = this.services.plan?.(equation) ?? null;
       const { content } = await this.services.client(model).complete({
         system: ExplanationPrompt.system(this.services.language()),
-        user: ExplanationPrompt.user(equation, context, "", plan?.block ?? null),
+        user: ExplanationPrompt.user(equation, context, "", plan?.block ?? null, study),
         schemaName: "explanation",
         schema: ExplanationPrompt.schema,
         signal,
@@ -487,6 +507,8 @@ export interface ClickedEquation {
 export class ExplanationSession {
   state: ExplanationState;
   intent: ExplanationIntent | null;
+  /** A function-study task chosen from the menu, when any. */
+  studyAction: EquationStudyAction | null = null;
   script: ExplanationScript | null = null;
   model: string = AISettings.defaultModel;
   /** Indices of the script's steps that are showing, in order. */
@@ -533,11 +555,14 @@ export class ExplanationSession {
     const chosen: string = model ?? AISettings.defaultModel;
     const { text, context } = this.equation;
     // Explained before: shown at once. If the default model's maths didn't check out, its stronger retry was saved too.
-    const cached = await this.provider.cached(text, context, chosen);
+    const study = this.studyAction;
+    const cached = await this.provider.cached(text, context, chosen, study);
     if (cached) {
       if (Verifier.passes(cached)) return this.show(cached, chosen, true);
       const retried =
-        chosen !== AISettings.strongModel ? await this.provider.cached(text, context, AISettings.strongModel) : null;
+        chosen !== AISettings.strongModel
+          ? await this.provider.cached(text, context, AISettings.strongModel, study)
+          : null;
       if (retried) return this.show(retried, AISettings.strongModel, Verifier.passes(retried));
     }
     this.state = { kind: "loading" };
@@ -545,11 +570,11 @@ export class ExplanationSession {
     const controller = new AbortController();
     this.controller = controller;
     try {
-      let script = await this.provider.script(text, context, chosen, controller.signal);
+      let script = await this.provider.script(text, context, chosen, controller.signal, study);
       let used = chosen;
       // Wrong maths is worse than slow maths: retry once on the stronger model.
       if (!Verifier.passes(script) && chosen !== AISettings.strongModel) {
-        script = await this.provider.script(text, context, AISettings.strongModel, controller.signal);
+        script = await this.provider.script(text, context, AISettings.strongModel, controller.signal, study);
         used = AISettings.strongModel;
       }
       if (controller.signal.aborted) return;
@@ -597,6 +622,20 @@ export class ExplanationSession {
       this.applyIntent();
       this.changed();
     }
+  }
+
+  /**
+   * The student picked a task from the study menu: it is solved with the task's note to the model. A task that needs a
+   * function, on a click that is not one, is solved as it is.
+   */
+  chooseStudy(action: EquationStudyAction, parsed: ParsedStandaloneMath | null): void {
+    if (this.intent !== null) return;
+    this.studyAction = EquationStudyActions.requiresFunction(action) && parsed === null ? null : action;
+    this.intent = "solve";
+    this.script = null;
+    this.state = { kind: "loading" };
+    this.changed();
+    void this.load();
   }
 
   private applyIntent() {

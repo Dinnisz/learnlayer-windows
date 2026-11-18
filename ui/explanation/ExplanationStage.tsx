@@ -1,6 +1,7 @@
 // The Mac's ExplanationOverlay and QuestionBubble @ ref 2026-11-04: a loose equation clicked in the reader, lifted
 // in white over the dimmed page, with what the student wants to do; then the steps, the marks on the equation, the
-// pieces to click for "Let me try", the worked lines, and the draggable graph. Esc closes it.
+// pieces to click for "Let me try", the worked lines, and the draggable graph. Esc closes it. A click on a function or
+// an equation gets the Mac's study menu (EquationStudyAction) and the figure the app builds for the task.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
@@ -13,6 +14,13 @@ import {
   type ExplanationScript,
 } from "@core/explanation/explanation";
 import { DiskCache } from "@core/ai/diskCache";
+import {
+  EquationStudyActions,
+  ExplanationFigure,
+  ParsedStandaloneMath,
+  type EquationStudyAction,
+} from "@core/explanation/studyAction";
+import { IllustrationView } from "../figures/IllustrationView";
 import { ConceptSlug, Plans, type MemoryStore } from "@core/memory/memory";
 import { memoryStore } from "../memory/memory";
 import { isSignedOut } from "@core/ai/modelClient";
@@ -107,6 +115,10 @@ export function ExplanationStage({
     () => session.version,
   );
   useEffect(() => () => session.cancel(), [session]);
+  // A function or an equation gets the study menu; any other formula the four ways to look at it.
+  const parsed = useMemo(() => ParsedStandaloneMath.parse(match.text), [match]);
+  const studies: EquationStudyAction[] = parsed ? EquationStudyActions.menuOptions(parsed) : [];
+  const options = studies.length;
 
   // Esc closes; 1–4 choose while the menu is up.
   useEffect(() => {
@@ -118,14 +130,18 @@ export function ExplanationStage({
       }
       if (session.intent !== null) return;
       const index = Number(event.key) - 1;
-      if (index >= 0 && index < intents.length) {
+      if (studies.length > 0 && index >= 0 && index < studies.length) {
+        event.preventDefault();
+        session.chooseStudy(studies[index]!, parsed);
+      } else if (studies.length === 0 && index >= 0 && index < intents.length) {
         event.preventDefault();
         session.choose(intents[index]![0]);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [session, close]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, close, parsed, options]);
 
   const holder = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -154,6 +170,22 @@ export function ExplanationStage({
 
   const state = session.state;
   const graph = session.script?.graph ?? null;
+  // The figure for a task of the study menu (or the graph asked for), built by the app (ExplanationFigure).
+  const figure =
+    state.kind === "ready"
+      ? ExplanationFigure.compiled(
+          session.script,
+          session.studyAction,
+          match.text,
+          drawingLanguage(),
+          session.studyAction !== null || session.intent === "graph",
+        )
+      : null;
+  const showsFigure =
+    figure !== null &&
+    (session.studyAction !== null ||
+      session.intent === "graph" ||
+      (session.script?.steps ?? []).some((step) => step.showsGraph === true || step.kind === "animation"));
   return (
     <div
       className="stage explanation-stage"
@@ -215,7 +247,21 @@ export function ExplanationStage({
           </div>
         </div>
 
-        {session.intent === null ? (
+        {session.intent === null && studies.length > 0 ? (
+          <nav className="stage-menu" aria-label={t("What would you like to do?")}>
+            <p className="stage-menu-title">{t("What would you like to do?")}</p>
+            <ol>
+              {studies.map((action, index) => (
+                <li key={action}>
+                  <button type="button" onClick={() => session.chooseStudy(action, parsed)} autoFocus={index === 0}>
+                    <span className="stage-menu-number">{index + 1}</span>
+                    {t(EquationStudyActions.title(action))}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : session.intent === null ? (
           <nav className="stage-menu" aria-label={t("What do you want to do?")}>
             <p className="stage-menu-title">{t("What do you want to do?")}</p>
             <ol>
@@ -273,7 +319,11 @@ export function ExplanationStage({
             {session.isUnverified && (
               <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
             )}
-            {session.showsGraph && graph && <CurveGraph graph={graph} session={session} height={240} />}
+            {showsFigure && figure ? (
+              <IllustrationView scene={figure} language={drawingLanguage()} maxHeight={260} />
+            ) : (
+              session.showsGraph && graph && <CurveGraph graph={graph} session={session} height={240} />
+            )}
             <footer className="explanation-actions">
               {session.canShowHint && (
                 <button type="button" onClick={() => session.showHint()}>
