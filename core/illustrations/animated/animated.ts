@@ -18,6 +18,7 @@ import { electromagnetismFigures } from "./electromagnetism";
 import { fallacyFigures } from "./fallacies";
 import { flowchartFigures } from "./flowchart";
 import { heatingFigures } from "./heating";
+import { kindFigures } from "./kinds";
 import { logicFigures } from "./logic";
 import { loopFigures } from "./loops";
 import { mechanicsFigures } from "./mechanics";
@@ -46,6 +47,7 @@ const compilers = {
   ...analysisFigures,
   ...probabilityFigures,
   ...spaceFigures,
+  ...kindFigures,
   ...electromagnetismFigures,
   ...opticsFigures,
   ...loopFigures,
@@ -261,6 +263,13 @@ export const animatedGallery: PremadeFigure[] = [
   sample("solids", '{"kind": "cylinder", "r": 2, "h": 5}'),
   sample("solids", '{"kind": "cone", "r": 3, "h": 4}'),
   sample("solids", '{"kind": "sphere", "r": 3}'),
+  sample("orbitalDiagram", '{"config": "1s2 2s2 2p4"}'),
+  sample("orbitalDiagram", '{"config": "1s2 2s2 2p6 3s2 3p6 4s2 3d6"}'),
+  sample("ruffini", '{"coefficients": [1, -6, 11, -6], "root": 2}'),
+  sample(
+    "equationSteps",
+    '{"steps": [{"line": "2x + 3 = 11", "highlight": "subtrair 3"}, {"line": "2x = 8", "highlight": "dividir por 2"}, {"line": "x = 4"}]}',
+  ),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 5}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 1}'),
   sample("lensRays", '{"kind": "converging", "focal": 2, "objectDistance": 2}'),
