@@ -50,6 +50,7 @@ import {
 } from "../ai/solver";
 import { Icon } from "../components/Icon";
 import { MathText, MathView, untypesetMath } from "../components/Math";
+import { MorphView } from "../components/MorphView";
 import { useT } from "../i18n";
 import {
   LessonContext,
@@ -673,16 +674,19 @@ function Progress({ session }: { session: QuestionSession }) {
 function HintView({ session }: { session: QuestionSession }) {
   const t = useT();
   const part = session.part;
-  if (session.state.kind === "loading" || !part) return <Progress session={session} />;
   const count = session.stepCount;
   const shown = Math.min(session.revealedSteps, count);
+  // One step on: its formula morphs from the one before. Any other move shows it as it is.
+  const [moved, setMoved] = useState({ shown, forward: false });
+  if (moved.shown !== shown) setMoved({ shown, forward: shown === moved.shown + 1 && shown >= 2 });
+  if (session.state.kind === "loading" || !part) return <Progress session={session} />;
   return (
     <div className="stage-panel">
       <p className="stage-hint">
         <Icon symbol="lightbulb" size={18} className="stage-hint-icon" />
         <MathText text={part.hint} />
       </p>
-      {shown > 0 && <StepCard part={part} index={shown - 1} session={session} />}
+      {shown > 0 && <StepCard part={part} index={shown - 1} session={session} advanced={moved.forward} />}
       {session.showsAnswer && <AnswerBox part={part} />}
       <div className="stage-stepper">
         <span className="stage-dots" aria-hidden="true">
@@ -928,11 +932,14 @@ function StepCard({
   index,
   session,
   interactive = false,
+  advanced = false,
 }: {
   part: Part;
   index: number;
   session: QuestionSession;
   interactive?: boolean;
+  /** The student has just moved one step on to this one: its formula grows out of the last. */
+  advanced?: boolean;
 }) {
   const card: Card | null = part.cards && part.cards.length > 0 ? (part.cards[index] ?? null) : null;
   const selected = session.selectedStep === index;
@@ -961,7 +968,9 @@ function StepCard({
             <h4>
               <MathText text={card.title} />
             </h4>
-            {card.latex.trim() !== "" && <MathView latex={card.latex} display className="stage-step-latex" />}
+            {card.latex.trim() !== "" && (
+              <StepFormula part={part} index={index} latex={card.latex} advanced={advanced} />
+            )}
             {card.branches && card.branches.length > 0 && (
               <div className="stage-branches">
                 {card.branches.map((branch, position) => (
@@ -986,6 +995,53 @@ function StepCard({
       </div>
     </article>
   );
+}
+
+/** One step on, the step's formula morphs from the one before (`SolutionSteps.morphSeconds`). */
+const stepMorphSeconds = 1.2;
+
+/**
+ * A step's formula. The lesson moved here from another line: that line becomes this one, paced to its voice. Just
+ * moved on to, one step at a time: it grows out of the step before's. Otherwise it is drawn as it is.
+ */
+function StepFormula({
+  part,
+  index,
+  latex,
+  advanced,
+}: {
+  part: Part;
+  index: number;
+  latex: string;
+  advanced: boolean;
+}) {
+  const morph = useLessonState()?.morph ?? null;
+  const cards = part.cards ?? [];
+  if (morph && morph.to === index && morph.from < cards.length)
+    return (
+      <MorphView
+        key={`lesson-${morph.beat}-${morph.started}`}
+        from={cards[morph.from]!.latex}
+        to={latex}
+        started={morph.started}
+        duration={morph.duration}
+        pacing={morph.pacing}
+        frozen={morph.frozen}
+        className="stage-step-latex"
+      />
+    );
+  const previous = index >= 1 ? (cards[index - 1]?.latex ?? "") : "";
+  if (advanced && previous.trim() !== "")
+    return (
+      <MorphView
+        key={`step-${index}`}
+        from={previous}
+        to={latex}
+        duration={stepMorphSeconds}
+        className="stage-step-latex"
+      />
+    );
+  return <MathView latex={latex} display className="stage-step-latex" />;
 }
 
 function EvidenceView({ evidence }: { evidence: NonNullable<QuestionSession["evidenceAnswer"]> }) {

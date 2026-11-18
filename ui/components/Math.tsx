@@ -33,6 +33,24 @@ export function typeset(latex: string, display = false): string | null {
   }
 }
 
+/**
+ * HTML for `latex` set in display style but inline, so a piece of a line typesets at the size the whole line has and
+ * sits on a baseline (the equation morph measures pieces this way); null when KaTeX can't read it.
+ */
+export function typesetInlineDisplay(latex: string): string | null {
+  try {
+    return katex.renderToString("\\displaystyle " + normalized(latex), {
+      displayMode: false,
+      throwOnError: true,
+      macros: { ...macros },
+      strict: "ignore",
+      output: "html",
+    });
+  } catch {
+    return null;
+  }
+}
+
 /** The first piece of maths in a question's reading that KaTeX can't draw; null when everything typesets. A reading
  * with such a piece is never shown: it would come out as stripped LaTeX (`RenderedQuestion.untypesetMath`). */
 export function untypesetMath(blocks: readonly { type: string; text: string | null }[]): string | null {

@@ -5,6 +5,7 @@
 
 import type { LessonBeat, LessonShow, LessonSummary } from "@core/lesson/mascotLesson";
 import type { LessonFeed } from "@core/lesson/mascotLessonProvider";
+import { LessonMorphs, morphSeconds, MorphPacer, type LessonMorph } from "@core/lesson/morphPacer";
 
 export interface LessonState {
   /** The beat being said, from 0; -1 before the first. */
@@ -18,6 +19,8 @@ export interface LessonState {
   closing: LessonSummary | null;
   /** A «Watch out» tag on a step. */
   pitfall: { step: number; mistake: string; why: string } | null;
+  /** The written solution's formula moving from the line the lesson was on to the one this beat moves to. */
+  morph: LessonMorph | null;
   speaking: boolean;
   level: number;
   playing: boolean;
@@ -33,6 +36,7 @@ const idle: LessonState = {
   check: null,
   closing: null,
   pitfall: null,
+  morph: null,
   speaking: false,
   level: 0,
   playing: false,
@@ -47,6 +51,11 @@ export class LessonPlayer {
   private readonly controller = new AbortController();
   private readonly listeners = new Set<() => void>();
   private answerCheck: ((index: number | null) => void) | null = null;
+  /**
+   * Rows of a block worked out from line `from` to line `to` (1 for a single line). Set by the stage, which has the
+   * lines; the rows are paced across the beat's voice.
+   */
+  morphStages: (from: number, to: number) => number = () => 1;
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -97,7 +106,7 @@ export class LessonPlayer {
       index += 1;
     }
     if (!this.stopped && feed.summary) {
-      this.set({ shows: [], calc: null, step: null, pitfall: null, closing: feed.summary });
+      this.set({ shows: [], calc: null, step: null, pitfall: null, morph: null, closing: feed.summary });
       await this.say(feed.summary.say, narrate);
       await this.pause(1_200);
     }
@@ -107,9 +116,30 @@ export class LessonPlayer {
   private async playBeat(beat: LessonBeat, index: number, narrate: Narrate): Promise<void> {
     const steps = beat.show.map((show) => show.step).filter((step): step is number => step != null && step > 0);
     const pitfallShow = beat.show.find((show) => show.op === "pitfall" && show.step && show.mistake && show.why);
+    // A beat that names no line stays on the line before it; one that moves to another line morphs that line into it.
+    const previous = this.state.step;
+    const step = steps.length > 0 ? steps[0]! - 1 : previous;
+    let morph: LessonMorph | null = null;
+    if (previous !== null && step !== null && step !== previous) {
+      const pacer = new MorphPacer(
+        this.morphStages(previous, step),
+        morphSeconds(beat.say),
+        MorphPacer.speakingSeconds(beat.say),
+      );
+      morph = {
+        from: previous,
+        to: step,
+        beat: index,
+        started: Date.now(),
+        duration: pacer.stageLength,
+        pacing: pacer.pacing(0),
+        frozen: null,
+      };
+    }
     this.set({
       beat: index,
-      step: steps.length > 0 ? steps[0]! - 1 : this.state.step,
+      step,
+      morph,
       shows: beat.show.filter((show) => show.op !== "pitfall"),
       calc: beat.calc?.line ?? null,
       check: null,
@@ -118,6 +148,7 @@ export class LessonPlayer {
         : this.state.pitfall,
     });
     await this.say(beat.say, narrate);
+    await this.settleMorph(index);
     const check = beat.check;
     if (!check || this.stopped) return;
     this.set({ check: { ask: check.ask, options: check.options } });
@@ -133,6 +164,14 @@ export class LessonPlayer {
     this.set({ check: null });
     if (tapped === null || this.stopped) return;
     await this.say(tapped === check.correct ? check.right : check.wrong, narrate);
+  }
+
+  /** Returns once beat `index`'s formula move has played, waiting at most `MorphPacer.maximumOverrun`. */
+  private async settleMorph(index: number): Promise<void> {
+    const morph = this.state.morph;
+    if (this.stopped || !morph || morph.beat !== index || morph.frozen !== null) return;
+    const left = morph.started / 1000 + LessonMorphs.total(morph) - Date.now() / 1000;
+    if (left > 0) await this.pause(Math.min(left, MorphPacer.maximumOverrun) * 1000);
   }
 
   private pause(ms: number): Promise<void> {

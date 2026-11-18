@@ -3,6 +3,7 @@
 // marks the question while it is said. With no lesson (no session, offline) the steps on screen are said one by one.
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { EquationMorph } from "@core/explanation/equationMorph";
 import { MascotLessons, type LessonShow } from "@core/lesson/mascotLesson";
 import { LessonFeed, type LessonRequest } from "@core/lesson/mascotLessonProvider";
 import { lessonFromWork } from "@core/lesson/readSteps";
@@ -97,6 +98,8 @@ export function useLessonControl(session: QuestionSession | null) {
     if (!session?.part) return;
     stop();
     const next = new LessonPlayer();
+    const cards = session.part.cards ?? [];
+    next.morphStages = (from, to) => EquationMorph.stages(cards[from]?.latex ?? "", cards[to]?.latex ?? "");
     current.current = next;
     setPlayer(next);
     const request = lessonRequest(session);

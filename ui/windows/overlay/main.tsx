@@ -5,7 +5,18 @@ import "./overlay.css";
 import { mount } from "../../mount";
 import { OverlayWindow } from "./OverlayWindow";
 import { AnimatedDemo, CircuitDemo } from "./CircuitDemo";
+import { MorphDemo } from "./MorphDemo";
 
 // `?demo=circuit`: the circuit schematics alone, for working on them in a browser.
 const demo = new URLSearchParams(window.location.search).get("demo");
-void mount(demo === "circuit" ? <CircuitDemo /> : demo === "animated" ? <AnimatedDemo /> : <OverlayWindow />);
+void mount(
+  demo === "circuit" ? (
+    <CircuitDemo />
+  ) : demo === "animated" ? (
+    <AnimatedDemo />
+  ) : demo === "morph" ? (
+    <MorphDemo />
+  ) : (
+    <OverlayWindow />
+  ),
+);

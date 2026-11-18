@@ -1,0 +1,57 @@
+/* The equation morph (MorphView.tsx): pieces of a formula placed one by one in the new line's frame. */
+
+.morph-host {
+  display: block;
+  /* A piece lifted away or dropping in may go a little past the line: it must not be cut or scrolled. */
+  overflow: visible !important;
+}
+
+/* Where the typeset line is drawn: KaTeX centres a displayed formula. */
+.morph-frame {
+  position: relative;
+  display: block;
+  margin: 4px auto;
+}
+
+.morph-piece {
+  position: absolute;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.morph-measure {
+  visibility: hidden;
+  left: 0;
+  top: 0;
+}
+
+.morph-baseline {
+  display: inline-block;
+  width: 0;
+  height: 0;
+}
+
+.morph-strikes {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* The old line and the new one in the same place, one fading out before the other comes in. */
+.morph-cross {
+  display: grid;
+}
+
+.morph-cross > span {
+  grid-area: 1 / 1;
+}
+
+.morph-cross .katex-display {
+  margin: 0;
+}
