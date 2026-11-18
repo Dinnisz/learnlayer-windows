@@ -83,7 +83,10 @@ async function reply(session: QuestionSession, transcript: string, signal: Abort
   const sources = [session.statementText, work ?? "", transcript].join("\n");
   const issues = VoiceTutorGuard.issues(answer.spoken, sources);
   if (issues.length > 0) console.info(`voice reply issues: ${issues.join("; ")}`);
-  return VoiceTutorGuard.droppingUnusedPlots(answer, sources);
+  // Then, as the Mac's `completed`: unlit marks out, the formula that holds the symbol, and "fórmula" underlining it.
+  const kept = VoiceTutorReplies.droppingUnlitMarks(VoiceTutorGuard.droppingUnusedPlots(answer, sources));
+  const context = VoiceFormula.holdingTheSymbol(kept, session.statementText, "");
+  return VoiceFormula.namingTheFormula(kept, `${transcript}\n${session.statementText}`, context);
 }
 
 /** Owns the voice of one stage: listening while the key is held, then the answer with its marks. */

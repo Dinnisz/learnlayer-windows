@@ -28,7 +28,21 @@ function findSymbol(root: HTMLElement, symbol: string): HTMLElement | null {
   const zeroWidth = String.fromCharCode(0x200b);
   const text = (element: Element) => (element.textContent ?? "").split(zeroWidth).join("").replace(/\s/g, "");
   const matches = [...html.querySelectorAll<HTMLElement>("span")].filter((element) => text(element) === symbol);
-  return matches.find((element) => !matches.some((other) => other !== element && element.contains(other))) ?? null;
+  const found = matches.find((element) => !matches.some((other) => other !== element && element.contains(other)));
+  if (found || Array.from(symbol).length !== 1) return found ?? null;
+  // KaTeX writes letters side by side in one element ("ma" for m·a): the letter is given an element of its own.
+  const walker = document.createTreeWalker(html, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const at = (node.textContent ?? "").indexOf(symbol);
+    if (at < 0 || !node.parentElement?.className.includes("mathnormal")) continue;
+    const letter = (node as Text).splitText(at);
+    letter.splitText(symbol.length);
+    const wrap = document.createElement("span");
+    letter.replaceWith(wrap);
+    wrap.appendChild(letter);
+    return wrap;
+  }
+  return null;
 }
 
 interface Ring {
@@ -38,9 +52,19 @@ interface Ring {
   height: number;
 }
 
-export function VoiceFormulaView({ latex, symbols }: { latex: string; symbols: readonly string[] }) {
+export function VoiceFormulaView({
+  latex,
+  symbols,
+  underlined = false,
+}: {
+  latex: string;
+  symbols: readonly string[];
+  /** The whole formula is being said: a line under it. */
+  underlined?: boolean;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const [rings, setRings] = useState<Ring[]>([]);
+  const [underline, setUnderline] = useState<Ring | null>(null);
   const key = symbols.join("\u0001");
 
   useLayoutEffect(() => {
@@ -65,11 +89,27 @@ export function VoiceFormulaView({ latex, symbols }: { latex: string; symbols: r
       });
     }
     setRings(found);
-  }, [latex, key]);
+    const bases = [...root.querySelectorAll(".katex-html > .katex-base, .katex-html > .base")].map((base) =>
+      base.getBoundingClientRect(),
+    );
+    if (underlined && bases.length > 0) {
+      const left = Math.min(...bases.map((rect) => rect.left));
+      const right = Math.max(...bases.map((rect) => rect.right));
+      const bottom = Math.max(...bases.map((rect) => rect.bottom));
+      setUnderline({ left: left - origin.left, top: bottom - origin.top + 2, width: right - left, height: 0 });
+    } else setUnderline(null);
+  }, [latex, key, underlined]);
 
   return (
     <div className="voice-formula" ref={box}>
       <MathView latex={latex} display />
+      {underline ? (
+        <span
+          className="voice-underline"
+          aria-hidden="true"
+          style={{ left: underline.left, top: underline.top, width: underline.width }}
+        />
+      ) : null}
       {rings.map((ring, index) => (
         <span key={index} className="voice-ring" aria-hidden="true" style={ring} />
       ))}

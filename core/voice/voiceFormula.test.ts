@@ -23,6 +23,49 @@ describe("the formula a spoken answer is drawn on", () => {
     expect(VoiceFormula.inlineEquation("explica isto")).toBeNull();
   });
 
+  it("a question about a formula underlines it when the answer names it", () => {
+    const asked = "explica a fórmula F = ma";
+    const raw =
+      "A fórmula diz que a força resultante sobre um corpo é igual à massa vezes a aceleração. [[1]]F é a força total, [[2]]m é a massa e [[3]]a é a aceleração. Com a mesma força, quanto maior a massa, menor a aceleração. Na tua página, o [[4]]a aparece na equação da posição, e é esta força que o produz. Queres que ligue as duas ideias com um exemplo?";
+    const reply = VoiceFormula.namingTheFormula(
+      VoiceTutorReplies.decode(
+        JSON.stringify({
+          spoken: raw,
+          drawing: [
+            { op: "formula", term: null, latex: "F = ma", segment: 0, anchor: "A fórmula diz", point: null },
+            { op: "circle", term: "F", segment: null, anchor: null, point: null },
+            { op: "circle", term: "m", segment: null, anchor: null, point: null },
+            { op: "circle", term: "a", segment: null, anchor: null, point: null },
+          ],
+        }),
+      ),
+      asked,
+    );
+    const opening = VoiceFormula.formulaWord(reply.spoken)!;
+    expect(reply.spoken.slice(opening, opening + 7)).toBe("fórmula");
+    expect(reply.drawing).toHaveLength(4);
+    expect(reply.drawing[0]!.mentionsUTF16).toEqual([opening]);
+    expect(VoiceFormula.namingTheFormula(reply, asked)).toEqual(reply);
+
+    const circlesOnly = VoiceTutorReplies.decode(
+      '{"spoken":"Esta fórmula liga a força à massa: o [[0]]F e o [[1]]m.","drawing":[' +
+        '{"op":"circle","term":"F","segment":null,"anchor":null,"point":null},' +
+        '{"op":"circle","term":"m","segment":null,"anchor":null,"point":null}]}',
+    );
+    const named = VoiceFormula.namingTheFormula(circlesOnly, asked);
+    expect(named.drawing).toHaveLength(3);
+    expect(named.drawing[2]!.kind).toEqual({ op: "formula", latex: "F = ma" });
+    expect(named.drawing[2]!.mentionsUTF16).toEqual([VoiceFormula.formulaWord(named.spoken)]);
+    expect(VoiceFormula.namingTheFormula(circlesOnly, "o que é a força?")).toEqual(circlesOnly);
+
+    const marked = VoiceTutorReplies.decode(
+      '{"spoken":"A [[0]]fórmula diz que a força é a massa vezes o [[1]]a.","drawing":[' +
+        '{"op":"formula","term":null,"latex":"F = ma","segment":0,"anchor":null,"point":null},' +
+        '{"op":"circle","term":"a","segment":null,"anchor":null,"point":null}]}',
+    );
+    expect(VoiceFormula.namingTheFormula(marked, asked)).toEqual(marked);
+  });
+
   it("explaining a symbol draws the formula that holds it", () => {
     const reply = VoiceTutorReplies.decode(
       '{"spoken":"Na tua página, o [[0]]a é a aceleração do carro. Diz-nos com que rapidez a velocidade muda em cada segundo. Quando o [[0]]a é positivo, o carro acelera e a curva sobe. Quando é negativo, o carro trava. Queres que vejamos o que acontece ao termo com [[1]]a na fórmula?","drawing":[' +

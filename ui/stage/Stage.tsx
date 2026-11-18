@@ -66,6 +66,7 @@ import { LessonGeometry } from "@core/lesson/lessonGeometry";
 import type { LessonPitfall, LessonShow } from "@core/lesson/mascotLesson";
 import { useVoiceTutor, useVoiceState, VoiceContext, type VoiceState } from "../voice/VoiceUI";
 import { VoiceFormulaView } from "../voice/VoiceFormulaView";
+import { VoiceFormula } from "@core/voice/voiceFormula";
 import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
@@ -1613,6 +1614,13 @@ function VoiceCaption({ state }: { state: VoiceState }) {
     const [expression, variable, xMin, xMax] = JSON.parse(plotKey) as [string, string, number, number];
     return FunctionPlot.make(expression, variable, xMin, xMax);
   }, [plotKey]);
+  // A formula mark, or one on a whole equation, underlines the formula; a symbol is ringed.
+  const underlined = state.lit.some(
+    (command) =>
+      command.kind.op === "formula" ||
+      ((command.kind.op === "highlight" || command.kind.op === "circle") &&
+        VoiceFormula.equationLine(command.kind.term) !== null),
+  );
   const symbols = state.lit.flatMap((command) =>
     command.kind.op === "circle" || command.kind.op === "highlight" ? [command.kind.term] : [],
   );
@@ -1629,7 +1637,7 @@ function VoiceCaption({ state }: { state: VoiceState }) {
     <div className="voice-caption" role="status" aria-live="polite">
       {phase ? <span className="voice-phase">{phase}</span> : null}
       {state.heard && state.phase !== "listening" ? <span className="voice-heard">«{state.heard}»</span> : null}
-      {formula ? <VoiceFormulaView latex={formula} symbols={symbols} /> : null}
+      {formula ? <VoiceFormulaView latex={formula} symbols={symbols} underlined={underlined} /> : null}
       {plot ? <CurveGraph graph={plot} session={stillGraph} height={200} /> : null}
       {state.shown ? <p className="voice-shown">{state.shown}</p> : null}
       {state.notice ? <span className="voice-notice">{t(state.notice)}</span> : null}

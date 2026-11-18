@@ -61,6 +61,17 @@ const saidGreek: Record<string, string> = {
   ipsilon: "upsilon",
 };
 const mathWords = new Set(["sin", "cos", "tan", "exp", "log", "sqrt", "abs"]);
+const formulaWords = new Set([
+  "formula",
+  "formulas",
+  "formulae",
+  "equacao",
+  "equacoes",
+  "equation",
+  "equations",
+  "ecuacion",
+  "ecuaciones",
+]);
 const subscripts: Record<string, string> = Object.fromEntries(
   Array.from("₀₁₂₃₄₅₆₇₈₉").map((ch, index) => [ch, String(index)]),
 );
@@ -319,6 +330,58 @@ export const VoiceFormula = {
       for (const name of names) if (name && !symbols.includes(name)) symbols.push(name);
     }
     return symbols;
+  },
+
+  /** Where a word for "formula" first starts (UTF-16), in any of the tutor's languages. */
+  formulaWord(text: string): number | null {
+    for (const match of text.matchAll(/\p{L}+/gu)) {
+      const word = match[0].normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+      if (formulaWords.has(word)) return match.index;
+    }
+    return null;
+  },
+
+  /**
+   * When the student asked about a formula, the first time the answer says "fórmula" ("formula", "equação",
+   * "equation") underlines that formula, even if the model put no marker there (`VoiceTutorReply.namingTheFormula`).
+   * A formula mark without a marker is moved to that word; otherwise one is added. Unchanged when a lit mark already
+   * underlines the formula: a formula mark, or one on a whole equation (the Mac reads this from the strokes it lays).
+   */
+  namingTheFormula(reply: VoiceTutorReply, asked: string, context: string | null = null): VoiceTutorReply {
+    const inline = VoiceFormula.inlineEquation(asked);
+    const latex = VoiceFormula.presentedFormula(reply.drawing, asked, reply.spoken, context) ?? inline;
+    const at = VoiceFormula.formulaWord(reply.spoken);
+    if (!latex || (VoiceFormula.formulaWord(asked) === null && inline === null) || at === null) return reply;
+    const underlined = reply.drawing.some(
+      (command) =>
+        command.mentionUTF16 !== null &&
+        (command.kind.op === "formula" ||
+          ((command.kind.op === "highlight" || command.kind.op === "circle") &&
+            VoiceFormula.equationLine(command.kind.term) !== null)),
+    );
+    if (underlined) return reply;
+    const drawing = [...reply.drawing];
+    let index = drawing.findIndex((command) => command.kind.op === "formula" && command.mentionUTF16 === null);
+    if (index < 0) {
+      drawing.push({
+        kind: { op: "formula", latex },
+        segment: null,
+        anchor: null,
+        point: null,
+        label: null,
+        mentionUTF16: null,
+        mentioned: null,
+        mentionsUTF16: [],
+      });
+      index = drawing.length - 1;
+    }
+    drawing[index] = {
+      ...drawing[index]!,
+      mentionUTF16: at,
+      mentioned: SpeechWords.word(at, reply.spoken),
+      mentionsUTF16: [at],
+    };
+    return { ...reply, drawing };
   },
 
   /**
