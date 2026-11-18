@@ -20,6 +20,8 @@ import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { SelectionAsk } from "@core/problems/selectionAsk";
+import { MascotGuide } from "@core/voice/mascotGuide";
+import { GuideSpots } from "../lesson/guideSpot";
 import { LessonEvidence } from "@core/lesson/lessonEvidence";
 import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
@@ -512,9 +514,26 @@ function CropPiece({
     if (!target) return null;
     const zoom = spot ? StepFocusGeometry.zoom(spot, crop) : QuoteLoupeScale;
     const box = StepFocusGeometry.lens(target, zoom, { x: 0, y: 0, width, height });
-    return { box, zoom, anchor: StepFocusGeometry.zoomAnchor(target, box, zoom) };
+    return { box, zoom, anchor: StepFocusGeometry.zoomAnchor(target, box, zoom), target };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, version, marks, region, scale, role, hasStatement]);
+  // The mascot waits beside the datum, level with it, past the crop's edge (MascotGuide.spot); not with Reduce Motion,
+  // where the lens is not shown either.
+  const cropElement = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = cropElement.current;
+    if (!lens || !element) return;
+    const crop = element.getBoundingClientRect();
+    const datum = {
+      x: crop.left + lens.target.x,
+      y: crop.top + lens.target.y,
+      width: lens.target.width,
+      height: lens.target.height,
+    };
+    const text = { x: crop.left, y: crop.top, width: crop.width, height: crop.height };
+    GuideSpots.set(MascotGuide.spot(datum, text, { width: window.innerWidth, height: window.innerHeight }, mascotSize));
+    return () => GuideSpots.set(null);
+  }, [lens]);
   const toCrop = (rect: Rect) => ({
     left: (rect.x - region.x) * scale,
     top: (region.y + region.height - (rect.y + rect.height)) * scale,
@@ -522,7 +541,11 @@ function CropPiece({
     height: rect.height * scale,
   });
   return (
-    <div className="stage-crop" style={{ width: region.width * scale, height: region.height * scale }}>
+    <div
+      className="stage-crop"
+      ref={cropElement}
+      style={{ width: region.width * scale, height: region.height * scale }}
+    >
       <canvas
         ref={canvas}
         style={{ width: region.width * scale, height: region.height * scale }}
@@ -610,6 +633,9 @@ function CropPiece({
 }
 
 /** Where the open step's data stands in the crop (its printed lines), and the right option of a multiple choice. */
+/** The mascot's side, as the lesson draws it (`AnimatedMascot`'s size). */
+const mascotSize = 56;
+
 /** How far a quoted datum is magnified in the lens (`QuoteLoupe.scale`). */
 const QuoteLoupeScale = 1.7;
 

@@ -22,6 +22,7 @@ import { useT } from "../i18n";
 import { speak, tutorLanguage, voiceEnabled } from "../voice/speaker";
 import { questionPlan } from "../voice/VoiceUI";
 import { idleLessonState, LessonPlayer, type LessonState, type Narrate } from "./lessonPlayer";
+import { GuideSpots } from "./guideSpot";
 
 export interface LessonContextValue {
   state: LessonState | null;
@@ -234,11 +235,14 @@ export function LessonOverlay({
   onTap(): void;
 }) {
   const t = useT();
+  // While it walks the steps, the sphere waits beside the step's datum (MascotGuide.spot).
+  const spot = useSyncExternalStore(GuideSpots.subscribe, GuideSpots.get);
   return (
     <aside className="lesson-overlay" aria-live="polite">
       <button
         type="button"
-        className={`lesson-mascot${state?.speaking ? " speaking" : ""}`}
+        className={`lesson-mascot${state?.speaking ? " speaking" : ""}${spot ? " beside" : ""}`}
+        style={spot ? { left: spot.x - 28, top: spot.y - 28 } : undefined}
         onClick={onTap}
         aria-label={state?.playing ? t("Stop Explaining") : t("Explain It to Me")}
         title={state?.playing ? t("Stop Explaining") : t("Explain It to Me")}
