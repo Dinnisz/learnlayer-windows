@@ -485,17 +485,30 @@ function CropPiece({
   }, [document, pageIndex, region, scale, ready]);
   const version = session?.version;
   const lessonShows = useLessonShows();
-  const voiceLit = useVoiceState().lit;
+  const voice = useVoiceState();
+  const voiceLit = voice.lit;
+  // The formula the caption writes (not one already on screen): a mark on one of its symbols is drawn there, and only a
+  // mark that names something else goes on the page (the Mac's FigureLabels.goesOnThePage).
+  const written = session
+    ? VoiceFormula.formulas(
+        voiceLit,
+        voice.formula,
+        new Set(voiceLit.map((_, index) => index)),
+        session.onScreenText,
+      ).join(String.raw` \qquad `)
+    : "";
+  const spoken = voice.spoken ?? "";
   const shows = useMemo(
     () => [
       ...lessonShows,
       ...voiceLit.flatMap((command): LessonShow[] =>
-        command.kind.op === "highlight" || command.kind.op === "circle"
+        (command.kind.op === "highlight" || command.kind.op === "circle") &&
+        (written === "" || SpeechMarkLayout.namesSomethingElse(command, written, spoken))
           ? [{ op: command.kind.op === "circle" ? "circle" : "underline", quote: command.kind.term, on: "voice" }]
           : [],
       ),
     ],
-    [lessonShows, voiceLit],
+    [lessonShows, voiceLit, written, spoken],
   );
   const marks = useMemo(
     () =>
