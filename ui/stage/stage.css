@@ -1198,3 +1198,22 @@
   gap: 4px 16px;
   justify-content: start;
 }
+
+/* AnswerBodyView: an answer on lines of its own. A part answered in words in the body font, the rest in the maths
+   italic, eight points apart. */
+.stage-answer-value > * + * {
+  margin-top: 8px;
+}
+
+.stage-answer-line {
+  font-family: "KaTeX_Main", "Cambria Math", serif;
+  font-style: italic;
+  font-size: 22px;
+}
+
+.stage-answer-line.prose {
+  font-family: inherit;
+  font-style: normal;
+  font-size: 17px;
+  font-weight: 500;
+}

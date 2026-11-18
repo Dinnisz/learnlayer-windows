@@ -26,6 +26,7 @@ import { ExamNotation } from "@core/math/examNotation";
 import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
 import { GuideSpots } from "../lesson/guideSpot";
+import { AnswerLines, AnswerTextLayout } from "@core/problems/answerTextLayout";
 import { LessonEvidence } from "@core/lesson/lessonEvidence";
 import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
@@ -1333,6 +1334,13 @@ function AnswerBox({ part, language }: { part: Part; language: string }) {
   const t = useT();
   // While a lesson plays, the answer waits for the lesson to work it out (`QuestionSession.showsFinalAnswer`).
   const hidden = useLessonState()?.hidesAnswer === true;
+  // A long answer on lines of its own (AnswerBodyView): clauses first, then each written out in words or typeset. Code
+  // in a written answer keeps its lines; it is never split at `;`.
+  const pieces = useMemo(() => {
+    const latex = part.answerLatex;
+    if (latex) return AnswerLines.clauses(latex).flatMap((clause) => AnswerTextLayout.pieces(clause));
+    return CodeText.containsCode(part.answer.text) ? null : AnswerTextLayout.pieces(part.answer.text);
+  }, [part.answerLatex, part.answer.text]);
   return (
     <section
       className={`stage-answer${hidden ? " waiting" : ""}`}
@@ -1341,8 +1349,19 @@ function AnswerBox({ part, language }: { part: Part; language: string }) {
     >
       <span className="stage-answer-label">{t("Answer")}</span>
       <div className="stage-answer-value">
-        {part.answerLatex ? (
-          <MathView latex={ExamNotation.trigInLatex(part.answerLatex, language)} display />
+        {pieces ? (
+          pieces.map((piece, index) =>
+            piece.kind === "latex" ? (
+              <MathView key={index} latex={ExamNotation.trigInLatex(piece.line, language)} display />
+            ) : (
+              <div
+                key={index}
+                className={`stage-answer-line${AnswerTextLayout.isProseLine(piece.line) ? " prose" : ""}`}
+              >
+                <MathText text={piece.line} />
+              </div>
+            ),
+          )
         ) : (
           <MathText text={part.answer.text} />
         )}
