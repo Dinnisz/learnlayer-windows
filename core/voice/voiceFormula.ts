@@ -176,13 +176,86 @@ function mathLatex(text: string): string {
   return out.replace(/\s+/g, " ").trim();
 }
 
+/** Operators and numbers as they are said, and the atoms that write them (`FormulaTerms.spokenSymbols`). */
+const spokenSymbols: Record<string, string[]> = {
+  seno: ["sin"],
+  sen: ["sin"],
+  sine: ["sin"],
+  cosseno: ["cos"],
+  coseno: ["cos"],
+  cosine: ["cos"],
+  tangente: ["tan"],
+  tangent: ["tan"],
+  logaritmo: ["log", "ln"],
+  logarithm: ["log", "ln"],
+  integral: ["int", "oint"],
+  somatorio: ["sum"],
+  sumatorio: ["sum"],
+  summation: ["sum"],
+  soma: ["sum"],
+  limite: ["lim"],
+  limit: ["lim"],
+  infinito: ["infty"],
+  infinity: ["infty"],
+  vezes: ["cdot", "times"],
+  times: ["times", "cdot"],
+  produto: ["cdot", "times"],
+  parcial: ["partial"],
+  gradiente: ["nabla"],
+  nabla: ["nabla"],
+  zero: ["0"],
+  dois: ["2"],
+  duas: ["2"],
+  two: ["2"],
+  dos: ["2"],
+  tres: ["3"],
+  three: ["3"],
+  quatro: ["4"],
+  four: ["4"],
+  cuatro: ["4"],
+  cinco: ["5"],
+  five: ["5"],
+  seis: ["6"],
+  six: ["6"],
+  sete: ["7"],
+  seven: ["7"],
+  siete: ["7"],
+  oito: ["8"],
+  eight: ["8"],
+  ocho: ["8"],
+  nove: ["9"],
+  nine: ["9"],
+  nueve: ["9"],
+  dez: ["10"],
+  ten: ["10"],
+  diez: ["10"],
+};
+
+/** The atoms a word says ("seno" → sin, "dois" → 2), cleaned and folded as the Mac does; null for any other word. */
+export function spokenAtoms(term: string): string[] | null {
+  const word = term
+    .replace(/[$\\{} ]/g, "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+  return spokenSymbols[word] ?? null;
+}
+
 /**
- * Whether `latex` holds the symbol `term`: `a`, `v0`, `v_0` and `v₀`, `ω` and `\omega` and "ómega". A bare letter is
- * not the same letter inside a command (`\alpha`) or with a subscript (`v_0`).
+ * Whether `latex` holds the symbol `term`: `a`, `v0`, `v_0` and `v₀`, `ω` and `\omega` and "ómega", and an operator or
+ * a number by the name it is said with ("seno" holds in `\sin x`, "dois" in `x^2`). A bare letter is not the same
+ * letter inside a command (`\alpha`) or with a subscript (`v_0`).
  */
 export function holdsSymbol(term: string, latex: string): boolean {
   const symbol = term.trim();
   if (symbol === "") return false;
+  const said = spokenAtoms(symbol);
+  if (said)
+    return said.some((atom) =>
+      /^\d+$/.test(atom)
+        ? new RegExp(`(?<!\\d)${atom}(?!\\d)`).test(latex)
+        : new RegExp(`\\\\${atom}(?![A-Za-z])`).test(latex) || (atom === "sin" && /\\sen(?![A-Za-z])/.test(latex)),
+    );
   const chars = Array.from(symbol);
   const folded = symbol.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
   const plain = folded.startsWith("var") ? folded.slice(3) : folded;

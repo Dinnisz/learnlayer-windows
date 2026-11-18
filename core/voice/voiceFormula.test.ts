@@ -3,7 +3,7 @@
 // from the reply, the question, or none for prose) @ ref 2026-11-04. The marks' layout on the formula is the drawing's.
 
 import { describe, expect, it } from "vitest";
-import { holdsSymbol, VoiceFormula } from "./voiceFormula";
+import { holdsSymbol, spokenAtoms, VoiceFormula } from "./voiceFormula";
 import { VoiceTutorReplies } from "./voiceTutorReply";
 
 const R = String.raw;
@@ -140,5 +140,18 @@ describe("the formula a spoken answer is drawn on", () => {
     expect(holdsSymbol("\\omega", R`\omega = 2 \pi /T`)).toBe(true);
     expect(holdsSymbol("T", R`\omega = 2 \pi /T`)).toBe(true);
     expect(holdsSymbol("t", R`\omega = 2 \pi /T`)).toBe(false);
+  });
+});
+
+// operatorsAndNumbersAreFoundByTheNameTheyAreSaidWith (LearnLayerTests/HighlightMappingTests.swift @ ref 2026-11-04).
+describe("a symbol said by its name", () => {
+  it("operators and numbers are found by the name they are said with", () => {
+    expect(spokenAtoms("integral")).toEqual(["int", "oint"]);
+    expect(holdsSymbol("integral", String.raw`\int_0^T v\,dt`)).toBe(true);
+    expect(holdsSymbol("seno", String.raw`y = \sin x`)).toBe(true);
+    expect(holdsSymbol("seno", String.raw`y = \sen x`)).toBe(true);
+    expect(holdsSymbol("dois", "x^2 + 2x")).toBe(true);
+    expect(holdsSymbol("integral", "F = m a")).toBe(false);
+    expect(holdsSymbol("dois", "x^{12}")).toBe(false);
   });
 });

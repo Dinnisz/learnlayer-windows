@@ -5,12 +5,38 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { latexToUnicode } from "@core/math/latexText";
+import { spokenAtoms } from "@core/voice/voiceFormula";
 import { MathView } from "../components/Math";
 
 const plainDigits: Record<string, string> = Object.fromEntries([
   ...Array.from("₀₁₂₃₄₅₆₇₈₉").map((ch, index) => [ch, String(index)]),
   ...Array.from("⁰¹²³⁴⁵⁶⁷⁸⁹").map((ch, index) => [ch, String(index)]),
 ]);
+
+/** How KaTeX draws an atom said by name (`spokenAtoms`): `\int` is "∫", `\sin` is "sin" (or "sen" in Portuguese). */
+const atomGlyphs: Record<string, string[]> = {
+  sin: ["sin", "sen"],
+  cos: ["cos"],
+  tan: ["tan", "tg"],
+  log: ["log"],
+  ln: ["ln"],
+  int: ["∫"],
+  oint: ["∮"],
+  sum: ["∑"],
+  lim: ["lim"],
+  infty: ["∞"],
+  cdot: ["⋅"],
+  times: ["×"],
+  partial: ["∂"],
+  nabla: ["∇"],
+};
+
+/** The spellings a symbol may have among KaTeX's elements: its own, or those of the operator or number it names. */
+export function symbolTexts(term: string): string[] {
+  const said = spokenAtoms(term);
+  if (said) return said.flatMap((atom) => atomGlyphs[atom] ?? [atom]);
+  return [symbolText(term)];
+}
 
 /** A symbol as KaTeX's elements spell it: "v_0" and "v₀" are "v0", "\omega" is "ω". */
 export function symbolText(term: string): string {
@@ -74,7 +100,10 @@ export function VoiceFormulaView({
     const origin = root.getBoundingClientRect();
     const found: Ring[] = [];
     for (const symbol of key === "" ? [] : key.split("\u0001")) {
-      const element = findSymbol(root, symbolText(symbol));
+      const element = symbolTexts(symbol).reduce<HTMLElement | null>(
+        (found, spelling) => found ?? findSymbol(root, spelling),
+        null,
+      );
       if (!element) continue;
       element.classList.add("voice-symbol");
       const rect = element.getBoundingClientRect();
