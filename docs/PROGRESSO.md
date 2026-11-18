@@ -79,7 +79,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 - **Fase 3 (feito, salvo):** `QuestionTranscription` (blocos), `QuestionSession` (o coração: cache, escalada, `confirm`), `SolutionReveal`, `StatementQuotes`, `SolveProgress`, `TextHelp`/`SelectionAsk` (builder do prompt v5), `ProblemVariant` (builder), `ExplanationPrompt` (builder v14), mensagens de recusa no palco.
 - **Fase 4 (feito, salvo):** ler antecipadamente o PDF à frente antes do primeiro clique; `SelectionSession` (fase 7, com a pílula).
 - **Fase 5 (feito, salvo):** STT nativo do Windows; `holdingTheSymbol`, `namingTheFormula` e `VoiceTutorGuard` (com as figuras); gestos da mascote; `SpeechActivity` e os testes de `NotchGlyphTests` que ficaram.
-- **Fase 6:** `IllustrationPrompt` (v22), `ComplexFigure`, templates, 3D.
+- **Fase 6 (feito):** `IllustrationPrompt` (v22), `ComplexFigure`, templates, figuras pré-feitas e 3D (ver «Próximo passo»).
 - **Fase 7 (feito, salvo):** clipes de voz do onboarding com as teclas do Windows (PARA-O-DINIS, ponto 9). `BrainSync*` passou para a fase 8.
 
 ## Deteção nos exames de `exames/` (relatório, `EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts`)
