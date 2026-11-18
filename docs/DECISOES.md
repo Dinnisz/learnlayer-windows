@@ -274,3 +274,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — A lição anela um ponto do gráfico
 - **Portado do Mac (`LessonRun.graphRing`, `pictureMarks`):** uma frase da lição com `on: "graph"` e um ponto anela esse ponto no gráfico ao lado (nas coordenadas do próprio gráfico) e não marca nada na pergunta. Falta ver no ecrã com uma lição real.
+
+## 2026-11-18 — As marcas do tutor de voz nas legendas da figura
+- **Portado do Mac (a parte de texto de `FigureLabels`), com os testes de `FigureMarksTests`:** uma marca do tutor de voz procura o termo como a página o escreve (H+ → H⁺, SO42- → SO₄²⁻, (B) → B), e uma legenda isolada numa linha curta ganha às mesmas letras dentro de uma palavra ou do texto corrido. As palavras ditas antes de uma marca («o ponto B», «o ângulo alfa») ficam reconhecidas (`saidAboutTheFigure`).
+- **Ainda não:** decidir entre a figura e a fórmula (`SpeechMarkLayout.namesSomethingElse`, `isPointInsideAName`); aqui a marca procura sempre primeiro na pergunta.

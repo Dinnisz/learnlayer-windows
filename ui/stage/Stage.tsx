@@ -21,6 +21,7 @@ import { formulasFor, type Card, type Part } from "@core/problems/problemSolutio
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { SelectionAsk } from "@core/problems/selectionAsk";
 import { markup } from "@core/problems/markup";
+import { FigureLabels } from "@core/voice/figureLabels";
 import { ExamNotation } from "@core/math/examNotation";
 import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
@@ -948,7 +949,19 @@ function cropMarks(
       continue;
     }
     const labelRange = show.label?.trim() ? firstInside(show.label.trim()) : undefined;
-    const range = labelRange ?? (show.quote?.trim() ? firstInside(show.quote.trim()) : undefined);
+    // The voice tutor's mark goes on the printed label (FigureLabels): a label on its own wins over the same letters
+    // inside a word, and it is written the ways a page writes it (H⁺, SO₄, (B)).
+    const voiceRange =
+      show.on === "voice" && show.quote?.trim()
+        ? FigureLabels.range(show.quote.trim(), page.text, (start, end) => {
+            const lines = linesOf(page, start, end - start);
+            return lines.length > 0 && lines.every((line) => inside(line.bounds));
+          })
+        : null;
+    const range =
+      labelRange ??
+      (voiceRange ? { start: voiceRange[0], end: voiceRange[1] } : undefined) ??
+      (show.quote?.trim() ? firstInside(show.quote.trim()) : undefined);
     // Marked in place as the Mac's LessonEvidence does on a question that reads clearly (a PDF does): words tinted,
     // a lone value or a part of a figure ringed. The voice's own marks keep their verb.
     const inPlace = (quote: string | null, onFigure: boolean) =>
