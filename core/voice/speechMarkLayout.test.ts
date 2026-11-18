@@ -65,3 +65,36 @@ describe("a mark on the figure or on the formula", () => {
     expect(SpeechMarkLayout.namesSomethingElse(circle("ma"), "F = m a")).toBe(false);
   });
 });
+
+describe("a mark that underlines the whole formula", () => {
+  const said = (kind: DrawingKind, mentioned: string | null) => ({ ...command(kind, 0), mentioned });
+  it("a phrase or a word the formula does not hold underlines it", () => {
+    expect(
+      SpeechMarkLayout.underlinesTheFormula(
+        said({ op: "highlight", term: "força é igual" } as DrawingKind, "força"),
+        "F = ma",
+      ),
+    ).toBe(true);
+    expect(
+      SpeechMarkLayout.underlinesTheFormula(said({ op: "highlight", term: "força" } as DrawingKind, "força"), "F = ma"),
+    ).toBe(true);
+    // A marker on an article means the formula.
+    expect(
+      SpeechMarkLayout.underlinesTheFormula(said({ op: "highlight", term: "lei" } as DrawingKind, "o"), "F = ma"),
+    ).toBe(true);
+  });
+
+  it("a symbol it holds is ringed, and a figure label goes on the page", () => {
+    expect(
+      SpeechMarkLayout.underlinesTheFormula(said({ op: "circle", term: "a" } as DrawingKind, "a"), "F = m a"),
+    ).toBe(false);
+    expect(SpeechMarkLayout.underlinesTheFormula(said({ op: "circle", term: "D" } as DrawingKind, "D"), "CB = 1")).toBe(
+      false,
+    );
+    // An unsaid mark on a word draws nothing; no formula, nothing to underline.
+    expect(SpeechMarkLayout.underlinesTheFormula(circle("força"), "F = ma")).toBe(false);
+    expect(
+      SpeechMarkLayout.underlinesTheFormula(said({ op: "highlight", term: "força" } as DrawingKind, "força"), ""),
+    ).toBe(false);
+  });
+});

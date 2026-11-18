@@ -3,7 +3,7 @@
 // symbol of the formula on screen belongs on the figure, not on the formula. The formula then rings nothing rather
 // than a look-alike letter (the C and B of "CB", the α of a formula about something else).
 
-import type { DrawingCommand } from "./voiceTutorReply";
+import { SpeechWords, type DrawingCommand } from "./voiceTutorReply";
 import { FigureLabels } from "./figureLabels";
 import { holdsSymbol } from "./voiceFormula";
 
@@ -131,6 +131,29 @@ export const SpeechMarkLayout = {
       (count <= 2 || Array.from(name).some((ch) => isUpper(ch) || /^\p{N}$/u.test(ch) || "+-⁺⁻".includes(ch)));
     if (!hasSymbol) return labelLike;
     return SpeechMarkLayout.isPointInsideAName(name, formula);
+  },
+
+  /**
+   * True when a circle or highlight lit on `latex` underlines the whole formula (FormulaTerms.marks): a marker on an
+   * article ("[[0]]o a") or a phrase means the formula; a marked word that is no symbol of it underlines it rather than
+   * marking nothing. A symbol it holds is ringed instead, and a figure label goes on the page (`namesSomethingElse`).
+   */
+  underlinesTheFormula(command: DrawingCommand, latex: string, spoken = ""): boolean {
+    const kind = command.kind;
+    if (kind.op !== "highlight" && kind.op !== "circle") return false;
+    const formula = latex.trim();
+    if (formula === "" || SpeechMarkLayout.namesSomethingElse(command, formula, spoken)) return false;
+    const words = kind.term
+      .trim()
+      .split(/\s+/u)
+      .filter((word) => word !== "");
+    const holds = holdsSymbol(kind.term, formula) || holdsRun(words.join(""), formula);
+    const word = command.mentioned?.trim() ?? "";
+    if (word !== "" && SpeechWords.isArticle(word)) return !holds || words.length > 1;
+    if (words.length > 1) return !holds;
+    if (holds) return false;
+    // Nothing of the formula drawn: the formula itself, when the mark was said (or names nothing at all).
+    return word !== "" || words.length === 0;
   },
 
   /** One capital letter written in `latex` only next to another capital (`CB`, `[BCD]`): a segment's or a triangle's

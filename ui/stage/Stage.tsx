@@ -2139,12 +2139,14 @@ function VoiceCaption({ state, onScreen }: { state: VoiceState; onScreen: readon
     const [expression, variable, xMin, xMax] = JSON.parse(plotKey) as [string, string, number, number];
     return FunctionPlot.make(expression, variable, xMin, xMax);
   }, [plotKey]);
-  // A formula mark, or one on a whole equation, underlines the formula; a symbol is ringed.
+  // A formula mark, or one on a whole equation, a phrase or a word that is no symbol of it, underlines the formula
+  // (FormulaTerms.marks); a symbol is ringed.
   const underlined = state.lit.some(
     (command) =>
       command.kind.op === "formula" ||
       ((command.kind.op === "highlight" || command.kind.op === "circle") &&
-        VoiceFormula.equationLine(command.kind.term) !== null),
+        (VoiceFormula.equationLine(command.kind.term) !== null ||
+          (formula !== null && SpeechMarkLayout.underlinesTheFormula(command, formula, state.spoken ?? "")))),
   );
   // A figure label the formula does not hold (H⁺, (B), the point D) is not ringed on it: no look-alike letter, as the
   // Mac's SpeechMarkLayout.namesSomethingElse.
