@@ -14,6 +14,7 @@ import { lessonProvider } from "../ai/solver";
 import { AnimatedMascot } from "../components/Mascot";
 import { useT } from "../i18n";
 import { speak, tutorLanguage, voiceEnabled } from "../voice/speaker";
+import { questionPlan } from "../voice/VoiceUI";
 import { idleLessonState, LessonPlayer, type LessonState, type Narrate } from "./lessonPlayer";
 
 export interface LessonContextValue {
@@ -117,8 +118,10 @@ export function useLessonControl(session: QuestionSession | null) {
     if (!session) return;
     const english = tutorLanguage().startsWith("en");
     const hasFigure = session.solution?.figure != null;
+    // The plan says whether the student learns from figures: then each step starts at the figure.
+    const pointer = questionPlan(session)?.pointer ?? false;
     session.mascotClicked(reducedMotion(), async (step, signal) => {
-      const text = session.narratedStep(step, false, hasFigure, english);
+      const text = session.narratedStep(step, pointer, hasFigure, english);
       if (!text) return;
       setVoice({ speaking: true, level: 0 });
       await narrate(text, (level) => setVoice({ speaking: true, level }), signal);

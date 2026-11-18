@@ -56,6 +56,20 @@ const mockReply = '{"opening":null,"drawing":[{"op":"circle","term":"a"}],"spoke
 let memory: MemoryStore | null = null;
 void memoryStore().then((store) => (memory = store));
 
+/** The plan for this question, read from memory (`QuestionSession.plan`); null until the memory has loaded. */
+export function questionPlan(session: QuestionSession) {
+  return (
+    memory?.plan({
+      question: session.question.groupText,
+      kind: "exercise",
+      area: ConceptSlug.area(session.routeSubject ?? ""),
+      concept: ConceptSlug.make(session.question.groupText),
+      utterance: session.question.groupText,
+      usesVoice: true,
+    }) ?? null
+  );
+}
+
 /** One spoken turn about the open question: the system prompt, the message and the model, as the Mac asks them. */
 async function reply(session: QuestionSession, transcript: string, signal: AbortSignal): Promise<VoiceTutorReply> {
   const part = session.part;
@@ -70,14 +84,7 @@ async function reply(session: QuestionSession, transcript: string, signal: Abort
   const language = tutorLanguage();
   // The step asked about, and how the plan read from memory wants the explanation to point (`voiceDirective`).
   const hasFigure = session.solution?.figure != null;
-  const plan = memory?.plan({
-    question: session.question.groupText,
-    kind: "exercise",
-    area: ConceptSlug.area(session.routeSubject ?? ""),
-    concept: ConceptSlug.make(session.question.groupText),
-    utterance: session.question.groupText,
-    usesVoice: true,
-  });
+  const plan = questionPlan(session);
   const directive = combineDirectives([
     index !== null ? stepDetail(index + 1, lines.length, lines[index]!, hasFigure) : null,
     pointingDirective(plan?.pointer ?? false, hasFigure, language.startsWith("en")),
