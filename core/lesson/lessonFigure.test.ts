@@ -2,7 +2,7 @@
 // LessonFigure3D.init(shows:) @ ref 2026-11-04).
 
 import { describe, expect, it } from "vitest";
-import { lessonFigure, LessonFigureText } from "./lessonFigure";
+import { lessonFigure, LessonFigurePicker, LessonFigureText } from "./lessonFigure";
 import type { CircuitSpec } from "../illustrations/circuit";
 
 describe("the 3D figure in a lesson", () => {
@@ -38,6 +38,48 @@ describe("the 3D figure in a lesson", () => {
         { op: "highlight", on: "figure3d", label: "R2", assemble: 0, yaw: 30 },
         { op: "point", on: "figure3d", assemble: 3 },
       ]),
-    ).toEqual({ highlight: "R2", assemble: 3, yaw: 30 });
+    ).toEqual({ highlight: "R2", assemble: 3, yaw: 30, join: null });
+  });
+});
+
+// theFigureRisesOnlyWhenItShowsSomethingNew and aCircuitReductionStillRisesOnEachStepThatJoinsParts
+// (LearnLayerTests/LessonFigure3DTests.swift @ ref 2026-11-04).
+describe("when the lesson raises the 3D figure (LessonFigurePicker)", () => {
+  const on = (label: string) => ({ show: [{ op: "highlight", on: "figure3d", label }] });
+  const figure = (highlight: string, join: string | null = null) => ({ highlight, assemble: null, yaw: null, join });
+
+  it("the figure rises only when it shows something new", () => {
+    const beats = [
+      on("curve"),
+      on("section"),
+      on("section"),
+      { show: [{ op: "highlight", step: 2 }] },
+      on("surface"),
+      on("curve"),
+    ];
+    const picker = new LessonFigurePicker([], new Set(["curve", "section", "surface"]));
+    expect(beats.map((beat) => picker.figure(beat, null)?.start.highlight ?? null)).toEqual([
+      "curve",
+      "section",
+      null,
+      null,
+      "surface",
+      null,
+    ]);
+  });
+
+  it("a circuit reduction still rises on each step that joins parts", () => {
+    const beat = { show: [{ op: "highlight", step: 1 }] };
+    const picker = new LessonFigurePicker(["R1,R2", "R1,R2", "R1,R2,R3"], new Set(["R1", "R2", "R3"]));
+    expect(picker.figure(beat, 0)?.end).toEqual(figure("R1,R2"));
+    expect(picker.figure(beat, 0)).toBeNull();
+    expect(picker.figure(beat, 1)).toBeNull();
+    expect(picker.figure(beat, 2)?.start).toEqual(figure("R1,R2,R3", "R1,R2"));
+  });
+
+  it("a part named by its id raises the figure even without saying figure3d", () => {
+    const picker = new LessonFigurePicker([], new Set(["R1", "R2"]));
+    expect(picker.figure({ show: [{ op: "circle", label: "R1+R2" }] }, null)?.start.highlight).toBe("R1+R2");
+    expect(picker.figure({ show: [{ op: "circle", label: "R7" }] }, null)).toBeNull();
   });
 });

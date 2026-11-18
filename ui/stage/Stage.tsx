@@ -1234,6 +1234,7 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
           spec={circuit}
           caption={session.illustration.title || undefined}
           highlight={lit ? CircuitMerges.ids(lit) : null}
+          joined={asked?.join != null ? CircuitMerges.ids(asked.join) : null}
         />
       ) : solid ? (
         <SolidView

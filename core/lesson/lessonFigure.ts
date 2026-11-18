@@ -2,7 +2,7 @@
 // (LearnLayer/Lesson/LessonRun.swift) @ ref 2026-11-04: the 3D figure as a lesson is told about it, and what a beat asks
 // of it (a part standing out, the first parts assembled, a turn).
 
-import { CircuitSpecs, type CircuitComponent, type CircuitSpec } from "../illustrations/circuit";
+import { CircuitMerges, CircuitSpecs, type CircuitComponent, type CircuitSpec } from "../illustrations/circuit";
 import { LessonShows, type LessonShow } from "./mascotLesson";
 
 /** A part's value as the circuit prints it ("470 Ω", "9 V"); null for a lamp, a switch or a wire. */
@@ -74,6 +74,73 @@ export interface LessonFigure3D {
   highlight: string | null;
   assemble: number | null;
   yaw: number | null;
+  /** The highlighted resistors joined so far ("" none, null all): the join itself waits for the voice. */
+  join?: string | null;
+}
+
+/** A beat's figure: shown as the beat starts, then (when it joins parts) what it ends on. */
+export interface LessonFigureBeat {
+  start: LessonFigure3D;
+  end: LessonFigure3D | null;
+}
+
+const figure = (highlight: string | null, join: string | null = null): LessonFigure3D => ({
+  highlight,
+  assemble: null,
+  yaw: null,
+  join,
+});
+
+/**
+ * When the lesson raises the 3D figure (`LessonFigurePicker`): only where it shows something new. A step that changes
+ * the figure (the app's reading of the solution) comes first; then a part the model names, once each. A beat that would
+ * show again what the figure already showed leaves it in its place.
+ */
+export class LessonFigurePicker {
+  private readonly steps = new Set<number>();
+  private readonly shown = new Set<string>();
+
+  constructor(
+    readonly plan: readonly (string | null)[],
+    readonly partIDs: ReadonlySet<string>,
+  ) {}
+
+  figure(beat: { show: readonly LessonShow[] }, step: number | null): LessonFigureBeat | null {
+    // The step's own reduction first: it starts from the step before (its block still joined, the new parts lit) and
+    // joins as it is said.
+    const highlight = step !== null ? (this.plan[step] ?? null) : null;
+    if (step !== null && highlight !== null) {
+      const before = step > 0 ? (this.plan[step - 1] ?? null) : null;
+      if (before === highlight || this.steps.has(step)) return null;
+      this.steps.add(step);
+      if (!this.isNew(highlight)) return null;
+      return { start: figure(highlight, before ?? ""), end: figure(highlight) };
+    }
+    const explicit = lessonFigure(beat.show);
+    if (explicit) return this.isNew(explicit.highlight) ? { start: explicit, end: null } : null;
+    const named = beat.show
+      .map((show) => show.label)
+      .find((label): label is string => {
+        if (!label) return false;
+        const ids = CircuitMerges.ids(label);
+        return ids.length > 0 && ids.every((id) => this.partIDs.has(id));
+      });
+    if (named) return this.isNew(named) ? { start: figure(named), end: null } : null;
+    return null;
+  }
+
+  /** The same parts in any order are the same view; the whole figure (no part) counts once too. */
+  private isNew(highlight: string | null): boolean {
+    const parts = (highlight ?? "")
+      .split(",")
+      .map((part) => part.trim().toLowerCase())
+      .filter((part) => part !== "")
+      .sort();
+    const key = parts.length === 0 ? "*" : parts.join(",");
+    if (this.shown.has(key)) return false;
+    this.shown.add(key);
+    return true;
+  }
 }
 
 /** From the beat's shows on the figure; null when it has none (the figure stays in its place). */
@@ -85,5 +152,6 @@ export function lessonFigure(shows: readonly LessonShow[]): LessonFigure3D | nul
     assemble:
       onFigure.map((show) => show.assemble).find((count): count is number => count != null && count > 0) ?? null,
     yaw: onFigure.map((show) => show.yaw).find((yaw): yaw is number => yaw != null && Number.isFinite(yaw)) ?? null,
+    join: null,
   };
 }

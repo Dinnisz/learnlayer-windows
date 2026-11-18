@@ -12,7 +12,7 @@ import {
 } from "@core/lesson/mascotLesson";
 import type { LessonFeed } from "@core/lesson/mascotLessonProvider";
 import { LessonMorphs, morphSeconds, MorphPacer, type LessonMorph } from "@core/lesson/morphPacer";
-import { lessonFigure, type LessonFigure3D } from "@core/lesson/lessonFigure";
+import { lessonFigure, type LessonFigure3D, type LessonFigureBeat } from "@core/lesson/lessonFigure";
 
 export interface LessonState {
   /** The beat being said, from 0; -1 before the first. */
@@ -86,6 +86,12 @@ export class LessonPlayer {
   /** The lesson has been on the answer's line and moved on from it. */
   private answerReached = false;
   private answerTimer: number | undefined;
+  /** Share of a beat's voice by which a join on the 3D figure has happened. */
+  static readonly figureJoinFraction = 0.4;
+  /** Which figure a beat raises (`LessonFigurePicker`); set by the stage, which has the figure. */
+  figureForBeat: ((beat: LessonBeat, step: number | null) => LessonFigureBeat | null) | null = null;
+  private figureLater: { beat: number; figure: LessonFigure3D } | null = null;
+  private figureTimer: number | undefined;
   /** The voice is on: a move waits for it to be heard (at most `MorphPacer.voiceWait`). */
   voiceIsOn = false;
   private pacer: MorphPacer | null = null;
@@ -110,6 +116,7 @@ export class LessonPlayer {
   /** Stops the lesson: the voice ends, the marks go, an open check is let go. */
   stop(): void {
     this.controller.abort();
+    window.clearTimeout(this.figureTimer);
     window.clearTimeout(this.answerTimer);
     this.answerCheck?.(null);
     this.set({ ...idleLessonState });
@@ -170,6 +177,22 @@ export class LessonPlayer {
     const previous = this.state.step;
     const step = steps.length > 0 ? steps[0]! - 1 : previous;
     if (previous !== null && previous === this.answerStep && step !== previous) this.answerReached = true;
+    // The 3D figure rises only where it shows something new (`LessonFigurePicker`); a join waits for the voice.
+    const planned = this.figureForBeat
+      ? this.figureForBeat(beat, step)
+      : (() => {
+          const asked = lessonFigure(beat.show);
+          return asked ? { start: asked, end: null } : null;
+        })();
+    this.figureLater = planned?.end ? { beat: index, figure: planned.end } : null;
+    window.clearTimeout(this.figureTimer);
+    if (this.figureLater) {
+      const later = this.figureLater;
+      this.figureTimer = window.setTimeout(
+        () => this.landFigure(later.beat),
+        MorphPacer.speakingSeconds(beat.say) * LessonPlayer.figureJoinFraction * 1000,
+      );
+    }
     let morph: LessonMorph | null = null;
     this.pacer = null;
     this.awaitingVoice = null;
@@ -197,7 +220,7 @@ export class LessonPlayer {
       beat: index,
       step,
       morph,
-      figure3D: lessonFigure(beat.show),
+      figure3D: planned?.start ?? null,
       shows: beat.show.filter((show) => show.op !== "pitfall"),
       calc: beat.calc?.line ?? null,
       check: null,
@@ -228,6 +251,9 @@ export class LessonPlayer {
    * voice began. Rows not yet begun move to when the voice reaches them.
    */
   voiceProgressed(fraction: number, elapsed: number): void {
+    // The figure's join lands as the voice gets to it.
+    if (this.figureLater && this.figureLater.beat === this.state.beat && fraction >= LessonPlayer.figureJoinFraction)
+      this.landFigure(this.figureLater.beat);
     const pacer = this.pacer;
     let morph = this.state.morph;
     if (!pacer || !morph || morph.frozen !== null) return;
@@ -248,6 +274,15 @@ export class LessonPlayer {
     if (samePacing && morph === this.state.morph) return;
     this.set({ morph: { ...morph, pacing } });
     this.refreshAnswer();
+  }
+
+  /** The figure a beat ends on (its join done), once, while that beat is still being said. */
+  private landFigure(beat: number): void {
+    const later = this.figureLater;
+    if (!later || later.beat !== beat || this.state.beat !== beat || this.stopped) return;
+    this.figureLater = null;
+    window.clearTimeout(this.figureTimer);
+    this.set({ figure3D: later.figure });
   }
 
   /** The lesson's tag, from the beats arrived so far: the first one (the guards keep one at most). */

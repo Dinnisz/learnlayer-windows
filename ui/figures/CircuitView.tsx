@@ -95,14 +95,18 @@ export function CircuitView({
   spec,
   caption,
   highlight = null,
+  joined = null,
 }: {
   spec: CircuitSpec;
   caption?: string;
   /** The resistors the step in focus joins (Figure3DSteps): lit in the blue, with their equivalent written. */
   highlight?: readonly string[] | null;
+  /** The ones joined so far, when the join waits for the voice (`LessonFigure3D.join`); null joins all that are lit. */
+  joined?: readonly string[] | null;
 }) {
   const lit = new Set(highlight ?? []);
-  const merge = highlight && highlight.length >= 2 ? CircuitMerges.make(spec, highlight) : null;
+  const merging = joined ?? highlight;
+  const merge = merging && merging.length >= 2 ? CircuitMerges.make(spec, merging) : null;
   const layout = useMemo(() => CircuitLayouts.make(spec), [spec]);
   const bounds = CircuitLayouts.bounds(layout);
   // Room for the labels: a vertical part's sits on its right ("R1 = 1 kΩ"), a terminal's on the left.

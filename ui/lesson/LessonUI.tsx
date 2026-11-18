@@ -5,14 +5,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { EquationMorph } from "@core/explanation/equationMorph";
-import type { LessonShow } from "@core/lesson/mascotLesson";
+import type { LessonBeat, LessonShow } from "@core/lesson/mascotLesson";
 import type { LessonRequest } from "@core/lesson/mascotLessonProvider";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { circuitOf } from "@core/illustrations/circuit";
 import { solidOf } from "@core/illustrations/solid";
 import { GenericSolidBuilder } from "@core/illustrations/solidBuilder";
 import { Space3D } from "@core/illustrations/spaceSteps";
-import { LessonFigureText } from "@core/lesson/lessonFigure";
+import { LessonFigurePicker, LessonFigureText } from "@core/lesson/lessonFigure";
+import { circuitHighlightPlan, solidStepPlan } from "@core/illustrations/figureSteps";
 import type { QuestionSession } from "@core/problems/questionSession";
 import { optionLinesOf, solutionWording, workContext } from "@core/voice/workContext";
 import { lessonProvider } from "../ai/solver";
@@ -83,6 +84,34 @@ function figureDescription(session: QuestionSession): string | null {
     return parts ? LessonFigureText.space(parts) : null;
   }
   return null;
+}
+
+/**
+ * Which 3D figure a lesson's beat raises: the step's change to the figure first (the app's reading of the solution),
+ * then a part the beat names, each once (`LessonFigurePicker`). Null without a figure.
+ */
+function figurePicker(session: QuestionSession) {
+  const illustration = session.illustration;
+  const circuit = illustration ? circuitOf(illustration) : null;
+  const solid = illustration ? solidOf(illustration) : null;
+  const figure = session.solutionFigure;
+  const steps = (session.part?.cards ?? []).map((card) => ({
+    formula: card.latex,
+    words: `${card.title} ${card.note ?? ""}`,
+  }));
+  let plan: (string | null)[] = [];
+  let parts: string[];
+  if (circuit) {
+    plan = circuitHighlightPlan(circuit, steps);
+    parts = circuit.components.map((part) => part.id);
+  } else if (solid) {
+    plan = solidStepPlan(solid, steps);
+    const built = GenericSolidBuilder.build(solid);
+    parts = built ? GenericSolidBuilder.order(built) : [];
+  } else if (figure?.kind === "space") parts = Space3D.parts(figure.figure) ?? [];
+  else return null;
+  const picker = new LessonFigurePicker(plan, new Set(parts));
+  return (beat: LessonBeat, step: number | null) => picker.figure(beat, step);
 }
 
 /** What the lesson is told about the question and what the student already read (`lessonRequest`). */
@@ -162,6 +191,7 @@ export function useLessonControl(session: QuestionSession | null) {
     next.morphStages = (from, to) => EquationMorph.stages(cards[from]?.latex ?? "", cards[to]?.latex ?? "");
     next.answerStep = cards.length > 0 ? cards.length - 1 : null;
     next.voiceIsOn = voiceEnabled();
+    next.figureForBeat = figurePicker(session);
     current.current = next;
     setPlayer(next);
     const request = lessonRequest(session);

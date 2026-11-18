@@ -233,4 +233,22 @@ describe("a lesson played beat by beat", () => {
     expect(silent.state.morph?.started).toBe(Date.now());
     silent.stop();
   });
+
+  it("the figure a beat raises joins its parts once the voice gets to it", async () => {
+    const player = new LessonPlayer();
+    const start = { highlight: "R1,R2,R3", assemble: null, yaw: null, join: "R1,R2" };
+    const end = { highlight: "R1,R2,R3", assemble: null, yaw: null, join: null };
+    player.figureForBeat = (_, step) => (step === 1 ? { start, end } : null);
+    const said = voice();
+    void player.play(LessonFeed.of(rows), said.narrate);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(player.state.figure3D).toBeNull();
+    await said.next();
+    expect(player.state.figure3D).toEqual(start);
+    said.heard(0.2, 0.5);
+    expect(player.state.figure3D).toEqual(start);
+    said.heard(0.45, 1.2);
+    expect(player.state.figure3D).toEqual(end);
+    player.stop();
+  });
 });
