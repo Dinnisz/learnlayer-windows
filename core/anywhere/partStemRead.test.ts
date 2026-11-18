@@ -139,3 +139,18 @@ describe("a clicked part with its stem", () => {
     expect(found.exam.text).not.toContain("Considere");
   });
 });
+
+// Port of theFirstPartStartsWhereItsStatementEnds (LearnLayerTests/QuestionDetectorTests.swift @ ref 2026-11-04), in
+// page points (y up), as the Mac's CGRect.
+describe("the regions a part is read from", () => {
+  it("the first part starts where its statement ends", () => {
+    const stem = { x: 40, y: 700, width: 400, height: 30 };
+    const area = { x: 40, y: 600, width: 400, height: 92 };
+    const regions = PDFQuestionReading.modelRegions(stem, area, []);
+    const last = regions[regions.length - 1]!;
+    expect(last.y + last.height).toBe(stem.y);
+    // A sibling part between them (a whole line or more) stays out.
+    const far = { x: 40, y: 600, width: 400, height: 60 };
+    expect(PDFQuestionReading.modelRegions(stem, far, []).at(-1)).toEqual(far);
+  });
+});

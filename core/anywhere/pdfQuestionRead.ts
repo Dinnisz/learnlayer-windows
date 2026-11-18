@@ -176,6 +176,8 @@ export interface PDFQuestionRead {
   placement: Placement;
   /** The question's area on the page (PDF points). */
   area: Rect;
+  /** What the question is shown and read from, top to bottom: the part's statement above it, then the part. */
+  regions: Rect[];
   /** Where the question is on screen (global, top-left). */
   screenFrame: Rect;
   /** What the page prints before the question: the excerpt a reading question is about. */
@@ -257,15 +259,30 @@ export const PDFQuestionReading = {
       text,
       groupText: question.groupLabels.length > 1 ? question.groupText : text,
     };
-    const regions = stem && stemText !== "" ? [stem, area] : [area];
+    const regions = PDFQuestionReading.modelRegions(stem && stemText !== "" ? stem : null, area, []);
     return {
       exam,
       page,
       placement,
       area,
+      regions,
       screenFrame: Placements.toScreen(placement, PDFQuestionReading.stackedArea(regions)!),
       supportText: PDFQuestionReading.supportText(question, page),
     };
+  },
+
+  /**
+   * The page regions the question is read from: the statement above the part (when it has one), then the part with its
+   * figures. Less than a line between them (the first part, right under it): the part starts where the statement ends,
+   * so a label whose box is short (bold "a)" of a Type 1 font) doesn't have the top of its line cut off under
+   * "Considere o circuito da figura." (Eletrotecnia, problem 5).
+   */
+  modelRegions(stem: Rect | null, area: Rect, figures: readonly Rect[]): Rect[] {
+    let own = figures.reduce((all, figure) => Rects.union(all, figure)!, area);
+    if (stem && minY(stem) > maxY(own) && minY(stem) - maxY(own) <= 14) {
+      own = { x: own.x, y: own.y, width: own.width, height: minY(stem) - minY(own) };
+    }
+    return stem ? [stem, own] : [own];
   },
 
   /** Where a part's shared statement is printed above it on the same page, across the part's width; null for a
