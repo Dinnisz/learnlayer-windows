@@ -475,7 +475,10 @@ function CropPiece({
     [lessonShows, voiceLit],
   );
   const marks = useMemo(
-    () => (page && session ? cropMarks(page, region, session, shows) : { underlines: [], circles: [] }),
+    () =>
+      page && session
+        ? cropMarks(page, region, session, shows)
+        : { underlines: [], circles: [], highlights: [], strikes: [] },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, region, session, version, shows],
   );
@@ -508,6 +511,12 @@ function CropPiece({
         const box = toCrop(Rects.inset(rect, -4, -3));
         return <span key={`c${index}`} className="stage-circle" style={box} />;
       })}
+      {marks.highlights.map((rect, index) => (
+        <span key={`h${index}`} className="stage-highlight" style={toCrop(Rects.inset(rect, -4, -2))} />
+      ))}
+      {marks.strikes.map((rect, index) => (
+        <span key={`s${index}`} className="stage-strike" style={toCrop(Rects.inset(rect, -4, -2))} />
+      ))}
       {session?.showsTiming && session.timing && session.timingLevels && (
         // The filled-in rows, in blue exactly on the printed diagram, one row after another like a pen.
         <svg className="stage-timing" width={region.width * scale} height={region.height * scale} aria-hidden="true">
@@ -534,12 +543,22 @@ function CropPiece({
 }
 
 /** Where the open step's data stands in the crop (its printed lines), and the right option of a multiple choice. */
+/** The marks on the question's crop, by kind (`LessonLayer`'s marks). */
+interface CropMarks {
+  underlines: Rect[];
+  circles: Rect[];
+  /** Filled in the blue, with a blue edge. */
+  highlights: Rect[];
+  /** Dimmed, one line drawn through: a part that does not hold. */
+  strikes: Rect[];
+}
+
 function cropMarks(
   page: PageText,
   region: Rect,
   session: QuestionSession,
   lessonShows: readonly LessonShow[] = [],
-): { underlines: Rect[]; circles: Rect[] } {
+): CropMarks {
   const inside = (rect: Rect) => Rects.contains(region, { x: Rects.midX(rect), y: Rects.midY(rect) });
   const firstInside = (quote: string) =>
     StatementQuotes.ranges(quote, page.text).find((range) => {
@@ -572,7 +591,16 @@ function cropMarks(
       }
     }
   }
-  // The beat being said marks the words it talks about, and rings the option it names (struck out or not).
+  const highlights: Rect[] = [];
+  const strikes: Rect[] = [];
+  /** Where a beat's mark goes, by its op: a ring, a line through, a fill, or a line under. */
+  const place = (op: string, rects: Rect[]) => {
+    if (op === "crossOut") strikes.push(...rects);
+    else if (op === "highlight") highlights.push(...rects);
+    else if (op === "circle" || op === "zoom") circles.push(...rects);
+    else underlines.push(...rects);
+  };
+  // The beat being said marks the words it talks about, and rings the option it names, or strikes it out.
   for (const show of lessonShows) {
     // As LessonGeometry.region on a PDF page: the option it names, else a word printed in a figure (found in the page's
     // text), else the words it quotes, else a box the model drew. No mark is better than a wrong one.
@@ -585,29 +613,32 @@ function cropMarks(
       return null;
     })();
     if (optionLine) {
-      circles.push(optionLine);
+      place(show.op === "crossOut" ? "crossOut" : "circle", [optionLine]);
       continue;
     }
     const range =
       (show.label?.trim() ? firstInside(show.label.trim()) : undefined) ??
       (show.quote?.trim() ? firstInside(show.quote.trim()) : undefined);
     if (range) {
-      const lines = linesOf(page, range.start, range.end - range.start).map((line) => line.bounds);
-      if (show.op === "circle" || show.op === "zoom" || show.op === "crossOut") circles.push(...lines);
-      else underlines.push(...lines);
+      place(
+        show.op,
+        linesOf(page, range.start, range.end - range.start).map((line) => line.bounds),
+      );
       continue;
     }
     const box = show.box ? LessonGeometry.box(show.box) : null;
     if (box)
       // As shares of the question's picture, from its top-left corner.
-      circles.push({
-        x: region.x + box.x * region.width,
-        y: region.y + region.height - (box.y + box.height) * region.height,
-        width: box.width * region.width,
-        height: box.height * region.height,
-      });
+      place(show.op, [
+        {
+          x: region.x + box.x * region.width,
+          y: region.y + region.height - (box.y + box.height) * region.height,
+          width: box.width * region.width,
+          height: box.height * region.height,
+        },
+      ]);
   }
-  return { underlines, circles };
+  return { underlines, circles, highlights, strikes };
 }
 
 function ModeView({ session }: { session: QuestionSession }) {

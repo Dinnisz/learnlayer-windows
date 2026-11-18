@@ -92,6 +92,56 @@
   }
 }
 
+/* A lesson's highlight: the words filled in the blue, with a blue edge. */
+.stage-highlight {
+  position: absolute;
+  border: 1.5px solid color-mix(in srgb, var(--stage-accent) 85%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--stage-accent) 28%, transparent);
+  pointer-events: none;
+  animation: stage-fade 250ms ease-out;
+}
+
+/* A part that does not hold: dimmed, with one line drawn through it as by hand, never a cross (it stays readable). */
+.stage-strike {
+  position: absolute;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 35%);
+  pointer-events: none;
+}
+
+.stage-strike::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: calc(50% - 1.5px);
+  height: 3px;
+  border-radius: 2px;
+  background: white;
+  transform: rotate(-2deg);
+  transform-origin: left center;
+  animation: stage-strike-draw 500ms ease-in-out 150ms both;
+}
+
+@keyframes stage-strike-draw {
+  from {
+    transform: rotate(-2deg) scaleX(0);
+  }
+}
+
+@keyframes stage-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-strike::after {
+    animation: stage-fade 250ms ease-in both;
+  }
+}
+
 /* The menu. */
 .stage-menu-title {
   margin: 0 0 6px;
@@ -535,6 +585,15 @@
   .stage-circle {
     background: Highlight;
     border-color: Highlight;
+  }
+
+  .stage-highlight {
+    border-color: Highlight;
+    background: transparent;
+  }
+
+  .stage-strike::after {
+    background: CanvasText;
   }
 }
 
