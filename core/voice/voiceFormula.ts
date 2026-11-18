@@ -5,6 +5,7 @@
 // significa a letra a" draws x(t) = x₀ + v₀t + ½at²); then one in the answer. Whether a formula holds a symbol is read
 // from its LaTeX (`holdsSymbol`); the Mac lays the formula out for it (`FormulaTerms.atomIndex`).
 
+import { latexToUnicode } from "../math/latexText";
 import { SpeechWords, type DrawingCommand, type VoiceTutorReply } from "./voiceTutorReply";
 
 const greekLetters: Record<string, string> = {
@@ -209,7 +210,139 @@ export function holdsSymbol(term: string, latex: string): boolean {
   return new RegExp(`(?<![A-Za-z\\\\])${base}(?![A-Za-z_])`).test(latex);
 }
 
+const screenFolds: Record<string, string> = {
+  "₀": "0",
+  "₁": "1",
+  "₂": "2",
+  "₃": "3",
+  "₄": "4",
+  "₅": "5",
+  "₆": "6",
+  "₇": "7",
+  "₈": "8",
+  "₉": "9",
+  "⁰": "0",
+  "¹": "1",
+  "²": "2",
+  "³": "3",
+  "⁴": "4",
+  "⁵": "5",
+  "⁶": "6",
+  "⁷": "7",
+  "⁸": "8",
+  "⁹": "9",
+  "₊": "+",
+  "₋": "-",
+  "⁺": "+",
+  "⁻": "-",
+  ₓ: "x",
+  ᵢ: "i",
+  ⁿ: "n",
+  "−": "-",
+  "–": "-",
+  "⋅": "·",
+  "∙": "·",
+  "×": "·",
+  "*": "·",
+  "∗": "·",
+  "÷": "/",
+  "⁄": "/",
+};
+
+const screenRules: [RegExp, string][] = [
+  [/\\(left|right|big|Big|bigg|Bigg)(?![A-Za-z])/g, ""],
+  [/\\(text|mathrm|mathit|mathbf|operatorname|mbox)\s*\{([^{}]*)\}/g, "$2"],
+  [/\\[,;:! ]/g, ""],
+  [/\\(quad|qquad)(?![A-Za-z])/g, ""],
+  [/\\(cdot|times|ast)(?![A-Za-z])/g, "·"],
+  [/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, "($1)/($2)"],
+  [/\\[dt]?frac\s*(\w)\s*(\w)/g, "$1/$2"],
+  [/(\d),(\d)/g, "$1.$2"],
+];
+
+/**
+ * LaTeX or plain text reduced to what a reader compares (`VoiceCanvasPlan.screenKey`), so the same formula in two
+ * notations gives the same key. Lower case; no spaces, braces, brackets, `_` or `^`.
+ */
+export function screenKey(text: string): string {
+  let t = text;
+  // Nested fractions: repeat until nothing changes.
+  for (let round = 0; round < 4; round++) {
+    const before = t;
+    for (const [pattern, template] of screenRules) t = t.replace(pattern, template);
+    if (t === before) break;
+  }
+  if (t.includes("\\")) t = latexToUnicode(t);
+  let key = "";
+  for (const ch of Array.from(t.toLowerCase())) {
+    if (/^\s$/u.test(ch) || "{}()[]\\_^".includes(ch)) continue;
+    key += screenFolds[ch] ?? ch;
+  }
+  // A decimal comma left after folding (e.g. "2,5" from "2{,}5").
+  return key.replace(/(\d),(\d)/g, "$1.$2");
+}
+
+/** The runs of letters, digits and points in a key. */
+function screenTokens(key: string): Set<string> {
+  const out = new Set<string>();
+  let run = "";
+  for (const ch of Array.from(key)) {
+    if (/^[\p{L}\p{N}.]$/u.test(ch)) run += ch;
+    else {
+      if (run !== "") out.add(run);
+      run = "";
+    }
+  }
+  if (run !== "") out.add(run);
+  return out;
+}
+
 export const VoiceFormula = {
+  /**
+   * True when `latex` already reads on screen, in any of `onScreen` (plain text or formulas), whatever the notation
+   * (`VoiceCanvasPlan.isOnScreen`). A formula of one or two characters counts only as a whole token on screen.
+   */
+  isOnScreen(latex: string, onScreen: readonly string[]): boolean {
+    const key = screenKey(latex);
+    if (key === "") return false;
+    if (Array.from(key).length < 3)
+      // Words keep their spaces here, so "t" in "durante t = 5" stays its own token.
+      return onScreen.some((text) =>
+        text
+          .split(/\s+/u)
+          .filter((word) => word !== "")
+          .some((word) => screenTokens(screenKey(word)).has(key)),
+      );
+    const keys = [key];
+    const sides = key.split("=");
+    if (sides.length === 2 && sides[0] !== "" && sides[1] !== "") keys.push(`${sides[1]}=${sides[0]}`);
+    const screens = onScreen.flatMap((text) => [screenKey(text), screenKey(latexToUnicode(text))]);
+    return screens.some((screen) => keys.some((candidate) => screen.includes(candidate)));
+  },
+
+  /**
+   * The formulas the answer writes once its marks have started: the presented one and the formula marks' own, less
+   * those already on screen (`VoiceCanvasPlan.formulas`).
+   */
+  formulas(
+    drawing: readonly DrawingCommand[],
+    presented: string | null,
+    started: ReadonlySet<number>,
+    onScreen: readonly string[] = [],
+  ): string[] {
+    if (started.size === 0) return [];
+    const shown: string[] = [];
+    const clean = (latex: string | null) => (latex && latex.trim() !== "" ? latex.trim() : null);
+    const own = clean(presented);
+    if (own) shown.push(own);
+    drawing.forEach((command, index) => {
+      if (!started.has(index) || command.kind.op !== "formula") return;
+      const written = clean(rendered(command.kind.latex));
+      if (written && !shown.includes(written)) shown.push(written);
+    });
+    return shown.filter((latex) => !VoiceFormula.isOnScreen(latex, onScreen));
+  },
+
   /** `F = ma` and `x = x0 + v0*t`. A sentence around the equals sign is not an equation. */
   equationLine(text: string): string | null {
     const line = text.trim().replace(/^\.+|\.+$/g, "");

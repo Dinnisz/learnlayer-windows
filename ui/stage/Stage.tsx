@@ -344,7 +344,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
               )}
             </div>
             {showsLesson ? <LessonOverlay player={lesson.player} state={lesson.state} onTap={lesson.toggle} /> : null}
-            <VoiceCaption state={voice.state} />
+            <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
           </div>
         </TalkContext.Provider>
       </VoiceContext.Provider>
@@ -1937,14 +1937,17 @@ const stillGraph: GraphControlling = {
 };
 
 /** What the voice is doing, and the formula of the answer while it is said. */
-function VoiceCaption({ state }: { state: VoiceState }) {
+function VoiceCaption({ state, onScreen }: { state: VoiceState; onScreen: readonly string[] }) {
   const t = useT();
-  const written = state.lit.find((command) => command.kind.op === "formula");
-  // Shown once the first mark lights; the symbols lit on it are ringed.
-  const formula =
-    state.lit.length > 0
-      ? (state.formula ?? (written && written.kind.op === "formula" ? written.kind.latex : null))
-      : null;
+  // Written once the first mark lights, unless it already reads on screen (then the marks go on the question there);
+  // the symbols lit on it are ringed.
+  const formulas = VoiceFormula.formulas(
+    state.lit,
+    state.formula,
+    new Set(state.lit.map((_, index) => index)),
+    onScreen,
+  );
+  const formula = formulas.length > 0 ? formulas.join(String.raw` \qquad `) : null;
   // A curve the tutor asks for, once it is said; one that does not plot is dropped.
   const asked = state.lit.find((command) => command.kind.op === "plot")?.kind;
   const curve = asked && asked.op === "plot" ? asked : null;

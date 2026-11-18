@@ -241,3 +241,6 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Portado do Mac (`QuoteLoupe`, com `StepFocusGeometry.lens`/`zoomAnchor`):** enquanto a mascote percorre os passos, o dado do passo (o seu ponto no recorte, ampliado até 2,4×, senão o primeiro dado sublinhado, a 1,7×) aparece numa lente sobre o recorte, com um fundo escuro que esconde a tinta por baixo. A etiqueta do ponto fica fora da lente e o anel não se desenha. Não aparece com «Reduzir movimento».
 - **Diferença:** a lente fica dentro do recorte (o Mac deixa-a ocupar o palco inteiro, menos 12 pt de margem).
 - **Falta ver no ecrã:** a lente só aparece com o guia, e no modo de demonstração o «Explica-me» toca a lição falsa.
+
+## 2026-11-18 — O tutor de voz não reescreve o que já está no ecrã
+- **Portado do Mac (`VoiceCanvasPlan.isOnScreen`/`formulas`/`screenKey`, `QuestionSession.onScreenText`), com os testes de `MascotClickGuideTests`:** uma fórmula que já se lê no ecrã (no enunciado, nos passos à vista ou na resposta), em qualquer notação (frações ou barra, `\cdot`/×/*, índices Unicode ou `_`, vírgula ou ponto decimal, os dois lados do `=` trocados), não é escrita outra vez; as marcas ficam na pergunta. Um símbolo de um ou dois caracteres só conta como palavra inteira.

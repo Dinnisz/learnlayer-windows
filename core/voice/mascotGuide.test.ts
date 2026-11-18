@@ -8,6 +8,7 @@ import type { ExamQuestion } from "../problems/questionDetector";
 import { QuestionSession } from "../problems/questionSession";
 import type { SolutionProvider } from "../problems/solutionProvider";
 import { MascotGuide } from "./mascotGuide";
+import { VoiceFormula } from "./voiceFormula";
 
 describe("the mascot walking the steps", () => {
   it("each step gets a beat long enough to travel and read", () => {
@@ -170,6 +171,16 @@ describe("the session's walk (QuestionSession.mascotClicked)", () => {
       expect(spoken).not.toContain("\\");
     }
     expect(opened.narratedStep(0, false, false)).toBe("Repara em «v0 = 12 m/s». Dados. Os dados.");
+  });
+
+  it("what is on screen is known, so it is not written again", () => {
+    const opened = session();
+    opened.finishCascade();
+    const shown = opened.onScreenText;
+    expect(shown).toContain(opened.question.text);
+    expect(shown.some((text) => text.includes("Velocidade"))).toBe(true);
+    expect(VoiceFormula.isOnScreen("v_0 = 12", shown)).toBe(true);
+    expect(VoiceFormula.isOnScreen("v = 12 + 2 \\cdot 5 = 22", shown)).toBe(true);
   });
 
   it("with nothing to explain the click goes to talk", () => {

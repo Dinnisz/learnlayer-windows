@@ -1704,6 +1704,27 @@ ${part.label}`,
     this.changed();
   }
 
+  /**
+   * What the stage already shows in words and formulas: the statement, the steps on screen and the answer. The tutor
+   * marks these where they are and writes only what none of them holds (`VoiceFormula.formulas`).
+   */
+  get onScreenText(): string[] {
+    const texts = [this.question.text, this.question.groupText];
+    const shown =
+      this.mode === "solution"
+        ? this.visibleSolutionSteps
+        : this.mode === "hint"
+          ? Math.min(this.revealedSteps, this.stepCount)
+          : 0;
+    for (let step = 0; step < shown; step++) texts.push(this.stepText(step) ?? "");
+    const part = this.part;
+    if (this.mode === "solution" && part) {
+      texts.push(part.answer.text);
+      if (part.answerLatex) texts.push(latexToUnicode(part.answerLatex));
+    }
+    return texts.filter((text) => text !== "");
+  }
+
   /** What the mascot says for a step: its title and why, in words (a formula alone when that is all the step has). */
   spokenStepText(step: number): string | null {
     const part = this.part;
