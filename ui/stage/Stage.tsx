@@ -83,6 +83,7 @@ import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import { stageInk } from "./stageInk";
 import { HandDrawnMark } from "../components/HandDrawnMark";
+import { stageMascotSize } from "../components/Mascot";
 import type { MascotPresence, MascotTransient } from "@core/voice/mascotMotion";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
 
@@ -759,7 +760,7 @@ function CropPiece({
 
 /** Where the open step's data stands in the crop (its printed lines), and the right option of a multiple choice. */
 /** The mascot's side, as the lesson draws it (`AnimatedMascot`'s size). */
-const mascotSize = 56;
+const mascotSize = stageMascotSize;
 
 /** How far a quoted datum is magnified in the lens (`QuoteLoupe.scale`). */
 const QuoteLoupeScale = 1.7;

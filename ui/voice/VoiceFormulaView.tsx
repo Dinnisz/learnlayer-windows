@@ -9,11 +9,11 @@ import { spokenAtoms } from "@core/voice/voiceFormula";
 import { PenRing, type MarkRect } from "@core/explanation/handDrawn";
 import { HandDrawnMark } from "../components/HandDrawnMark";
 import { MathView } from "../components/Math";
+import { stageMascotSize } from "../components/Mascot";
 import { GuideSpots } from "../lesson/guideSpot";
 import { VoicePerch } from "@core/voice/voicePerch";
 
-/** The mascot's side on the stage (`AnimatedMascot`). */
-const mascotSize = 56;
+const mascotSize = stageMascotSize;
 
 /** The mark shows a moment after its word starts, so the body has reached the symbol (HighlightTiming.lead). */
 const HighlightLead = 0.2;

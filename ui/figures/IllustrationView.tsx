@@ -10,6 +10,7 @@ import { IllustrationRenderer, type DrawOp, type Paint, type TextMeasurer } from
 import { setMascotPreference } from "@core/illustrations/animated/mascot";
 import { FigureFocusGeometry, FigureFocusRegion } from "@core/voice/mascotFigureFocus";
 import { GuideSpots } from "../lesson/guideSpot";
+import { stageMascotSize } from "../components/Mascot";
 import { Icon } from "../components/Icon";
 import { useT } from "../i18n";
 import "./figures.css";
@@ -202,7 +203,7 @@ export function IllustrationView({
   language = "Portuguese (Portugal)",
   maxHeight = 320,
   focus = null,
-  bodySize = 56,
+  bodySize = stageMascotSize,
 }: {
   scene: Illustration;
   revealed?: boolean;

@@ -298,6 +298,12 @@ export function AnimatedMascot({
   );
 }
 
+/**
+ * The tutor's side on the stage, in pixels: its body as big as the Mac's (`VoiceMascot.size` 84 pt, drawn at 0.7 of its
+ * half-width; here the body is 0.84 of it). The places it goes to (beside a datum, over a mark) are worked out for it.
+ */
+export const stageMascotSize = 70;
+
 export const mascotColorKey = "mascotColor";
 
 /** The colour the student chose (Settings › General), blue by default. */

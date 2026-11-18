@@ -18,7 +18,7 @@ import { circuitHighlightPlan, solidStepPlan } from "@core/illustrations/figureS
 import type { QuestionSession } from "@core/problems/questionSession";
 import { optionLinesOf, solutionWording, workContext } from "@core/voice/workContext";
 import { lessonProvider } from "../ai/solver";
-import { AnimatedMascot } from "../components/Mascot";
+import { AnimatedMascot, stageMascotSize } from "../components/Mascot";
 import { useT } from "../i18n";
 import { speak, tutorLanguage, voiceEnabled } from "../voice/speaker";
 import { questionPlan } from "../voice/VoiceUI";
@@ -265,7 +265,7 @@ export function LessonOverlay({
         <button
           type="button"
           className={`lesson-mascot${speaking ? " speaking" : ""}${spot ? " beside" : ""}${listening ? " listening" : ""}`}
-          style={spot ? { left: spot.x - 28, top: spot.y - 28 } : undefined}
+          style={spot ? { left: spot.x - stageMascotSize / 2, top: spot.y - stageMascotSize / 2 } : undefined}
           onClick={onTap}
           aria-label={label}
           title={label}
@@ -273,6 +273,7 @@ export function LessonOverlay({
           {/* Listening for the student's question: a brief word over the sphere. */}
           {listening ? <span className="lesson-tell">{t("Tell me")}</span> : null}
           <AnimatedMascot
+            size={stageMascotSize}
             level={level}
             speaking={speaking}
             presence={presence}
