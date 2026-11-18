@@ -262,4 +262,5 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — O rascunho do OCR corrigido por regra
 - **Portado do Mac (`LocalTranscriptionRepair` / `Repair`, `LocalTranscriber.Context` e `Cell.label`), com o teste de `LocalTranscriberTests`:** o rascunho que o palco mostra enquanto o modelo lê a imagem (a leitura do próprio Windows) passa pelas regras do Mac: letras cirílicas parecidas, o selo do item, numerais romanos, «kQ», «kD» e afins como kΩ (e «kg» só numa pergunta de circuitos), equações de um circuito («R1 = 4 kQ» → R₁ = 4 kΩ) e fórmulas de uma opção como matemática, composta no ecrã.
-- **Ainda não:** o resto do `LocalTranscriber` (refazer a disposição a partir das posições das palavras: linhas, grelha de opções, figuras recortadas da tinta que não é texto). O OCR do Windows dá linhas com posições, e o rascunho continua linha a linha.
+- **Feito também (a disposição do `LocalTranscriber`, com os testes de `LocalTranscriberTests`):** o rascunho é refeito a partir de onde estão as linhas: as que se continuam juntam-se num parágrafo, cada opção de uma escolha múltipla fica na sua linha (também numa grelha lida coluna a coluna) e uma letra mal lida («(0)») continua a sequência.
+- **Diferença:** sem figuras recortadas da tinta nem fórmulas lidas pelo Pix2Text (não existem no Windows); as linhas são os itens, como no Mac quando não há fórmulas.

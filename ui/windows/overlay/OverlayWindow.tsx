@@ -217,7 +217,7 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
           }
         : null,
     figureBoxes: region?.figureBoxes ?? [],
-    draft: outcome.transcribes ? draftText(region?.text ?? "") : null,
+    draft: outcome.transcribes ? draftText(region?.text ?? "", region?.lines ?? []) : null,
     transcribes: outcome.transcribes && images.length > 0,
     ocrText: region?.text ?? "",
     session: () =>
