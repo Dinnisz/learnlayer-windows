@@ -191,6 +191,22 @@ export function AnimatedMascot({
     parts.push(<circle key="good" cx={cx} cy={cy} r={radius} fill={green} opacity={0.88 * look.good} />);
   if (look.bad > 0.001)
     parts.push(<circle key="bad" cx={cx} cy={cy} r={radius} fill={orange} opacity={0.92 * look.bad} />);
+  // The thin white ring round the sphere (VoiceMascotView: the orb's radius plus its halo, white at 38 %): it reads as a
+  // body, not a button.
+  // In the body's own proportions: the halo is 0.22 of the half-side where the orb is `radiusFactor` of it.
+  const ringRadius = (radius * (look.radiusFactor + 0.22)) / Math.max(0.05, look.radiusFactor);
+  parts.push(
+    <circle
+      key="ring"
+      cx={cx}
+      cy={cy}
+      r={ringRadius}
+      fill="none"
+      stroke="#fff"
+      strokeOpacity={0.38}
+      strokeWidth={1.25 * unit}
+    />,
+  );
 
   const share = radius / stillRadius;
   if (!shown) {
