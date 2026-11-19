@@ -206,4 +206,20 @@ describe("the body on its way", () => {
     expect(MascotHome.point("bottomTrailing", { width: 1000, height: 800 }, 84)).toEqual({ x: 938, y: 738 });
     expect(MascotHome.point("topLeading", { width: 1000, height: 800 }, 84)).toEqual({ x: 62, y: 62 });
   });
+
+  // ExplanationLayoutTests: the body waits beside the open explanation, not in its corner.
+  it("rests beside the explanation's top corner when the stage has room there", () => {
+    const panel = { left: 28, top: 200, right: 900 };
+    expect(MascotHome.beside(panel, 1412, { width: 1440, height: 900 }, 84)).toEqual({ x: 954, y: 242 });
+  });
+
+  it("rests just above that corner when the explanation fills the width", () => {
+    const panel = { left: 28, top: 200, right: 1400 };
+    expect(MascotHome.beside(panel, 1412, { width: 1440, height: 900 }, 84)).toEqual({ x: 1358, y: 154 });
+  });
+
+  it("never rests past the stage's edge", () => {
+    const panel = { left: 28, top: 10, right: 1400 };
+    expect(MascotHome.beside(panel, 1412, { width: 1440, height: 900 }, 84).y).toBe(46);
+  });
 });

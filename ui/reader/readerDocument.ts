@@ -10,6 +10,9 @@ import { PageImage } from "@core/pdf/pageImage";
 import { PageInk, type InkTheme } from "@core/pdf/pageInk";
 import { questionsOn, type ExamQuestion } from "@core/problems/questionDetector";
 
+/** The drawing under way on each lifted crop's canvas (`renderRegion`). */
+const regionRenders = new WeakMap<HTMLCanvasElement, { cancel(): void }>();
+
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export interface PageSize {
@@ -149,20 +152,31 @@ export class ReaderDocument {
     const media = this.sizes[index]!.mediaBox;
     const pixels = scale * pixelRatio;
     const viewport = page.getViewport({ scale: pixels });
+    // A canvas redrawn at a new scale stops its earlier drawing first: two on one canvas mix their sizes.
+    regionRenders.get(canvas)?.cancel();
     canvas.width = Math.max(1, Math.ceil(region.width * pixels));
     canvas.height = Math.max(1, Math.ceil(region.height * pixels));
     const context = canvas.getContext("2d");
     if (!context) return;
     const offsetX = (region.x - media.x) * pixels;
     const offsetY = (media.y + media.height - (region.y + region.height)) * pixels;
-    await page.render({
+    const task = page.render({
       canvas,
       canvasContext: context,
       viewport,
       intent: "print",
       background: "rgba(0,0,0,0)",
       transform: [1, 0, 0, 1, -offsetX, -offsetY],
-    }).promise;
+    });
+    regionRenders.set(canvas, task);
+    try {
+      await task.promise;
+    } catch (error) {
+      if ((error as { name?: string } | null)?.name === "RenderingCancelledException") return;
+      throw error;
+    } finally {
+      if (regionRenders.get(canvas) === task) regionRenders.delete(canvas);
+    }
     if (!ink) return;
     const image = context.getImageData(0, 0, canvas.width, canvas.height);
     PageInk.recolour(image.data, ink);

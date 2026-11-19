@@ -287,6 +287,19 @@ function useSphere(goal: () => MascotPoint, returning: boolean, still: boolean) 
   return { scene, chaser };
 }
 
+/** Where the body waits beside the open solution (QuestionOverlay.mascotRestSpot); null when none is on the stage. */
+function besideExplanation() {
+  const panel = document.querySelector<HTMLElement>(".stage-solution");
+  if (!panel) return null;
+  const box = panel.getBoundingClientRect();
+  // The explanation ends where its widest part does: the steps, the formulas, the figure.
+  let right = box.left;
+  for (const part of panel.querySelectorAll<HTMLElement>(":scope > .stage-solution-body > *, :scope > .stage-answer"))
+    right = Math.max(right, part.getBoundingClientRect().right);
+  const size = { width: window.innerWidth, height: window.innerHeight };
+  return MascotHome.beside({ left: box.left, top: box.top, right }, size.width - 28, size, stageMascotSize);
+}
+
 /**
  * The tutor on the stage (VoiceMascotExerciseOverlay), and what the beat being said brings: its calculation, its check,
  * the closing. The sphere rests in its corner and breathes; a click stops an explanation under way, else talks to the
@@ -301,6 +314,7 @@ export function LessonOverlay({
   presence,
   transient = null,
   showsMascot = true,
+  restsBeside = false,
 }: {
   player: LessonPlayer | null;
   state: LessonState | null;
@@ -312,6 +326,8 @@ export function LessonOverlay({
   /** A short reaction: a hint, a right answer, a wrong one. */
   transient?: MascotTransient | null;
   showsMascot?: boolean;
+  /** Between its stops while it explains the open solution: it waits beside the explanation, not in its corner. */
+  restsBeside?: boolean;
 }) {
   const t = useT();
   // While it walks the steps, the sphere waits beside the step's datum (MascotGuide.spot).
@@ -341,7 +357,10 @@ export function LessonOverlay({
   }, []);
   const half = stageMascotSize / 2;
   const { scene, chaser } = useSphere(
-    () => spot ?? MascotHome.point(corner, { width: window.innerWidth, height: window.innerHeight }, stageMascotSize),
+    () =>
+      spot ??
+      (restsBeside ? besideExplanation() : null) ??
+      MascotHome.point(corner, { width: window.innerWidth, height: window.innerHeight }, stageMascotSize),
     spot === null,
     still,
   );

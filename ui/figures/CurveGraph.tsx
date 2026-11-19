@@ -8,6 +8,7 @@ import { PenRing } from "@core/explanation/handDrawn";
 import { HandDrawnPath } from "../components/HandDrawnMark";
 import { useLanguage } from "../i18n";
 import "./figures.css";
+import { cssZoom } from "../stage/stageScale";
 
 /** What the graph reads and changes: the explanation or the exam question it belongs to. */
 export interface GraphControlling {
@@ -34,11 +35,18 @@ interface Rect {
 
 /** The plot inside the drawing area, with room above for the y label and to the right for the x label. */
 export const plotRect = (width: number, height: number): Rect => ({
-  x: 14,
+  x: 30,
   y: 32,
-  width: width - 52,
-  height: height - 42,
+  width: width - 68,
+  height: height - 56,
 });
+
+/** Where the y axis stands: at x = 0 when the window holds it, else at the window's left edge. */
+export const yAxisValue = (graph: Graph) => (graph.xMin <= 0 && graph.xMax >= 0 ? 0 : graph.xMin);
+
+/** A tick's number, at most two decimals, in the reader's language. */
+const tickLabel = (value: number, locale: string) =>
+  new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(Math.abs(value) < 1e-9 ? 0 : value);
 
 /** Converts between graph values and points in the plot. */
 export class PlotMapping {
@@ -140,10 +148,14 @@ export function CurveGraph({
   const parameter = held?.parameter ?? session.parameterValue;
   const y = (x: number) => Graphs.y(graph, x, parameter, expression);
   const axisY = mapping.point(graph.xMin, 0).y;
+  const axisX = mapping.point(yAxisValue(graph), 0).x;
 
-  // The curve from xMin up to the drawn share of the domain, skipping undefined points.
+  // The curve from xMin up to the drawn share of the domain, skipping undefined points and lifting the pen where it
+  // jumps or runs off through a pole (no false vertical line at the break).
   let curve = "";
   let pen = false;
+  let previous = NaN;
+  const tall = (yRange[1] - yRange[0]) / 4;
   for (let index = 0; index <= 160 && curveProgress > 0; index++) {
     const x = graph.xMin + ((graph.xMax - graph.xMin) * curveProgress * index) / 160;
     const value = y(x);
@@ -151,9 +163,11 @@ export function CurveGraph({
       pen = false;
       continue;
     }
+    if (pen && Graphs.breaksBetween(y, previous, x, tall)) pen = false;
     const p = mapping.point(x, value);
     curve += `${pen ? "L" : "M"}${f(p.x)} ${f(p.y)}`;
     pen = true;
+    previous = x;
   }
 
   let area = "";
@@ -178,10 +192,28 @@ export function CurveGraph({
   // Both axes with arrowheads, as one path so it draws in order: up the y axis, then along the x axis.
   const head = 7;
   const axes =
-    `M${plot.x} ${plot.y + plot.height}L${plot.x} ${plot.y - 6}` +
-    `M${plot.x - head * 0.7} ${plot.y - 6 + head}L${plot.x} ${plot.y - 6}L${plot.x + head * 0.7} ${plot.y - 6 + head}` +
+    `M${f(axisX)} ${plot.y + plot.height}L${f(axisX)} ${plot.y - 6}` +
+    `M${f(axisX - head * 0.7)} ${plot.y - 6 + head}L${f(axisX)} ${plot.y - 6}L${f(axisX + head * 0.7)} ${plot.y - 6 + head}` +
     `M${plot.x} ${f(axisY)}L${plot.x + plot.width + 14} ${f(axisY)}` +
     `M${plot.x + plot.width + 14 - head} ${f(axisY - head * 0.7)}L${plot.x + plot.width + 14} ${f(axisY)}L${plot.x + plot.width + 14 - head} ${f(axisY + head * 0.7)}`;
+
+  // The ticks' values (CurveGraphView.ticks): about four across each axis, the y axis's 0 left to the x axis.
+  const xTicks: number[] = [];
+  const xTickStep = step(graph.xMax - graph.xMin);
+  for (
+    let x = Math.ceil(graph.xMin / xTickStep) * xTickStep;
+    x <= graph.xMax + 1e-9 && xTicks.length < 40;
+    x += xTickStep
+  )
+    xTicks.push(Math.abs(x) < xTickStep * 1e-6 ? 0 : x);
+  const yTicks: number[] = [];
+  const yTickStep = step(yRange[1] - yRange[0]);
+  for (
+    let v = Math.ceil(yRange[0] / yTickStep) * yTickStep;
+    v <= yRange[1] + 1e-9 && yTicks.length < 40;
+    v += yTickStep
+  )
+    if (Math.abs(v) >= yTickStep * 1e-6) yTicks.push(v);
 
   let ticks = "";
   const xStep = step(graph.xMax - graph.xMin);
@@ -192,7 +224,7 @@ export function CurveGraph({
   const yStep = step(yRange[1] - yRange[0]);
   for (let value = Math.ceil(yRange[0] / yStep) * yStep; value <= yRange[1] + 1e-9; value += yStep) {
     const at = mapping.point(graph.xMin, value);
-    ticks += `M${plot.x - 4} ${f(at.y)}L${plot.x + 4} ${f(at.y)}`;
+    ticks += `M${f(axisX - 4)} ${f(at.y)}L${f(axisX + 4)} ${f(at.y)}`;
   }
 
   const showsCurve = graph.curveStep === null || session.graphStep >= graph.curveStep;
@@ -210,7 +242,9 @@ export function CurveGraph({
   /** Near the x axis a drag moves the end of the area; elsewhere it moves the curve so it passes under the pointer. */
   const dragTo = (event: React.PointerEvent<SVGSVGElement>, startY: number) => {
     const box = event.currentTarget.getBoundingClientRect();
-    const point = mapping.value({ x: event.clientX - box.left, y: event.clientY - box.top });
+    // In the plot's own pixels: the stage may be zoomed (StageScale).
+    const zoom = cssZoom(event.currentTarget);
+    const point = mapping.value({ x: (event.clientX - box.left) / zoom, y: (event.clientY - box.top) / zoom });
     const nearAxis = Math.abs(startY - axisY) < 28;
     if (graph.area?.draggableBound === true && (nearAxis || Graphs.draggableParameter(graph) === null)) {
       const end = Math.min(graph.xMax, Math.max(graph.xMin, point.x));
@@ -241,7 +275,8 @@ export function CurveGraph({
           onPointerDown={(event) => {
             if (!canDrag) return;
             event.currentTarget.setPointerCapture(event.pointerId);
-            dragStart.current = event.clientY - event.currentTarget.getBoundingClientRect().top;
+            dragStart.current =
+              (event.clientY - event.currentTarget.getBoundingClientRect().top) / cssZoom(event.currentTarget);
             setDragging(true);
             dragTo(event, dragStart.current);
           }}
@@ -354,8 +389,32 @@ export function CurveGraph({
                 </g>
               );
             })}
+          <g className="curve-graph-tick-labels" style={{ opacity: axesProgress }}>
+            {xTicks.map((x) => (
+              <text
+                key={`x${x}`}
+                x={mapping.point(x, 0).x + (x === 0 && axisX > plot.x ? -7 : 0)}
+                y={axisY + 13}
+                textAnchor="middle"
+                dominantBaseline="central"
+              >
+                {tickLabel(x, locale)}
+              </text>
+            ))}
+            {yTicks.map((value) => (
+              <text
+                key={`y${value}`}
+                x={axisX - 8}
+                y={mapping.point(graph.xMin, value).y}
+                textAnchor="end"
+                dominantBaseline="central"
+              >
+                {tickLabel(value, locale)}
+              </text>
+            ))}
+          </g>
           <text
-            x={plot.x}
+            x={axisX}
             y={plot.y - 18}
             className="curve-graph-name"
             textAnchor="middle"

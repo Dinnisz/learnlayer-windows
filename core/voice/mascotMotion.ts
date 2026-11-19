@@ -375,6 +375,33 @@ export class MascotChaser {
 }
 
 export const MascotHome = {
+  /** How near the stage's edge the body may rest beside the content (MascotHome.edgeInset). */
+  edgeInset: 4,
+
+  /**
+   * The body's centre at rest beside the open explanation (ExplanationLayout.home): right of the panel's top corner when
+   * the stage has room there, else just above that corner; kept inside the stage (MascotHome.point with an anchor).
+   * `panel` is the explanation's box and `contentRight` the stage's right margin, in the stage's coordinates.
+   */
+  beside(
+    panel: { left: number; top: number; right: number },
+    contentRight: number,
+    size: { width: number; height: number },
+    mascotSize: number,
+  ): MascotPoint {
+    const half = mascotSize / 2;
+    const spare = contentRight - panel.right;
+    const anchor =
+      spare >= mascotSize + 16
+        ? { x: panel.right + 12 + half, y: panel.top + half }
+        : { x: Math.max(panel.left + half, Math.min(panel.right, contentRight) - half), y: panel.top - half - 4 };
+    const inset = half + MascotHome.edgeInset;
+    return {
+      x: Math.min(Math.max(anchor.x, inset), Math.max(inset, size.width - inset)),
+      y: Math.min(Math.max(anchor.y, inset), Math.max(inset, size.height - inset)),
+    };
+  },
+
   /** The body's centre at rest in its corner of a stage of `size` (MascotHome.point with no anchor). */
   point(corner: MascotCorner, size: { width: number; height: number }, mascotSize: number): MascotPoint {
     const inset = 20 + mascotSize / 2;

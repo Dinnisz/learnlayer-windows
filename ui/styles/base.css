@@ -26,10 +26,24 @@
   --font-text: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   --font-display: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
-  --font-icons: "Segoe Fluent Icons", "Segoe MDL2 Assets";
 
   --spring: cubic-bezier(0.2, 0.9, 0.3, 1.1);
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* The Mac's springs (ui/styles/springs.ts writes each as a linear() easing and its settling time; these stand in
+     where linear() is not supported). */
+  --spring-arrive: var(--spring);
+  --spring-arrive-duration: 700ms;
+  --spring-phase: var(--spring);
+  --spring-phase-duration: 600ms;
+  --spring-step: var(--spring);
+  --spring-step-duration: 530ms;
+  --spring-select: var(--spring);
+  --spring-select-duration: 470ms;
+  --spring-cascade: var(--spring);
+  --spring-cascade-duration: 630ms;
+  --spring-pill: var(--spring);
+  --spring-pill-duration: 410ms;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -106,13 +120,12 @@ input {
   outline-offset: 2px;
 }
 
+/* The app's own line icons (components/Icon.tsx): SVG in the text colour, the same on Windows and the Mac. */
 .icon {
-  font-family: var(--font-icons);
-  font-style: normal;
-  font-weight: normal;
-  line-height: 1;
   display: inline-block;
-  text-align: center;
+  flex: none;
+  vertical-align: -0.15em;
+  overflow: visible;
 }
 
 .visually-hidden {
