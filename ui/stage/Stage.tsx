@@ -425,6 +425,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                 presence={mascotPresence}
                 transient={cue?.cue ?? null}
                 showsMascot={mascotOn && session !== null}
+                restsBeside={session?.mode === "solution" && (session.isGuiding || (lesson.state?.playing ?? false))}
               />
             ) : null}
             <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
