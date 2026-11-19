@@ -1,5 +1,6 @@
 import "katex/dist/katex.min.css";
 import "../../styles/base.css";
+import { installSprings } from "../../styles/springs";
 import "./reader.css";
 import "../../stage/stage.css";
 import { useMemo } from "react";
@@ -7,6 +8,8 @@ import { mount } from "../../mount";
 import type { ReaderDocument } from "../../reader/readerDocument";
 import { Stage } from "../../stage/Stage";
 import { ReaderWindow, type OpenedQuestion } from "./ReaderWindow";
+
+installSprings();
 
 /** The stage over the reader: one source per opened question, so the session is made once. */
 function ReaderStage({

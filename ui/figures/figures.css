@@ -132,6 +132,13 @@
   stroke-linecap: round;
 }
 
+.curve-graph-tick-labels {
+  fill: rgb(255 255 255 / 60%);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
 .curve-graph-curve {
   fill: none;
   stroke: var(--accent, #0a84ff);

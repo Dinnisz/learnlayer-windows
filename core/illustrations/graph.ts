@@ -164,6 +164,35 @@ export const Graphs = {
     return values;
   },
 
+  /**
+   * Whether the curve breaks between two neighbouring samples (a jump, as E_z across a charged plane, or a pole
+   * through infinity), so the pen lifts instead of drawing a false vertical line. The interval is halved towards the
+   * steeper side: a steep but continuous curve shrinks its step as it is cut, a break keeps it. `tall` is the step, in
+   * the curve's own units, that counts as a break (a quarter of the plot's height suits).
+   */
+  breaksBetween(curve: (x: number) => number, x0: number, x1: number, tall: number): boolean {
+    let a = x0;
+    let b = x1;
+    let ya = curve(a);
+    let yb = curve(b);
+    if (!Number.isFinite(ya) || !Number.isFinite(yb)) return true;
+    if (Math.abs(yb - ya) <= tall) return false;
+    for (let cut = 0; cut < 24; cut++) {
+      const m = (a + b) / 2;
+      const ym = curve(m);
+      if (!Number.isFinite(ym)) return true;
+      if (Math.abs(ym - ya) >= Math.abs(yb - ym)) {
+        b = m;
+        yb = ym;
+      } else {
+        a = m;
+        ya = ym;
+      }
+      if (Math.abs(yb - ya) <= tall / 4) return false;
+    }
+    return true;
+  },
+
   y(graph: Graph, x: number, parameter: number | null = null, parsed: Expression | null = null): number {
     const expression = parsed ?? Graphs.parsed(graph);
     if (!expression) return NaN;

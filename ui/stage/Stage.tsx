@@ -14,7 +14,9 @@ import {
   useSyncExternalStore,
 } from "react";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
-import { linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
+import { FitToHeight } from "./FitToHeight";
+import { springDuration, springEasing, Springs } from "../styles/springs";
+import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
@@ -82,10 +84,12 @@ import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import { stageInk } from "./stageInk";
+import { PageInk } from "@core/pdf/pageInk";
 import { HandDrawnMark } from "../components/HandDrawnMark";
 import { stageMascotSize } from "../components/Mascot";
 import type { MascotPresence, MascotTransient } from "@core/voice/mascotMotion";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
+import { StageScale, cssZoom } from "./stageScale";
 
 const base64Bytes = (text: string) => Uint8Array.from(atob(text), (character) => character.charCodeAt(0));
 
@@ -97,6 +101,8 @@ export interface PictureQuestion {
   picture: { url: string; width: number; height: number } | null;
   /** Where the figures are in the picture, as shares (for a typeset reading's figure blocks). */
   figureBoxes: readonly Rect[];
+  /** Where the question was on the screen, in the stage's own pixels: it flies from there. Null: it only fades in. */
+  from?: { left: number; top: number; width: number; height: number } | null;
   /** What the stage shows until the model's reading comes: the computer's own reading, typeset; null for bars. */
   draft: string | null;
   /** The model reads the picture and the stage shows that reading typeset; false: the question's text as it is. */
@@ -232,6 +238,13 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   // The sphere's short reactions (MascotController.flash): a hint lights its bulb, a right answer to «Let me try» turns
   // it green with a hop, a wrong one orange with a shake, for 1.35 s.
   const [cue, setCue] = useState<{ cue: MascotTransient } | null>(null);
+  // Larger on a tall screen, exactly as laid out on the laptop's (StageScale): the column is zoomed by it.
+  const [stageScale, setStageScale] = useState(() => StageScale.factor(window.innerHeight));
+  useEffect(() => {
+    const resize = () => setStageScale(StageScale.factor(window.innerHeight));
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
   const cueKey = session
     ? session.mode === "hint"
       ? "hint"
@@ -385,6 +398,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
         <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
           <div
             className="stage"
+            style={{ "--stage-scale": stageScale } as React.CSSProperties}
             role="dialog"
             aria-modal="true"
             aria-label={t("What do you want to do?")}
@@ -422,6 +436,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                 presence={mascotPresence}
                 transient={cue?.cue ?? null}
                 showsMascot={mascotOn && session !== null}
+                restsBeside={session?.mode === "solution" && (session.isGuiding || (lesson.state?.playing ?? false))}
               />
             ) : null}
             <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
@@ -441,8 +456,17 @@ function Menu({ explains, onChoose, onAsk }: { explains: boolean; onChoose: (mod
     [explains ? t("Show the explanation") : t("Show the solution"), () => onChoose("solution")],
     [t("Ask about this exercise"), onAsk],
   ];
+  // The first choice takes the focus for the screen reader, but shows it only once the keyboard moves it (ChoiceRow
+  // is plain white until the pointer or Tab reaches it).
+  const [navigated, setNavigated] = useState(false);
   return (
-    <nav className="stage-menu" aria-label={t("What do you want to do?")}>
+    <nav
+      className={`stage-menu${navigated ? " navigated" : ""}`}
+      aria-label={t("What do you want to do?")}
+      onKeyDown={(event) => {
+        if (event.key === "Tab" || event.key.startsWith("Arrow")) setNavigated(true);
+      }}
+    >
       <p className="stage-menu-title">{t("What do you want to do?")}</p>
       <ol>
         {items.map(([label, action], index) => (
@@ -456,6 +480,164 @@ function Menu({ explains, onChoose, onAsk }: { explains: boolean; onChoose: (mod
       </ol>
     </nav>
   );
+}
+
+/**
+ * The question's flight from the page to the stage (QuestionOverlay: `arrived`): it shows where it was clicked, waits
+ * a beat (0.15 s), then slides to its place with the Mac's spring (0.5 / 0.86). Measured FLIP-style: the lifted crop is
+ * laid out where it settles, a transform puts it back over its box on the page, and the spring takes the transform
+ * away. It flies once its size is known (the page's letters set it); with Reduce Motion it only fades in.
+ */
+class QuestionFlight {
+  private state: "waiting" | "holding" | "flying" | "done" = "waiting";
+  private opened = 0;
+
+  /** `pieces`: what flies, inside the holder (the PDF's crops, or the screen question's one view). */
+  constructor(private readonly pieces: string) {}
+
+  /**
+   * Puts each lifted crop back over its own box on the page (the statement over the statement, the part over the
+   * part, whatever lies between them there); the transforms, or null when they can't be measured.
+   */
+  private pin(element: HTMLElement, targets: readonly DOMRectReadOnly[]): string[] | null {
+    const crops = [...element.querySelectorAll<HTMLElement>(this.pieces)];
+    if (crops.length === 0 || crops.length !== targets.length) return null;
+    for (const crop of crops) crop.style.transform = "";
+    const transforms: string[] = [];
+    for (const [index, crop] of crops.entries()) {
+      const settled = crop.getBoundingClientRect();
+      const target = targets[index]!;
+      if (settled.width < 1 || target.width < 1) return null;
+      // Fitted inside its box on the screen: a typeset reading need not have the picture's shape.
+      const k = Math.min(target.width / settled.width, target.height / Math.max(1, settled.height));
+      // In the crop's own pixels: the stage's column may be zoomed (StageScale).
+      const zoom = cssZoom(crop);
+      const dx = (target.left - settled.left) / zoom;
+      const dy = (target.top - settled.top) / zoom;
+      transforms.push(`translate(${dx}px, ${dy}px) scale(${k})`);
+    }
+    crops.forEach((crop, index) => {
+      crop.style.transformOrigin = "0 0";
+      crop.style.transform = transforms[index]!;
+    });
+    return transforms;
+  }
+
+  /** Laid out (or resized while it waits): over its box on the page, before the first paint. */
+  laidOut(element: HTMLElement, targets: readonly DOMRectReadOnly[]) {
+    if (this.state === "holding") {
+      this.pin(element, targets);
+      return;
+    }
+    if (this.state !== "waiting") return;
+    if (reducedMotion()) {
+      this.state = "done";
+      return;
+    }
+    element.style.animation = "none";
+    // Its size is final the moment it is known (no easing from the first guess), so the pin stays true.
+    element.classList.add("stage-question-flying");
+    this.opened = performance.now();
+    if (this.pin(element, targets)) {
+      this.state = "holding";
+    } else {
+      element.style.animation = "";
+      element.classList.remove("stage-question-flying");
+      this.state = "done";
+    }
+  }
+
+  /** How long until it may fly: its beat on the page, longer while its size is not known. */
+  delay(sized: boolean): number | null {
+    if (this.state !== "holding") return null;
+    const beat = Math.max(0, 150 - (performance.now() - this.opened));
+    return sized ? beat : Math.max(beat, 400);
+  }
+
+  fly(element: HTMLElement, targets: readonly DOMRectReadOnly[]) {
+    if (this.state !== "holding") return;
+    const from = this.pin(element, targets);
+    const crops = [...element.querySelectorAll<HTMLElement>(this.pieces)];
+    for (const crop of crops) crop.style.transform = "";
+    if (!from) {
+      element.classList.remove("stage-question-flying");
+      this.state = "done";
+      return;
+    }
+    this.state = "flying";
+    const timing = {
+      duration: springDuration(Springs.arrive) * 1000,
+      easing: CSS.supports("animation-timing-function", "linear(0, 1)")
+        ? springEasing(Springs.arrive)
+        : "cubic-bezier(0.2, 0.9, 0.3, 1.05)",
+    };
+    const flights = crops.map((crop, index) =>
+      crop.animate([{ transform: from[index]! }, { transform: "none" }], timing),
+    );
+    const land = () => {
+      element.classList.remove("stage-question-flying");
+      this.state = "done";
+    };
+    void Promise.all(flights.map((flight) => flight.finished)).then(land, land);
+  }
+}
+
+/** Where each lifted crop was on the page, in the window: the page's box for the part, scaled to every region. */
+function sourceRects(frame: OpenedQuestion["frame"], bounds: Rect, regions: readonly Rect[]): DOMRectReadOnly[] {
+  const perPoint = frame.width / Math.max(1e-6, bounds.width);
+  return regions.map(
+    (region) =>
+      new DOMRectReadOnly(
+        frame.left + (region.x - bounds.x) * perPoint,
+        frame.top + (Rects.maxY(bounds) - Rects.maxY(region)) * perPoint,
+        region.width * perPoint,
+        region.height * perPoint,
+      ),
+  );
+}
+
+function useQuestionFlight(
+  holder: React.RefObject<HTMLDivElement | null>,
+  targets: readonly DOMRectReadOnly[],
+  laidOut: boolean,
+  sized: boolean,
+  scale: number,
+  pieces = ":scope > .stage-crop",
+) {
+  const [flight] = useState(() => new QuestionFlight(pieces));
+  useLayoutEffect(() => {
+    if (holder.current && laidOut) flight.laidOut(holder.current, targets);
+  }, [flight, holder, targets, laidOut, scale]);
+  useEffect(() => {
+    const delay = flight.delay(sized);
+    if (delay === null) return;
+    const timer = window.setTimeout(() => {
+      if (holder.current) flight.fly(holder.current, targets);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [flight, holder, targets, laidOut, sized]);
+}
+
+/** `Stage.init`'s scale for the lifted question: its body text at `readingSize` or `compactSize` points. */
+function questionScale({
+  body,
+  compact,
+  fits,
+  height,
+}: {
+  body: number;
+  compact: boolean;
+  fits: number;
+  height: number;
+}) {
+  // In the column's own pixels, which StageScale enlarges.
+  const windowHeight = window.innerHeight || 800;
+  const available = windowHeight / StageScale.factor(windowHeight);
+  const size = compact ? 14 : 17;
+  const share = compact ? 0.3 : 0.45;
+  const scale = Math.min(size / Math.max(1, body), fits, (available * share) / Math.max(1, height));
+  // Never below the smallest readable size.
+  return Math.max(scale, Math.min(fits, 11 / Math.max(1, body)));
 }
 
 /** The question lifted off the page: drawn by pdf.js, white on the dark stage, with the open step's data underlined. */
@@ -496,9 +678,18 @@ function QuestionCrop({
     return () => observer.disconnect();
   }, []);
 
-  // Lifted large; after «Solution» it steps back to the size of print. One scale for both crops.
+  // Sized by its letters (QuestionOverlay's Stage): body text at 17 pt while it is read, 14 pt after «Solution»,
+  // never wider than the column nor taller than its share of the window. One scale for both crops.
+  const body = useMemo(() => (page ? bodyFontSize(page, question.bounds) : 11), [page, question]);
   const widest = Math.max(...regions.map((region) => region.width));
-  const scale = width === 0 ? 1 : Math.min(compact ? 1.1 : 1.7, width / widest);
+  const tall = regions.reduce((sum, region) => sum + region.height, 0);
+  const scale = width === 0 ? 1 : questionScale({ body, compact, fits: width / widest, height: tall });
+
+  const sources = useMemo(
+    () => sourceRects(opened.frame, question.bounds, regions),
+    [opened.frame, question.bounds, regions],
+  );
+  useQuestionFlight(holder, sources, width > 0, page !== null, scale);
 
   return (
     <div className="stage-question" ref={holder}>
@@ -551,7 +742,14 @@ function CropPiece({
   useEffect(() => {
     if (!canvas.current || !ready) return;
     void document
-      .renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1, stageInk(canvas.current))
+      .renderRegion(
+        pageIndex,
+        canvas.current,
+        region,
+        scale,
+        (window.devicePixelRatio || 1) * cssZoom(canvas.current),
+        stageInk(canvas.current),
+      )
       .then(() => setDrawn((count) => count + 1));
   }, [document, pageIndex, region, scale, ready]);
   const version = session?.version;
@@ -623,11 +821,13 @@ function CropPiece({
     const element = cropElement.current;
     if (!lens || !element) return;
     const crop = element.getBoundingClientRect();
+    // The lens is in the crop's own pixels; the window's are larger when the stage is zoomed (StageScale).
+    const zoom = cssZoom(element);
     const datum = {
-      x: crop.left + lens.target.x,
-      y: crop.top + lens.target.y,
-      width: lens.target.width,
-      height: lens.target.height,
+      x: crop.left + lens.target.x * zoom,
+      y: crop.top + lens.target.y * zoom,
+      width: lens.target.width * zoom,
+      height: lens.target.height * zoom,
     };
     const text = { x: crop.left, y: crop.top, width: crop.width, height: crop.height };
     GuideSpots.set(MascotGuide.spot(datum, text, { width: window.innerWidth, height: window.innerHeight }, mascotSize));
@@ -1301,43 +1501,46 @@ function SolutionView({ session }: { session: QuestionSession }) {
       (session.showsGraph && session.hasGraph) ||
       session.showsIllustration);
   return (
-    <div className="stage-panel stage-solution">
-      {solution.figure && (
-        <details className="stage-figure-reading">
-          <summary>{t("How I read the figure")}</summary>
-          <MathText text={solution.figure} />
-        </details>
-      )}
-      <AnswerBox part={part} language={session.notationLanguage} />
-      {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
-        <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
-      )}
-      {session.isConfirming && <p className="stage-progress">{t("Checking the result…")}</p>}
-      <div className="stage-solution-body">
-        <div className="stage-steps">
-          {evidence ? (
-            <EvidenceView evidence={evidence} />
-          ) : (
-            Array.from({ length: session.stepCount }, (_, index) => index)
-              .filter((index) => index < visible)
-              .map((index) => <StepCard key={index} part={part} index={index} session={session} interactive />)
+    <FitToHeight>
+      <div className="stage-panel stage-solution">
+        {solution.figure && (
+          <details className="stage-figure-reading">
+            <summary>{t("How I read the figure")}</summary>
+            <MathText text={solution.figure} />
+          </details>
+        )}
+        <AnswerBox part={part} language={session.notationLanguage} />
+        <ExplainEntry session={session} />
+        {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
+          <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
+        )}
+        {session.isConfirming && <p className="stage-progress">{t("Checking the result…")}</p>}
+        <div className="stage-solution-body">
+          <div className="stage-steps">
+            {evidence ? (
+              <EvidenceView evidence={evidence} />
+            ) : (
+              Array.from({ length: session.stepCount }, (_, index) => index)
+                .filter((index) => index < visible)
+                .map((index) => <StepCard key={index} part={part} index={index} session={session} interactive />)
+            )}
+          </div>
+          {(formulas.length > 0 || side) && (
+            <aside className="stage-formulas" aria-label={t("Formulas")}>
+              {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
+              {formulas.map((formula) => (
+                <div key={formula.name + formula.latex} className="stage-formula">
+                  <span>{formula.name}</span>
+                  <MathView latex={formula.latex} display />
+                </div>
+              ))}
+              {side && <SideFigures session={session} />}
+            </aside>
           )}
         </div>
-        {(formulas.length > 0 || side) && (
-          <aside className="stage-formulas" aria-label={t("Formulas")}>
-            {formulas.length > 0 && <h3>{t("Formulas")}</h3>}
-            {formulas.map((formula) => (
-              <div key={formula.name + formula.latex} className="stage-formula">
-                <span>{formula.name}</span>
-                <MathView latex={formula.latex} />
-              </div>
-            ))}
-            {side && <SideFigures session={session} />}
-          </aside>
-        )}
+        <Actions session={session} />
       </div>
-      <Actions session={session} />
-    </div>
+    </FitToHeight>
   );
 }
 
@@ -1457,6 +1660,19 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
   }
 }
 
+/** «Explain It to Me» right under the answer (QuestionOverlay.explainEntry), not in the footer under every step. */
+function ExplainEntry({ session }: { session: QuestionSession }) {
+  const t = useT();
+  const lesson = useLessonState();
+  const toggleLesson = useLessonToggle();
+  if (session.mode !== "solution" || session.part === null || session.state.kind !== "ready") return null;
+  return (
+    <button type="button" className="stage-explain" onClick={toggleLesson}>
+      {lesson?.playing ? t("Stop Explaining") : t("Explain It to Me")}
+    </button>
+  );
+}
+
 function AnswerBox({ part, language }: { part: Part; language: string }) {
   const t = useT();
   // While a lesson plays, the answer waits for the lesson to work it out (`QuestionSession.showsFinalAnswer`).
@@ -1547,7 +1763,7 @@ function StepCard({
                 {card.branches.map((branch, position) => (
                   <div key={position}>
                     <span>{branch.title}</span>
-                    <MathView latex={ExamNotation.trigInLatex(branch.latex, session.notationLanguage)} />
+                    <MathView latex={ExamNotation.trigInLatex(branch.latex, session.notationLanguage)} display />
                   </div>
                 ))}
               </div>
@@ -1906,8 +2122,6 @@ const QuestionSessionDetail =
 /** The field to ask about the exercise and the other ways in, under every mode. */
 function Actions({ session }: { session: QuestionSession }) {
   const t = useT();
-  const lesson = useLessonState();
-  const toggleLesson = useLessonToggle();
   const [asked, setAsked] = useState("");
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -1920,11 +2134,6 @@ function Actions({ session }: { session: QuestionSession }) {
       session.explains ? t("Show the explanation") : t("Solution"),
       () => session.choose("solution"),
       session.mode !== "solution",
-    ],
-    [
-      lesson?.playing ? t("Stop Explaining") : t("Explain It to Me"),
-      toggleLesson,
-      session.mode === "solution" && session.part !== null && session.state.kind === "ready",
     ],
     [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant],
     [
@@ -2047,18 +2256,28 @@ function ScreenQuestionView({
     };
   }, [session, source]);
 
+  // Lifted from where it was clicked on the screen, like the PDF's crop from its page.
+  const holder = useRef<HTMLDivElement>(null);
+  const from = source.from ?? null;
+  const targets = useMemo(
+    () => (from ? [new DOMRectReadOnly(from.left, from.top, from.width, from.height)] : []),
+    [from],
+  );
+  useQuestionFlight(holder, targets, from !== null, true, 0, ":scope > *");
+
   const picture = source.picture;
   const scale = compact ? 0.85 : 1;
   return (
-    <div className="stage-question stage-screen-question" aria-live="polite">
+    <div className="stage-question stage-screen-question" aria-live="polite" ref={holder}>
       {shown.kind === "typeset" ? (
         <TypesetQuestion transcription={shown.transcription} source={source} />
       ) : shown.kind === "crop" && picture ? (
-        <img
+        <InkPicture
           className="stage-screen-crop"
-          src={picture.url}
-          alt={source.question.text}
-          style={{ width: picture.width * scale, height: picture.height * scale }}
+          picture={picture}
+          label={source.question.text}
+          width={picture.width * scale}
+          height={picture.height * scale}
         />
       ) : source.draft ? (
         <div className="stage-typeset stage-draft">
@@ -2088,6 +2307,69 @@ function ScreenQuestionView({
   );
 }
 
+/**
+ * Part of a picture of the screen drawn in the stage's ink (the Mac's white-ink image): white letters on nothing, the
+ * same as a question lifted from a PDF, never a white plate. A dark page, or a picture that can't be read back, is shown
+ * as it is.
+ */
+function InkPicture({
+  picture,
+  label,
+  width,
+  height,
+  region,
+  className,
+}: {
+  picture: { url: string; width: number; height: number };
+  label: string;
+  width: number;
+  height: number;
+  /** The part to draw, in the picture's points; all of it when absent. */
+  region?: Rect;
+  className?: string;
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const area = region ?? { x: 0, y: 0, width: picture.width, height: picture.height };
+  const { x, y, width: areaWidth, height: areaHeight } = area;
+  useEffect(() => {
+    const target = canvas.current;
+    if (!target) return;
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (cancelled) return;
+      const ratio = (window.devicePixelRatio || 1) * cssZoom(target);
+      target.width = Math.max(1, Math.round(width * ratio));
+      target.height = Math.max(1, Math.round(height * ratio));
+      const context = target.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+      // The picture's pixels per point.
+      const sx = image.naturalWidth / Math.max(1, picture.width);
+      const sy = image.naturalHeight / Math.max(1, picture.height);
+      context.drawImage(image, x * sx, y * sy, areaWidth * sx, areaHeight * sy, 0, 0, target.width, target.height);
+      try {
+        const pixels = context.getImageData(0, 0, target.width, target.height);
+        if (PageInk.recolourPicture(pixels.data, stageInk(target))) context.putImageData(pixels, 0, 0);
+      } catch {
+        // A picture the canvas can't read back stays as it was taken.
+      }
+    };
+    image.src = picture.url;
+    return () => {
+      cancelled = true;
+    };
+  }, [picture, width, height, x, y, areaWidth, areaHeight]);
+  return (
+    <canvas
+      ref={canvas}
+      className={className}
+      role="img"
+      aria-label={label}
+      style={{ width, height: "auto", aspectRatio: `${width} / ${height}` }}
+    />
+  );
+}
+
 /** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
  * cut from the picture where the reading says they are. */
 function TypesetQuestion({ transcription, source }: { transcription: QuestionTranscription; source: PictureQuestion }) {
@@ -2106,16 +2388,12 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
           const height = box.height * picture.height;
           return (
             <figure key={index} className="stage-figure">
-              <div
-                role="img"
-                aria-label={block.caption ?? ""}
-                style={{
-                  width,
-                  height,
-                  backgroundImage: `url(${picture.url})`,
-                  backgroundSize: `${picture.width}px ${picture.height}px`,
-                  backgroundPosition: `${-box.x * picture.width}px ${-box.y * picture.height}px`,
-                }}
+              <InkPicture
+                picture={picture}
+                label={block.caption ?? ""}
+                width={width}
+                height={height}
+                region={{ x: box.x * picture.width, y: box.y * picture.height, width, height }}
               />
               {block.caption ? <figcaption>{block.caption}</figcaption> : null}
             </figure>
@@ -2123,7 +2401,8 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
         }
         const text = block.text ?? "";
         if (text.trim() === "") return null;
-        if (block.type === "formula") return <MathView key={index} latex={text} display className="stage-formula" />;
+        if (block.type === "formula")
+          return <MathView key={index} latex={text} display className="stage-typeset-formula" />;
         return <MarkupText key={index} text={text} />;
       })}
     </div>
