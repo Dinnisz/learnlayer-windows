@@ -8,6 +8,7 @@ import { PenRing } from "@core/explanation/handDrawn";
 import { HandDrawnPath } from "../components/HandDrawnMark";
 import { useLanguage } from "../i18n";
 import "./figures.css";
+import { cssZoom } from "../stage/stageScale";
 
 /** What the graph reads and changes: the explanation or the exam question it belongs to. */
 export interface GraphControlling {
@@ -241,7 +242,9 @@ export function CurveGraph({
   /** Near the x axis a drag moves the end of the area; elsewhere it moves the curve so it passes under the pointer. */
   const dragTo = (event: React.PointerEvent<SVGSVGElement>, startY: number) => {
     const box = event.currentTarget.getBoundingClientRect();
-    const point = mapping.value({ x: event.clientX - box.left, y: event.clientY - box.top });
+    // In the plot's own pixels: the stage may be zoomed (StageScale).
+    const zoom = cssZoom(event.currentTarget);
+    const point = mapping.value({ x: (event.clientX - box.left) / zoom, y: (event.clientY - box.top) / zoom });
     const nearAxis = Math.abs(startY - axisY) < 28;
     if (graph.area?.draggableBound === true && (nearAxis || Graphs.draggableParameter(graph) === null)) {
       const end = Math.min(graph.xMax, Math.max(graph.xMin, point.x));
@@ -272,7 +275,8 @@ export function CurveGraph({
           onPointerDown={(event) => {
             if (!canDrag) return;
             event.currentTarget.setPointerCapture(event.pointerId);
-            dragStart.current = event.clientY - event.currentTarget.getBoundingClientRect().top;
+            dragStart.current =
+              (event.clientY - event.currentTarget.getBoundingClientRect().top) / cssZoom(event.currentTarget);
             setDragging(true);
             dragTo(event, dragStart.current);
           }}

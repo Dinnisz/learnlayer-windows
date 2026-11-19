@@ -16,7 +16,7 @@
   justify-content: flex-start;
   overflow-y: auto;
   /* Stage.margin: anchored at the left, where the eye starts reading. */
-  padding: 28px;
+  padding: calc(28px * var(--stage-scale, 1));
   background: rgb(20 20 22 / 62%);
   backdrop-filter: blur(10px) saturate(110%);
   color: var(--stage-text);
@@ -40,6 +40,8 @@
 /* ExplanationLayout: the words at a readable measure (720), a 32 px gutter, the figures in 42 % of the width
    (520 at most, up to 640 once the words have their full measure). */
 .stage-column {
+  /* Larger on a tall screen (StageScale): sizes, margins and measures grow together, as laid out on a laptop. */
+  zoom: var(--stage-scale, 1);
   width: min(1272px, 100%);
   display: flex;
   flex-direction: column;

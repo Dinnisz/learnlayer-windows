@@ -1,5 +1,6 @@
 // Port of LearnLayer/Problems/SolutionSteps.swift (FitToHeight)
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { cssZoom } from "./stageScale";
 
 /** How far the content may shrink before the stage scrolls instead (`FitToHeight.floor`). */
 export const fitFloor = 0.78;
@@ -39,7 +40,8 @@ export function FitToHeight({
       const stage = box.closest(".stage");
       const top = box.getBoundingClientRect().top + (stage?.scrollTop ?? 0);
       const room = window.innerHeight - top - bottom;
-      const scale = fitScale(natural, room, floor);
+      // The window's pixels are larger than the content's own when the stage is zoomed (StageScale).
+      const scale = fitScale(natural * cssZoom(content), room, floor);
       setFit((now) => (now.scale === scale && now.natural === natural ? now : { scale, natural }));
     };
     measure();

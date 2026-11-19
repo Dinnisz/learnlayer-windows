@@ -89,6 +89,7 @@ import { HandDrawnMark } from "../components/HandDrawnMark";
 import { stageMascotSize } from "../components/Mascot";
 import type { MascotPresence, MascotTransient } from "@core/voice/mascotMotion";
 import type { OpenedQuestion } from "../windows/reader/ReaderWindow";
+import { StageScale, cssZoom } from "./stageScale";
 
 const base64Bytes = (text: string) => Uint8Array.from(atob(text), (character) => character.charCodeAt(0));
 
@@ -237,6 +238,13 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   // The sphere's short reactions (MascotController.flash): a hint lights its bulb, a right answer to «Let me try» turns
   // it green with a hop, a wrong one orange with a shake, for 1.35 s.
   const [cue, setCue] = useState<{ cue: MascotTransient } | null>(null);
+  // Larger on a tall screen, exactly as laid out on the laptop's (StageScale): the column is zoomed by it.
+  const [stageScale, setStageScale] = useState(() => StageScale.factor(window.innerHeight));
+  useEffect(() => {
+    const resize = () => setStageScale(StageScale.factor(window.innerHeight));
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
   const cueKey = session
     ? session.mode === "hint"
       ? "hint"
@@ -390,6 +398,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
         <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
           <div
             className="stage"
+            style={{ "--stage-scale": stageScale } as React.CSSProperties}
             role="dialog"
             aria-modal="true"
             aria-label={t("What do you want to do?")}
@@ -501,7 +510,11 @@ class QuestionFlight {
       if (settled.width < 1 || target.width < 1) return null;
       // Fitted inside its box on the screen: a typeset reading need not have the picture's shape.
       const k = Math.min(target.width / settled.width, target.height / Math.max(1, settled.height));
-      transforms.push(`translate(${target.left - settled.left}px, ${target.top - settled.top}px) scale(${k})`);
+      // In the crop's own pixels: the stage's column may be zoomed (StageScale).
+      const zoom = cssZoom(crop);
+      const dx = (target.left - settled.left) / zoom;
+      const dy = (target.top - settled.top) / zoom;
+      transforms.push(`translate(${dx}px, ${dy}px) scale(${k})`);
     }
     crops.forEach((crop, index) => {
       crop.style.transformOrigin = "0 0";
@@ -617,7 +630,9 @@ function questionScale({
   fits: number;
   height: number;
 }) {
-  const available = window.innerHeight || 800;
+  // In the column's own pixels, which StageScale enlarges.
+  const windowHeight = window.innerHeight || 800;
+  const available = windowHeight / StageScale.factor(windowHeight);
   const size = compact ? 14 : 17;
   const share = compact ? 0.3 : 0.45;
   const scale = Math.min(size / Math.max(1, body), fits, (available * share) / Math.max(1, height));
@@ -727,7 +742,14 @@ function CropPiece({
   useEffect(() => {
     if (!canvas.current || !ready) return;
     void document
-      .renderRegion(pageIndex, canvas.current, region, scale, window.devicePixelRatio || 1, stageInk(canvas.current))
+      .renderRegion(
+        pageIndex,
+        canvas.current,
+        region,
+        scale,
+        (window.devicePixelRatio || 1) * cssZoom(canvas.current),
+        stageInk(canvas.current),
+      )
       .then(() => setDrawn((count) => count + 1));
   }, [document, pageIndex, region, scale, ready]);
   const version = session?.version;
@@ -799,11 +821,13 @@ function CropPiece({
     const element = cropElement.current;
     if (!lens || !element) return;
     const crop = element.getBoundingClientRect();
+    // The lens is in the crop's own pixels; the window's are larger when the stage is zoomed (StageScale).
+    const zoom = cssZoom(element);
     const datum = {
-      x: crop.left + lens.target.x,
-      y: crop.top + lens.target.y,
-      width: lens.target.width,
-      height: lens.target.height,
+      x: crop.left + lens.target.x * zoom,
+      y: crop.top + lens.target.y * zoom,
+      width: lens.target.width * zoom,
+      height: lens.target.height * zoom,
     };
     const text = { x: crop.left, y: crop.top, width: crop.width, height: crop.height };
     GuideSpots.set(MascotGuide.spot(datum, text, { width: window.innerWidth, height: window.innerHeight }, mascotSize));
@@ -2314,7 +2338,7 @@ function InkPicture({
     const image = new Image();
     image.onload = () => {
       if (cancelled) return;
-      const ratio = window.devicePixelRatio || 1;
+      const ratio = (window.devicePixelRatio || 1) * cssZoom(target);
       target.width = Math.max(1, Math.round(width * ratio));
       target.height = Math.max(1, Math.round(height * ratio));
       const context = target.getContext("2d", { willReadFrequently: true });
