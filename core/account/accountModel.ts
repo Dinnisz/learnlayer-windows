@@ -3,6 +3,7 @@
 import { siteBase, sitePage, type Environment } from "../ai/aiGateway";
 import {
   BackendFailure,
+  nearestWindow,
   type AccountSnapshot,
   type AuthTokens,
   type BackendClient,
@@ -148,8 +149,7 @@ export class AccountModel {
       const consent = await client.consents(token).catch(() => null);
       if (consent) this.update({ pendingConsent: consentToAsk(consent) });
       preferences.set(planKey, me.plan.id === "free" ? "free" : "paid");
-      const spent = me.usage.monthlyRequests >= me.usage.monthlyLimit || me.usage.dailyRequests >= me.usage.dailyLimit;
-      this.update({ banner: spent ? "You’ve used this month’s allowance." : null });
+      this.update({ banner: usageBanner(me.usage) });
     } catch {
       this.update({ banner: unreachable });
     }
@@ -342,15 +342,31 @@ export class AccountModel {
 
 /** Defaults kept in step with `loadConfig` in the API. The live numbers come from `/v1/plans`. */
 export const PlanDefaults = {
-  /** "paid" is Plus. Pro has its own numbers. */
+  /** "paid" is Plus. Pro has its own numbers. 1 credit = $0.01 of API cost. */
   paidMonthlyCents: 2_000,
-  yearlyPriceCents: 19_000 as number | null,
-  freeDailyRequests: 8,
-  freeMonthlyRequests: 30,
-  paidDailyRequests: 35,
-  paidMonthlyRequests: 350,
+  yearlyPriceCents: 19_200 as number | null,
+  freeDailyCredits: 10,
+  freeMonthlyCredits: 30,
+  paidDailyCredits: 70,
+  paidWeeklyCredits: 250,
+  paidMonthlyCredits: 700,
   proMonthlyCents: 5_000,
   proYearlyCents: 48_000,
-  proDailyRequests: 100,
-  proMonthlyRequests: 1_000,
+  proDailyCredits: 160,
+  proWeeklyCredits: 560,
+  proMonthlyCredits: 1_600,
 } as const;
+
+/** The banner when a credit window is spent (AccountModel.swift `refresh`), else null. */
+export function usageBanner(usage: AccountSnapshot["usage"]): string | null {
+  const nearest = nearestWindow(usage);
+  if (nearest) {
+    if (nearest.used < nearest.limit) return null;
+    if (nearest.name === "day") return "You’ve used today’s credits. They reset at midnight UTC.";
+    if (nearest.name === "week") return "You’ve used this week’s credits. They reset on Monday at 00:00 UTC.";
+    return "You’ve used this month’s credits. Upgrade to keep going.";
+  }
+  // An older server without credit windows.
+  const spent = usage.monthlyRequests >= usage.monthlyLimit || usage.dailyRequests >= usage.dailyLimit;
+  return spent ? "You’ve used this month’s credits. Upgrade to keep going." : null;
+}

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { PlanDefaults } from "@core/account/accountModel";
+import { credits, nearestWindow } from "@core/ai/backendClient";
 import { useAccount } from "../../../account/accountStore";
 import {
   SettingsButton,
@@ -32,12 +33,24 @@ export function PlanPane() {
   const currentID = planID === "paid" ? "plus" : planID;
 
   const price = (cents: number) =>
-    new Intl.NumberFormat(language, { style: "currency", currency: "EUR" }).format(cents / 100);
-  const perk = (count: number) => t("A daily limit and %lld explanations a month.", count);
+    new Intl.NumberFormat(language, { style: "currency", currency: plus?.currency ?? "EUR" }).format(cents / 100);
+  const perk = (count: number) => t("%lld credits a month.", count);
 
+  // One bar: the credit window closest to full (PlanSettingsTab.swift `currentPlan`).
   const usage = state.snapshot?.usage;
-  const used = usage?.monthlyRequests ?? 0;
-  const allowance = usage?.monthlyLimit ?? free?.monthlyRequestLimit ?? PlanDefaults.freeMonthlyRequests;
+  const nearest = usage ? nearestWindow(usage) : null;
+  const used = nearest ? credits(nearest.used) : credits(usage?.monthlyCostUsdMicros ?? 0);
+  const allowance = nearest ? credits(nearest.limit) : (free?.monthlyCreditLimit ?? PlanDefaults.freeMonthlyCredits);
+  const monthlyCredits = usage?.monthly?.limitUsdMicros
+    ? credits(usage.monthly.limitUsdMicros)
+    : (free?.monthlyCreditLimit ?? PlanDefaults.freeMonthlyCredits);
+  const usedLine =
+    nearest?.name === "day"
+      ? "%lld of %lld credits used today"
+      : nearest?.name === "week"
+        ? "%lld of %lld credits used this week"
+        : "%lld of %lld credits used this month";
+  const resetsAt = nearest?.resetsAt ?? usage?.resetsMonthlyAt;
 
   return (
     <SettingsPage title={t("Plan & usage")} subtitle={t("Your plan, what you’ve used and what’s next.")}>
@@ -50,7 +63,7 @@ export function PlanPane() {
               <strong className="plan-current-name">
                 {currentID === "pro" ? t("Pro") : currentID === "plus" ? t("Plus") : t("Free")}
               </strong>
-              <span className="settings-row-detail">{perk(allowance)}</span>
+              <span className="settings-row-detail">{perk(monthlyCredits)}</span>
             </div>
             {currentID === "free" ? (
               <SettingsButton onClick={() => model?.upgradeMonthly()}>{t("Upgrade")}</SettingsButton>
@@ -59,10 +72,18 @@ export function PlanPane() {
           {state.isSignedIn ? (
             <div className="plan-usage">
               <div className="plan-usage-line">
-                <span className="plan-usage-count">{t("%lld of %lld explanations used", used, allowance)}</span>
-                {usage ? (
+                <span className="plan-usage-count">{t(usedLine, used, allowance)}</span>
+                {resetsAt ? (
                   <span className="settings-row-detail">
-                    {new Intl.DateTimeFormat(language, { month: "long", day: "numeric" }).format(usage.resetsMonthlyAt)}
+                    {t(
+                      "Resets %@",
+                      new Intl.DateTimeFormat(language, {
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }).format(resetsAt),
+                    )}
                   </span>
                 ) : null}
               </div>
@@ -78,14 +99,14 @@ export function PlanPane() {
           <PlanCard
             name={t("Free")}
             price={price(free?.monthlyPriceCents ?? 0)}
-            perk={perk(free?.monthlyRequestLimit ?? PlanDefaults.freeMonthlyRequests)}
+            perk={perk(free?.monthlyCreditLimit ?? PlanDefaults.freeMonthlyCredits)}
             isCurrent={currentID === "free"}
           />
           <PlanCard
             name={t("Plus")}
             price={price(plus?.monthlyPriceCents ?? PlanDefaults.paidMonthlyCents)}
             period={t("/ month")}
-            perk={perk(plus?.monthlyRequestLimit ?? PlanDefaults.paidMonthlyRequests)}
+            perk={perk(plus?.monthlyCreditLimit ?? PlanDefaults.paidMonthlyCredits)}
             isCurrent={currentID === "plus"}
             isProminent={currentID === "free"}
             onUpgrade={() => model?.upgrade("plus")}
@@ -94,7 +115,7 @@ export function PlanPane() {
             name={t("Pro")}
             price={price(pro?.monthlyPriceCents ?? PlanDefaults.proMonthlyCents)}
             period={t("/ month")}
-            perk={perk(pro?.monthlyRequestLimit ?? PlanDefaults.proMonthlyRequests)}
+            perk={perk(pro?.monthlyCreditLimit ?? PlanDefaults.proMonthlyCredits)}
             isCurrent={currentID === "pro"}
             isProminent={currentID !== "pro"}
             // Plus to Pro is a plan change on the existing subscription, done in the Paddle portal.

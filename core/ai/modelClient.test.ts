@@ -121,13 +121,14 @@ describe("failures", () => {
     expect(isTransient(direct)).toBe(false);
   });
 
-  it("402 and 503 show the right messages, all of them in the String Catalog", () => {
+  it("402 and 503 show the right messages, all of them in the String Catalog or the Windows additions", () => {
     const message = (status: number, code: string) =>
       failureMessage(new ModelError(classifiedFailure(status, JSON.stringify({ error: { code, message: "x" } }), true)))
         .key;
-    expect(message(402, "quota_daily")).toBe("You’ve reached today’s limit. It resets at midnight UTC.");
-    expect(message(402, "quota_monthly")).toBe("You’ve used this month’s allowance. Upgrade to keep going.");
-    expect(message(402, "quota_cost")).toBe("You’ve used this month’s allowance. Upgrade to keep going.");
+    expect(message(402, "quota_daily")).toBe("You’ve used today’s credits. They reset at midnight UTC.");
+    expect(message(402, "quota_weekly")).toBe("You’ve used this week’s credits. They reset on Monday at 00:00 UTC.");
+    expect(message(402, "quota_monthly")).toBe("You’ve used this month’s credits. Upgrade to keep going.");
+    expect(message(402, "quota_cost")).toBe("You’ve used this month’s credits. Upgrade to keep going.");
     expect(message(503, "spend_kill")).toBe("LearnLayer is paused right now. Try again later.");
     expect(message(429, "rate_limited")).toBe("Too many attempts. Wait a minute and try again.");
     expect(message(413, "too_large")).toBe("LearnLayer couldn’t complete that request.");

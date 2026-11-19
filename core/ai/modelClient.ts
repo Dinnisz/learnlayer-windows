@@ -17,7 +17,7 @@ export type ModelFailure =
   | { kind: "cutOff"; tokens: number; partial: string }
   /** A streamed reply that broke off or ended unreadable. */
   | { kind: "stream"; reason: string }
-  /** The LearnLayer API refused the call: `quota_daily`, `quota_monthly`, `quota_cost`, `spend_kill`, `rate_limited`… */
+  /** The LearnLayer API refused the call: `quota_daily`, `quota_weekly`, `quota_monthly`, `quota_cost`, `spend_kill`, `rate_limited`… */
   | { kind: "gateway"; status: number; code: string; message: string }
   /** No local key and no signed-in session. */
   | { kind: "signedOut" }
@@ -75,10 +75,12 @@ export function failureMessage(error: unknown): { key: string; args: (string | n
     case "gateway":
       switch (failure.code) {
         case "quota_daily":
-          return { key: "You’ve reached today’s limit. It resets at midnight UTC.", args: [] };
+          return { key: "You’ve used today’s credits. They reset at midnight UTC.", args: [] };
+        case "quota_weekly":
+          return { key: "You’ve used this week’s credits. They reset on Monday at 00:00 UTC.", args: [] };
         case "quota_monthly":
         case "quota_cost":
-          return { key: "You’ve used this month’s allowance. Upgrade to keep going.", args: [] };
+          return { key: "You’ve used this month’s credits. Upgrade to keep going.", args: [] };
         case "spend_kill":
           return { key: "LearnLayer is paused right now. Try again later.", args: [] };
         case "rate_limited":
@@ -102,7 +104,8 @@ export function offersUpgrade(error: unknown): boolean {
 export function isQuota(error: unknown): boolean {
   const failure = failureOf(error);
   return (
-    failure?.kind === "gateway" && ["quota_daily", "quota_monthly", "quota_cost", "spend_kill"].includes(failure.code)
+    failure?.kind === "gateway" &&
+    ["quota_daily", "quota_weekly", "quota_monthly", "quota_cost", "spend_kill"].includes(failure.code)
   );
 }
 

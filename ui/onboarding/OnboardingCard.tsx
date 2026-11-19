@@ -691,7 +691,7 @@ function Plan({ voice }: ScreenProps) {
         <span>{price(cents)}</span>
         {monthly && <small>{t("/ month")}</small>}
       </div>
-      <p>{t("A daily limit and %lld explanations a month.", count)}</p>
+      <p>{t("%lld credits a month.", count)}</p>
       <em>{t(note)}</em>
     </div>
   );
@@ -702,7 +702,7 @@ function Plan({ voice }: ScreenProps) {
           "Free",
           free?.monthlyPriceCents ?? 0,
           false,
-          free?.monthlyRequestLimit ?? PlanDefaults.freeMonthlyRequests,
+          free?.monthlyCreditLimit ?? PlanDefaults.freeMonthlyCredits,
           true,
           "No card needed.",
         )}
@@ -710,7 +710,7 @@ function Plan({ voice }: ScreenProps) {
           "Plus",
           plus?.monthlyPriceCents ?? PlanDefaults.paidMonthlyCents,
           true,
-          plus?.monthlyRequestLimit ?? PlanDefaults.paidMonthlyRequests,
+          plus?.monthlyCreditLimit ?? PlanDefaults.paidMonthlyCredits,
           false,
           "Upgrade in Settings",
         )}
@@ -718,7 +718,7 @@ function Plan({ voice }: ScreenProps) {
           "Pro",
           pro?.monthlyPriceCents ?? PlanDefaults.proMonthlyCents,
           true,
-          pro?.monthlyRequestLimit ?? PlanDefaults.proMonthlyRequests,
+          pro?.monthlyCreditLimit ?? PlanDefaults.proMonthlyCredits,
           false,
           "Upgrade in Settings",
         )}

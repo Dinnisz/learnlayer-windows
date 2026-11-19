@@ -39,5 +39,16 @@
   "Integral / area": "Integral / area",
   "Domain and asymptotes": "Domain and asymptotes",
   "Sign chart": "Sign chart",
-  "Solve": "Solve"
+  "Solve": "Solve",
+  "Credits today": "Credits today",
+  "Credits this week": "Credits this week",
+  "Credits this month": "Credits this month",
+  "%lld credits a month.": "%lld credits a month.",
+  "%lld of %lld credits used today": "%lld of %lld credits used today",
+  "%lld of %lld credits used this week": "%lld of %lld credits used this week",
+  "%lld of %lld credits used this month": "%lld of %lld credits used this month",
+  "Resets %@": "Resets %@",
+  "You’ve used today’s credits. They reset at midnight UTC.": "You’ve used today’s credits. They reset at midnight UTC.",
+  "You’ve used this week’s credits. They reset on Monday at 00:00 UTC.": "You’ve used this week’s credits. They reset on Monday at 00:00 UTC.",
+  "You’ve used this month’s credits. Upgrade to keep going.": "You’ve used this month’s credits. Upgrade to keep going."
 }

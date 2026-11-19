@@ -22,7 +22,21 @@ export interface AccountPlan {
   renewsAt: Date | null;
 }
 
+/** One credit window of `/v1/me` (BackendClient.swift `UsageWindow`). A null limit: the plan has no such window. */
+export interface UsageWindow {
+  usedUsdMicros: number;
+  limitUsdMicros: number | null;
+  resetsAt: Date;
+}
+
+export type UsageWindowName = "day" | "week" | "month";
+
 export interface AccountUsage {
+  /** Day / week / month cost windows. Absent on an older server. */
+  daily?: UsageWindow;
+  weekly?: UsageWindow;
+  monthly?: UsageWindow;
+  // Legacy request counters, still filled by the server. `dailyLimit` is now only its hidden abuse backstop.
   dailyRequests: number;
   dailyLimit: number;
   monthlyRequests: number;
@@ -48,6 +62,37 @@ export interface PlanOffer {
   dailyRequestLimit: number;
   monthlyRequestLimit: number;
   monthlyCostLimitUsdMicros: number;
+  dailyCostLimitUsdMicros?: number | null;
+  weeklyCostLimitUsdMicros?: number | null;
+  /** 1 credit = $0.01 of API cost. Absent on an older server. */
+  dailyCreditLimit?: number | null;
+  weeklyCreditLimit?: number | null;
+  monthlyCreditLimit?: number | null;
+}
+
+/** 1 credit = $0.01 of API cost (10_000 USD micros), rounded up (`AccountUsage.credits(fromMicros:)`). */
+export function credits(micros: number): number {
+  return Math.max(0, Math.ceil(micros / 10_000));
+}
+
+/** The window closest to full, for the single bar in Plan & usage (`AccountUsage.nearestWindow`). */
+export function nearestWindow(
+  usage: AccountUsage,
+): { name: UsageWindowName; used: number; limit: number; resetsAt: Date } | null {
+  let best: { name: UsageWindowName; used: number; limit: number; resetsAt: Date; fraction: number } | null = null;
+  const consider = (name: UsageWindowName, window: UsageWindow | undefined) => {
+    if (!window || window.limitUsdMicros == null || window.limitUsdMicros <= 0) return;
+    const fraction = window.usedUsdMicros / window.limitUsdMicros;
+    if (!best || fraction > best.fraction) {
+      best = { name, used: window.usedUsdMicros, limit: window.limitUsdMicros, resetsAt: window.resetsAt, fraction };
+    }
+  };
+  consider("day", usage.daily);
+  consider("week", usage.weekly);
+  consider("month", usage.monthly);
+  if (!best) return null;
+  const { name, used, limit, resetsAt } = best;
+  return { name, used, limit, resetsAt };
 }
 
 export interface CheckoutLink {
@@ -180,6 +225,9 @@ export function decodeSnapshot(value: unknown): AccountSnapshot {
       renewsAt: optional(plan.renewsAt, parseDate),
     },
     usage: {
+      ...windowField("daily", usage.daily),
+      ...windowField("weekly", usage.weekly),
+      ...windowField("monthly", usage.monthly),
       dailyRequests: integer(usage.dailyRequests, "usage.dailyRequests"),
       dailyLimit: integer(usage.dailyLimit, "usage.dailyLimit"),
       monthlyRequests: integer(usage.monthlyRequests, "usage.monthlyRequests"),
@@ -190,6 +238,23 @@ export function decodeSnapshot(value: unknown): AccountSnapshot {
       resetsMonthlyAt: parseDate(usage.resetsMonthlyAt),
     },
   };
+}
+
+function windowField(name: "daily" | "weekly" | "monthly", value: unknown): Partial<AccountUsage> {
+  if (value == null) return {};
+  const json = object(value, `usage.${name}`);
+  return {
+    [name]: {
+      usedUsdMicros: integer(json.usedUsdMicros, `usage.${name}.usedUsdMicros`),
+      limitUsdMicros: optional(json.limitUsdMicros, (limit) => integer(limit, `usage.${name}.limitUsdMicros`)),
+      resetsAt: parseDate(json.resetsAt),
+    },
+  };
+}
+
+function optionalInteger(value: unknown, field: string): number | null | undefined {
+  if (value === undefined) return undefined;
+  return optional(value, (number) => integer(number, field));
 }
 
 function decodePlanOffer(value: unknown): PlanOffer {
@@ -203,6 +268,11 @@ function decodePlanOffer(value: unknown): PlanOffer {
     dailyRequestLimit: integer(json.dailyRequestLimit, "plan.dailyRequestLimit"),
     monthlyRequestLimit: integer(json.monthlyRequestLimit, "plan.monthlyRequestLimit"),
     monthlyCostLimitUsdMicros: integer(json.monthlyCostLimitUsdMicros, "plan.monthlyCostLimitUsdMicros"),
+    dailyCostLimitUsdMicros: optionalInteger(json.dailyCostLimitUsdMicros, "plan.dailyCostLimitUsdMicros"),
+    weeklyCostLimitUsdMicros: optionalInteger(json.weeklyCostLimitUsdMicros, "plan.weeklyCostLimitUsdMicros"),
+    dailyCreditLimit: optionalInteger(json.dailyCreditLimit, "plan.dailyCreditLimit"),
+    weeklyCreditLimit: optionalInteger(json.weeklyCreditLimit, "plan.weeklyCreditLimit"),
+    monthlyCreditLimit: optionalInteger(json.monthlyCreditLimit, "plan.monthlyCreditLimit"),
   };
 }
 
