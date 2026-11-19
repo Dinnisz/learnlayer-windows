@@ -379,6 +379,10 @@
 .stage-answer-value {
   font-size: 21px;
   overflow-x: auto;
+  /* Only sideways: auto on one axis makes the other auto too, and a fraction a few pixels taller than its line got a
+     scrollbar of its own (live test, 2026-11-19). The padding keeps sub- and superscripts from being clipped. */
+  overflow-y: hidden;
+  padding-block: 0.2em;
 }
 
 .stage-answer-value .katex-display {
@@ -454,6 +458,10 @@
   display: block;
   font-size: 17px;
   overflow-x: auto;
+  /* Only sideways: auto on one axis makes the other auto too, and a fraction a few pixels taller than its line got a
+     scrollbar of its own (live test, 2026-11-19). The padding keeps sub- and superscripts from being clipped. */
+  overflow-y: hidden;
+  padding-block: 0.2em;
 }
 
 .stage-step-latex .katex-display {
@@ -537,6 +545,10 @@
   max-width: 100%;
   margin: 0;
   overflow-x: auto;
+  /* Only sideways: auto on one axis makes the other auto too, and a fraction a few pixels taller than its line got a
+     scrollbar of its own (live test, 2026-11-19). The padding keeps sub- and superscripts from being clipped. */
+  overflow-y: hidden;
+  padding-block: 0.2em;
   color: var(--stage-text);
   font-size: 18px;
 }
