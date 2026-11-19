@@ -85,7 +85,8 @@
   height: 2.5px;
   border-radius: 1.25px;
   background: var(--stage-accent);
-  animation: stage-draw 260ms var(--ease-out);
+  /* Fades in place, as the Mac's StatementUnderlines: nothing moves or draws from left to right. */
+  animation: stage-fade 200ms ease-in-out;
   transform-origin: left;
 }
 
