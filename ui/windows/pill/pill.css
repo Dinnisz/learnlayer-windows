@@ -19,8 +19,8 @@
   font-size: 12px;
   font-weight: 500;
   transition:
-    width 0.35s var(--spring),
-    height 0.35s var(--spring),
+    width var(--spring-pill-duration) var(--spring-pill),
+    height var(--spring-pill-duration) var(--spring-pill),
     border-radius 0.35s var(--ease-out);
 }
 
@@ -92,7 +92,7 @@
   color: #0a84ff;
   transition:
     background 0.12s var(--ease-out),
-    transform 0.25s var(--spring);
+    transform var(--spring-pill-duration) var(--spring-pill);
 }
 
 .pill-glyph.primary {
