@@ -134,3 +134,14 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 - 2026-11-15 — Fase 3: palco sobre o leitor (`ui/stage/`), verificado no browser com o exam.pdf do Mac.
 - 2026-11-15 — Fase 3: SolutionProvider + QuestionSession (núcleo) com testes; 415 testes.
 - 2026-11-15 — Fase 3 (em curso): detetor de perguntas com os testes do Mac (páginas sintéticas e `exam.pdf`/`teste-modelo-eo.pdf` via pdf.js), RouteDecision, QuestionPages, leitor pdf.js. 340 testes.
+
+## Próximo (2026-11-19, depois do teste ao vivo)
+Ramo `fix/windows-live-test` (PR #3). Feito hoje: créditos em vez de pedidos (patch do Mac), barras de scroll escondidas e arrasto com o rato (`ui/dragScroll.ts`), sublinhado com fade, focos dos passos no recorte certo, menu sempre visível sob uma pergunta alta. Referência: `COMO-FUNCIONA-MAC.md` e `MODELOS-E-PLANOS.md` (enviados pelo Dinis, em Transferências).
+Falta, por esta ordem (secção 7 de `COMO-FUNCIONA-MAC.md`):
+1. **Ctrl + Windows não começa a ouvir** no PC do Dinis (clicar na mascote funciona). Ler `%APPDATA%\LearnLayer\talk-debug.jsonl` depois de ele carregar nas teclas: se não houver linhas, o evento não sai do hook; se houver, ver `session`/`recording`.
+2. Pergunta compacta: ceder abaixo de 14 pt só o que o trabalho precisa (`panelHeight`), piso 11 pt.
+3. `FitToHeight` no palco com piso 1 (normal) e 0,83 (compacto), não 0,78.
+4. Colunas da resolução só com figura (contas de `ExplanationLayout` 5.6); sem figura, coluna lateral do palco (≥ 1000·s, `min(440·s, 34 %)`).
+5. Ordem da coluna direita e caixa de figura com separadores; resposta longa (> 36 caracteres) por cima.
+6. Sublinhados, lente e focos também na pergunta tipografada a partir do ecrã (`RenderedUnderlines`, `RenderedQuestion.focus`).
+7. Alturas mínimas do trabalho (160/80) e o espaço 16/8.
