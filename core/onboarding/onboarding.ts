@@ -383,15 +383,27 @@ export class OnboardingCoordinator {
   }
 }
 
+/**
+ * The Windows recordings of the lines that name a key (`scripts/onboarding-clips/lines.windows.json`: Ctrl + Win, Alt),
+ * as `<step>_<language>`. Listed once `scripts/onboarding-clips/generate.py` has recorded them; until then those screens
+ * show their text without the voice.
+ */
+export const windowsClips: ReadonlySet<string> = new Set<string>([]);
+
 /** The recorded line of a screen (`ui/public/clips/onboarding/`), or null when its words name a Mac key or permission. */
 export function onboardingClip(
   step: OnboardingStep | "talkReply",
   language: "pt" | "en",
   platform: PlatformName,
+  recorded: ReadonlySet<string> = windowsClips,
 ): string | null {
-  // These speak of Control + Option, ⌥-click and the Mac's permissions: Windows shows their text without the voice
-  // until the clips are recorded again (docs/PARA-O-DINIS.md).
-  if (platform === "windows" && (step === "talk" || step === "permissions" || step === "tryIt")) return null;
+  // These speak of Control + Option, ⌥-click and the Mac's permissions: Windows plays its own recording of the line
+  // with its keys, when there is one (no permissions screen on Windows).
+  if (platform === "windows" && (step === "talk" || step === "permissions" || step === "tryIt")) {
+    return step !== "permissions" && recorded.has(`${step}_${language}`)
+      ? `clips/onboarding/onboarding_${step}_windows_${language}.m4a`
+      : null;
+  }
   return `clips/onboarding/onboarding_${step}_${language}.m4a`;
 }
 

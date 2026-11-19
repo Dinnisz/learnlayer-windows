@@ -92,13 +92,17 @@ Depende do ponto 1. Com a app aberta (`npm run tauri dev`):
 5. **Custos:** com a voz premium desligada, confirma no Worker de teste que não há pedidos `/v1/audio/speech`.
 
 ### 9. Clipes de voz do onboarding para o Windows
-Os clipes `onboarding_talk_*` e `onboarding_tryIt_*` do Mac falam de Control + Option e do ⌥-clique. No Windows esses dois ecrãs aparecem sem voz. Para terem voz, grava (com as mesmas vozes do Mac: «Joana» em pt, Kokoro «af_heart» em en) estas frases e põe-nas em `ui/public/clips/onboarding/` como `onboarding_talk_windows_pt.m4a`, `onboarding_talk_windows_en.m4a`, `onboarding_tryIt_windows_pt.m4a` e `onboarding_tryIt_windows_en.m4a`:
-- talk, pt: «Mantém premidas as teclas Ctrl e Win, diz olá e larga. Estou a ouvir enquanto as tiveres premidas. Funciona em qualquer app.»
-- talk, en: «Hold Ctrl and Win together, say hi, then let go. I’m listening the whole time you hold them. It works in any app.»
-- tryIt, pt: «Mantém Alt premido e clica na pergunta abaixo. Eu explico passo a passo.»
-- tryIt, en: «Hold Alt and click the question below. I’ll explain it step by step.»
+Os clipes `onboarding_talk_*` e `onboarding_tryIt_*` do Mac falam de Control + Option e do ⌥-clique. No Windows esses dois ecrãs aparecem sem voz até haver gravações com as teclas do Windows. As frases estão em `scripts/onboarding-clips/lines.windows.json`, no mesmo estilo curto das do Mac:
+- talk, pt: «Mantém premidas as teclas Ctrl e Windows, diz olá e larga.»
+- talk, en: «Hold Ctrl and the Windows key together, say hi, then let go.»
+- tryIt, pt: «Experimenta numa pergunta. Mantém a tecla Alt premida e clica.»
+- tryIt, en: «Try it on a question. Hold the Alt key and click.»
 
-Depois disso basta mudar `onboardingClip` em `core/onboarding/onboarding.ts` para os usar.
+Para as gravar com as mesmas vozes do Mac (Kokoro «af_heart» em en, grátis; «Joana» em pt, menos de 1 cêntimo):
+1. `pip install kokoro-onnx soundfile keyring` e o `ffmpeg` no PATH (`winget install Gyan.FFmpeg`).
+2. Descarrega `kokoro-v1.0.onnx` e `voices-v1.0.bin` (releases de `thewh1teagle/kokoro-onnx`) para `scripts/onboarding-clips/models/` (está no `.gitignore`).
+3. `python scripts/onboarding-clips/generate.py en` e `python scripts/onboarding-clips/generate.py pt --cost-cap 0.05` (lê a chave da OpenRouter do Credential Manager, `LearnLayer.OpenRouter`; regista o custo em `docs/CUSTOS.md`).
+4. Acrescenta `"talk_en", "tryIt_en", "talk_pt", "tryIt_pt"` a `windowsClips` em `core/onboarding/onboarding.ts`.
 
 ### 10. Gerar o instalador (quando houver uma máquina que compile, ponto 1)
 **Feito a 2026-11-17 pelo CI:** `dist\LearnLayer_0.1.0_x64-setup.exe`, sem assinatura. Cada push para o `main` gera um novo, no artefacto «learnlayer-windows-installer» da corrida do CI. Para o trazer: `gh run download <id da corrida> --name learnlayer-windows-installer --dir dist`. Experimentado a 2026-11-17: o Smart App Control desta máquina **bloqueou o instalador** («Uma política de Controlo de Aplicações bloqueou este ficheiro») e nada foi instalado. Para o experimentar aqui é precisa a assinatura (ponto 4), ou usa outro PC.
@@ -117,9 +121,7 @@ Depois, num Windows limpo:
 3. Liga «Abrir com o Windows» e reinicia: só devem aparecer a pílula e o ícone na área de notificação.
 
 ## Etiquetas dos exames (Mac e Windows)
-Nos exames de 2026 de Biologia e Geologia, História A e Português, o detetor (o mesmo nas duas apps) dá a alguns itens de um grupo o prefixo e a outros não. Por exemplo, na Biologia: «II.1» na p. 11, e depois «2» e «3» na p. 12. Também conta os passos numerados de um procedimento (Biologia, p. 11) como itens II.2 a II.6.
-
-A causa: as regras `withoutRepeatedLabels` e `numberingRestarts` do `QuestionDetector.swift` só olham para uma página. Se quiseres corrigir, muda-as no Mac para olharem para o documento todo, e eu porto a mudança. Para ver o relatório no Windows:
+**Corrigido no Windows a 2026-11-19** (DECISOES): a numeração por grupo passou a ser decidida no documento todo, o grupo passa de página em página, os passos numerados de um procedimento já não contam como itens, e as partes numeradas em seguida («Parte A» 1–3, «Parte B» 4–6) ficam sem prefixo. Biologia: I.1–I.20, II.1–II.3, III.1–III.5. História: I.1–IV.5. Português: 1–7, II.1–II.7, III.1–III.2. O Mac ainda tem a regra antiga (só olha para uma página). Se quiseres as mesmas etiquetas nas duas apps, porta para o `QuestionDetector.swift` as funções `documentNumbering`, `sectionBefore` e `withoutNumberedLists` de `core/problems/questionDetector.ts`. Para ver o relatório:
 ```
 EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts --silent=false
 ```

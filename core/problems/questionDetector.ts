@@ -220,7 +220,7 @@ export function questionsOn(page: PageText): ExamQuestion[] {
   let trailing: { name: string; bounds: Rect; text: string } | null = null;
   let lastSection: string | null = null;
   if (previous) {
-    lastSection = lastHeadingName(previous);
+    lastSection = sectionBefore(page);
     trailing = trailingHeading(previous);
     if (trailing) carried = { label: trailing.name, text: trailing.text };
   }
@@ -254,11 +254,155 @@ function detect(
   carried: { label: string; text: string } | null,
   carriedSection: string | null,
 ): ExamQuestion[] {
-  let raw = page.text;
-  // The marking scheme ("COTAÇÕES") ends the questions; a last item above it stays.
-  const scores = scoresPattern.exec(raw);
-  if (scores) raw = raw.slice(0, scores.index);
-  const text = raw;
+  const text = questionText(page);
+  let marks = candidateMarks(text);
+  const headings = matchesOf(headingPattern, text).map((match) => {
+    const exec = new RegExp(headingPattern.source, "u").exec(text.slice(match.index, match.end));
+    return { location: match.index, name: exec?.[1] ?? exec?.[2] ?? null };
+  });
+  // Papers that number the items of each group from 1 again: an item is its group's ("VII.2").
+  const sections = headings.filter((heading) => heading.name !== null).sort((a, b) => a.location - b.location);
+  const sectionOf = (location: number): string | null =>
+    [...sections].reverse().find((section) => section.location < location)?.name ?? carriedSection;
+  // Decided on the whole paper, not page by page: a group whose items are all on one page numbers like the others.
+  const numbering = documentNumbering(page);
+  const restarting =
+    numbering.restarts ||
+    numberingRestarts(
+      marks
+        .filter((mark) => mark.kind === "top")
+        .map((mark) => ({ number: mark.number, section: sectionOf(mark.location) })),
+    );
+  // "13." over items in alternative isn't a question, but it still ends the one before.
+  const alternativeHeadings = marks
+    .filter(
+      (mark, index) =>
+        mark.kind === "top" &&
+        index + 1 < marks.length &&
+        marks[index + 1]!.kind === "alternative" &&
+        marks[index + 1]!.number === mark.number,
+    )
+    .map((mark) => mark.location);
+  marks = withoutNumberedLists(marks, restarting ? sectionOf : () => null);
+  marks = withoutRepeatedLabels(marks, text, restarting ? sectionOf : () => null);
+  // A group that numbers on from the one before keeps plain numbers.
+  const prefixOf = (location: number) => {
+    const section = sectionOf(location);
+    return section !== null && numbering.continuing.has(section) ? null : section;
+  };
+  return labelledQuestions(page, text, marks, headings, alternativeHeadings, restarting, prefixOf, carried);
+}
+
+/**
+ * The group a page starts in: the last heading printed on any page before it ("GRUPO II" alone on a page, its documents
+ * on the next, its items on the one after), or null.
+ */
+function sectionBefore(page: PageText): string | null {
+  for (let index = page.index - 1; index >= 0; index--) {
+    const before = page.page(index);
+    const name = before ? lastHeadingName(before) : null;
+    if (name !== null) return name;
+  }
+  return null;
+}
+
+interface Numbering {
+  restarts: boolean;
+  /** Groups whose items number on from the group before ("Parte A" 1–3, "Parte B" 4–6): their items keep their own
+   * number, with no group prefix. */
+  continuing: ReadonlySet<string>;
+}
+
+const numberingCache = new WeakMap<PageText, Numbering>();
+
+/**
+ * Whether the paper numbers each group's items from 1 again (`numberingRestarts`), over all its pages: a page holding
+ * only "2." and "3." of group II still labels them "II.2" and "II.3", like the page with "II.1".
+ */
+function documentNumbering(page: PageText): Numbering {
+  const first = page.index === 0 ? page : page.page(0);
+  if (!first) return { restarts: false, continuing: new Set() };
+  const cached = numberingCache.get(first);
+  if (cached !== undefined) return cached;
+  const items: { number: string; section: string | null }[] = [];
+  let section: string | null = null;
+  for (let index = 0; index < first.pageCount(); index++) {
+    const each = index === 0 ? first : first.page(index);
+    if (!each) continue;
+    const text = questionText(each);
+    const headings = headingSections(text);
+    const carried = section;
+    const sectionOf = (location: number) =>
+      [...headings].reverse().find((heading) => heading.location < location)?.name ?? carried;
+    const marks = candidateMarks(text).filter((mark) => mark.kind === "top");
+    for (const mark of withoutNumberedLists(marks, sectionOf)) {
+      items.push({ number: mark.number, section: sectionOf(mark.location) });
+    }
+    section = headings[headings.length - 1]?.name ?? section;
+    // The marking scheme ends the paper's questions.
+    if (scoresPattern.test(each.text)) break;
+  }
+  const numbering = { restarts: numberingRestarts(items), continuing: continuingSections(items) };
+  numberingCache.set(first, numbering);
+  return numbering;
+}
+
+/** The groups chained by their numbering: one whose first item is the item after the last of the group before. */
+function continuingSections(items: readonly { number: string; section: string | null }[]): Set<string> {
+  const runs: { section: string; first: number; last: number }[] = [];
+  for (const item of items) {
+    if (item.section === null) continue;
+    const value = Number(item.number);
+    const run = runs[runs.length - 1];
+    if (run && run.section === item.section) run.last = value;
+    else runs.push({ section: item.section, first: value, last: value });
+  }
+  const continuing = new Set<string>();
+  runs.forEach((run, index) => {
+    const before = runs[index - 1];
+    if (before && before.section !== run.section && run.first === before.last + 1) {
+      continuing.add(before.section);
+      continuing.add(run.section);
+    }
+  });
+  return continuing;
+}
+
+/**
+ * A numbered list in a group's statement (the steps of a procedure: "1. Marcaram-se… 6. Observou-se…") followed by the
+ * group's first item, "1." again: the list's marks are not questions. Only a run 1, 2, … n right before that "1."
+ * within the same group.
+ */
+function withoutNumberedLists(marks: readonly Mark[], section: (location: number) => string | null): Mark[] {
+  const tops = marks.filter((mark) => mark.kind === "top");
+  const dropped = new Set<Mark>();
+  for (const [index, mark] of tops.entries()) {
+    if (mark.number !== "1" || index === 0) continue;
+    const own = section(mark.location);
+    let start = index - 1;
+    let expected = Number(tops[start]!.number);
+    if (section(tops[start]!.location) !== own || !(expected >= 2)) continue;
+    while (start >= 0 && section(tops[start]!.location) === own && Number(tops[start]!.number) === expected) {
+      if (expected === 1) break;
+      start--;
+      expected--;
+    }
+    if (start < 0 || expected !== 1 || Number(tops[start]!.number) !== 1 || section(tops[start]!.location) !== own) {
+      continue;
+    }
+    for (let at = start; at < index; at++) dropped.add(tops[at]!);
+  }
+  return marks.filter((mark) => !dropped.has(mark));
+}
+
+/** The page's text down to its marking scheme ("COTAÇÕES"), which ends the questions; a last item above it stays. */
+function questionText(page: PageText): string {
+  const scores = scoresPattern.exec(page.text);
+  return scores ? page.text.slice(0, scores.index) : page.text;
+}
+
+/** Every printed label that may start a question, in text order, without the options and stray roman numerals. */
+function candidateMarks(text: string): Mark[] {
   let marks: Mark[] = [];
   for (const [kind, pattern] of patterns) {
     for (const match of matchesOf(pattern, text)) {
@@ -284,32 +428,21 @@ function detect(
   const romanKept = inRomanSequence(subs.map((index) => marks[index]!.number));
   const strayRoman = new Set(subs.filter((_, position) => !romanKept[position]));
   marks = marks.filter((_, index) => !strayRoman.has(index));
-  marks = withoutOptions(marks, text);
-  const headings = matchesOf(headingPattern, text).map((match) => {
-    const exec = new RegExp(headingPattern.source, "u").exec(text.slice(match.index, match.end));
-    return { location: match.index, name: exec?.[1] ?? exec?.[2] ?? null };
-  });
-  // Papers that number the items of each group from 1 again: an item is its group's ("VII.2").
-  const sections = headings.filter((heading) => heading.name !== null).sort((a, b) => a.location - b.location);
-  const sectionOf = (location: number): string | null =>
-    [...sections].reverse().find((section) => section.location < location)?.name ?? carriedSection;
-  const restarting = numberingRestarts(
-    marks
-      .filter((mark) => mark.kind === "top")
-      .map((mark) => ({ number: mark.number, section: sectionOf(mark.location) })),
-  );
-  // "13." over items in alternative isn't a question, but it still ends the one before.
-  const alternativeHeadings = marks
-    .filter(
-      (mark, index) =>
-        mark.kind === "top" &&
-        index + 1 < marks.length &&
-        marks[index + 1]!.kind === "alternative" &&
-        marks[index + 1]!.number === mark.number,
-    )
-    .map((mark) => mark.location);
-  marks = withoutRepeatedLabels(marks, text, restarting ? sectionOf : () => null);
-  marks = marks.map((mark) => placed(mark, text, page));
+  return withoutOptions(marks, text);
+}
+
+/** Labels, and which group, of the questions marked on the page. */
+function labelledQuestions(
+  page: PageText,
+  text: string,
+  found: Mark[],
+  headings: readonly { location: number; name: string | null }[],
+  alternativeHeadings: readonly number[],
+  restarting: boolean,
+  sectionOf: (location: number) => string | null,
+  carried: { label: string; text: string } | null,
+): ExamQuestion[] {
+  let marks = found.map((mark) => placed(mark, text, page));
   if (marks.length === 0) return [];
   const pageIndex = page.index;
   // Two columns: the questions are read down the left one, then down the right one.
