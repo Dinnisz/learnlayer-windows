@@ -95,7 +95,7 @@ export function questionInBlock(block: UIABlock): { text: string; frame: Rect; h
     }
   }
   if (first === index && last === index) return found;
-  const texts: string[] = [];
+  const texts: { text: string; frame: Rect }[] = [];
   let frame: Rect | null = null;
   let hasImage = false;
   for (let at = first; at <= last; at += 1) {
@@ -103,7 +103,7 @@ export function questionInBlock(block: UIABlock): { text: string; frame: Rect; h
     if (!nearby(sibling) && at !== index) continue;
     // A lone link or button next to the question ("Ver Resposta") isn't part of it.
     if (sibling.kind === "link" || sibling.kind === "button") continue;
-    if (sibling.text !== "") texts.push(sibling.text);
+    if (sibling.text !== "") texts.push({ text: sibling.text, frame: sibling.frame });
     if (sibling.hasImage || (sibling.kind === "image" && sibling.text === "")) hasImage = true;
     if (sibling.frame.width > 0) {
       frame = frame
@@ -120,11 +120,67 @@ export function questionInBlock(block: UIABlock): { text: string; frame: Rect; h
         : sibling.frame;
     }
   }
-  const text = texts.join("\n");
+  const text = joinedLines(texts);
   if (characterCount(text) >= characterCount(found.text) && characterCount(text) <= 4000 && frame) {
     found = { text, frame, hasImage: hasImage || found.hasImage };
   }
   return found;
+}
+
+const superscripts: Record<string, string> = Object.fromEntries(
+  [..."0123456789+-−=()nixyabcdefghjklmoprstuvwz"].map((ch, index) => [
+    ch,
+    [..."⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁻⁼⁽⁾ⁿⁱˣʸᵃᵇᶜᵈᵉᶠᵍʰʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷᶻ"][index]!,
+  ]),
+);
+
+/** A raised piece written as an exponent: in superscript letters when each has one ("−x" → "⁻ˣ"), primes as they are,
+ * else after a caret. */
+function asExponent(text: string): string {
+  const trimmed = text.trim();
+  if (/^[′″‴']+$/u.test(trimmed)) return trimmed;
+  const letters = [...trimmed];
+  if (letters.every((ch) => superscripts[ch] !== undefined)) return letters.map((ch) => superscripts[ch]).join("");
+  return letters.length === 1 ? `^${trimmed}` : `^(${trimmed})`;
+}
+
+/**
+ * The siblings' text in reading order. A page cuts a line into pieces around an inline element (`e<sup>−x</sup>.`):
+ * a piece beside the one before, on the same line, goes on that line, a raised smaller one as its exponent, and a new
+ * line only starts below.
+ */
+export function joinedLines(pieces: readonly { text: string; frame: Rect }[]): string {
+  let out = "";
+  // The line's own (unraised) box, and where the last piece ended.
+  let line: Rect | null = null;
+  let end = 0;
+  for (const piece of pieces) {
+    const box = piece.frame;
+    if (!line || box.width <= 0 || box.height <= 0) {
+      out += (out === "" ? "" : "\n") + piece.text;
+      if (box.width > 0 && box.height > 0) {
+        line = box;
+        end = box.x + box.width;
+      }
+      continue;
+    }
+    const overlap = Math.min(line.y + line.height, box.y + box.height) - Math.max(line.y, box.y);
+    const beside = box.x >= end - 2 && box.x - end < 2 * line.height;
+    if (!beside || overlap < 0.3 * Math.min(line.height, box.height)) {
+      out += "\n" + piece.text;
+      line = box;
+      end = box.x + box.width;
+      continue;
+    }
+    const raised = midY(box) < midY(line) - 0.15 * line.height && box.height < 0.9 * line.height;
+    // A piece's box takes in the space after its words, so the gap says nothing: words are always a space apart; an
+    // exponent and punctuation go right after what they follow.
+    const glued = raised || /^[.,;:!?)\]′″‴']/u.test(piece.text) || /\s$/u.test(out);
+    out += (glued ? "" : " ") + (raised ? asExponent(piece.text) : piece.text);
+    end = box.x + box.width;
+  }
+  // A typeset formula's text spells its primes apart ("y ‴ + 2 y ″"): they are the letter's.
+  return out.replace(/(\p{L}) +([′″‴]+)/gu, "$1$2");
 }
 
 /** UI Automation's question under the point, as `AccessibilityReader.question` returns it; null when nothing reads. */
