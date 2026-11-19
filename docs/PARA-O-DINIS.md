@@ -92,13 +92,17 @@ Depende do ponto 1. Com a app aberta (`npm run tauri dev`):
 5. **Custos:** com a voz premium desligada, confirma no Worker de teste que não há pedidos `/v1/audio/speech`.
 
 ### 9. Clipes de voz do onboarding para o Windows
-Os clipes `onboarding_talk_*` e `onboarding_tryIt_*` do Mac falam de Control + Option e do ⌥-clique. No Windows esses dois ecrãs aparecem sem voz. Para terem voz, grava (com as mesmas vozes do Mac: «Joana» em pt, Kokoro «af_heart» em en) estas frases e põe-nas em `ui/public/clips/onboarding/` como `onboarding_talk_windows_pt.m4a`, `onboarding_talk_windows_en.m4a`, `onboarding_tryIt_windows_pt.m4a` e `onboarding_tryIt_windows_en.m4a`:
-- talk, pt: «Mantém premidas as teclas Ctrl e Win, diz olá e larga. Estou a ouvir enquanto as tiveres premidas. Funciona em qualquer app.»
-- talk, en: «Hold Ctrl and Win together, say hi, then let go. I’m listening the whole time you hold them. It works in any app.»
-- tryIt, pt: «Mantém Alt premido e clica na pergunta abaixo. Eu explico passo a passo.»
-- tryIt, en: «Hold Alt and click the question below. I’ll explain it step by step.»
+Os clipes `onboarding_talk_*` e `onboarding_tryIt_*` do Mac falam de Control + Option e do ⌥-clique. No Windows esses dois ecrãs aparecem sem voz até haver gravações com as teclas do Windows. As frases estão em `scripts/onboarding-clips/lines.windows.json`, no mesmo estilo curto das do Mac:
+- talk, pt: «Mantém premidas as teclas Ctrl e Windows, diz olá e larga.»
+- talk, en: «Hold Ctrl and the Windows key together, say hi, then let go.»
+- tryIt, pt: «Experimenta numa pergunta. Mantém a tecla Alt premida e clica.»
+- tryIt, en: «Try it on a question. Hold the Alt key and click.»
 
-Depois disso basta mudar `onboardingClip` em `core/onboarding/onboarding.ts` para os usar.
+Para as gravar com as mesmas vozes do Mac (Kokoro «af_heart» em en, grátis; «Joana» em pt, menos de 1 cêntimo):
+1. `pip install kokoro-onnx soundfile keyring` e o `ffmpeg` no PATH (`winget install Gyan.FFmpeg`).
+2. Descarrega `kokoro-v1.0.onnx` e `voices-v1.0.bin` (releases de `thewh1teagle/kokoro-onnx`) para `scripts/onboarding-clips/models/` (está no `.gitignore`).
+3. `python scripts/onboarding-clips/generate.py en` e `python scripts/onboarding-clips/generate.py pt --cost-cap 0.05` (lê a chave da OpenRouter do Credential Manager, `LearnLayer.OpenRouter`; regista o custo em `docs/CUSTOS.md`).
+4. Acrescenta `"talk_en", "tryIt_en", "talk_pt", "tryIt_pt"` a `windowsClips` em `core/onboarding/onboarding.ts`.
 
 ### 10. Gerar o instalador (quando houver uma máquina que compile, ponto 1)
 **Feito a 2026-11-17 pelo CI:** `dist\LearnLayer_0.1.0_x64-setup.exe`, sem assinatura. Cada push para o `main` gera um novo, no artefacto «learnlayer-windows-installer» da corrida do CI. Para o trazer: `gh run download <id da corrida> --name learnlayer-windows-installer --dir dist`. Experimentado a 2026-11-17: o Smart App Control desta máquina **bloqueou o instalador** («Uma política de Controlo de Aplicações bloqueou este ficheiro») e nada foi instalado. Para o experimentar aqui é precisa a assinatura (ponto 4), ou usa outro PC.
