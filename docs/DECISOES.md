@@ -318,3 +318,8 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Resultado:** Biologia I.1–I.20, II.1–II.3, III.1–III.5; História I.1–IV.5; Português 1–7, II.1–II.7, III.1–III.2; Inglês com B.1–B.6. Os outros exames de `exames/`, os 17 PDFs de `Tools/TestPDFs/` e os PDFs de exemplo do Mac ficam iguais. Testes em `core/problems/examNumbering.test.ts`.
 - **Porquê:** a Tauri vai ser a base única, e a regra antiga dava etiquetas diferentes para itens do mesmo grupo. O Mac deve receber a mesma mudança (PARA-O-DINIS).
 
+
+## 2026-11-19 — Uma pergunta alta deixa o menu no ecrã (teste na app real)
+- **Bug:** no leitor, a 100 % num ecrã de 1440 px, o item 3 de Matemática A (tabela, figura e um texto para completar) era levantado tão alto que as opções 3 e 4 do menu ficavam fora do ecrã. O tamanho da pergunta tinha um piso de 11 pt que passava por cima do limite de altura (45 % do palco).
+- **Correção:** como o Mac (`QuestionStage`, fase de leitura): o tamanho é o menor entre o das letras, o que cabe na largura e o que cabe em 45 % da altura, sem piso. O piso do Mac só existe na fase compacta, para dar lugar ao trabalho por baixo, que o palco do Windows não mede.
+- **Consequência:** uma pergunta muito longa fica pequena (no item 3, cerca de 12 px de letra a 100 %), como no Mac. Captura: `capturas-windows/09-leitor-pergunta-alta-100pc.png`.

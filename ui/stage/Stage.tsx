@@ -635,9 +635,10 @@ function questionScale({
   const available = windowHeight / StageScale.factor(windowHeight);
   const size = compact ? 14 : 17;
   const share = compact ? 0.3 : 0.45;
-  const scale = Math.min(size / Math.max(1, body), fits, (available * share) / Math.max(1, height));
-  // Never below the smallest readable size.
-  return Math.max(scale, Math.min(fits, 11 / Math.max(1, body)));
+  // Sized by its letters, never wider than the column nor taller than its share of the height (QuestionStage): a long
+  // question (a table and a cloze) shrinks so the menu under it stays on the screen. The Mac's floor at the smallest
+  // readable size only applies with the work's own height to make room for, which the stage doesn't measure here.
+  return Math.min(size / Math.max(1, body), fits, (available * share) / Math.max(1, height));
 }
 
 /** The question lifted off the page: drawn by pdf.js, white on the dark stage, with the open step's data underlined. */
