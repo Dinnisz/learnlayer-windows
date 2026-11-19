@@ -68,7 +68,14 @@ fn file_values(path: &PathBuf) -> Environment {
     let Ok(text) = std::fs::read_to_string(path) else {
         return Environment::new();
     };
-    let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(&text) else {
+    parse_file_values(&text)
+}
+
+/// `config.json`'s keys. Notepad and Windows PowerShell save UTF-8 with a byte-order mark, which JSON doesn't allow:
+/// it is skipped, or the whole file would be ignored and the app would fall back to production without a word.
+fn parse_file_values(text: &str) -> Environment {
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+    let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(text) else {
         return Environment::new();
     };
     map.into_iter()
@@ -171,6 +178,16 @@ mod tests {
         assert_eq!(base_url(&local, true), "http://127.0.0.1:8787");
         let secure = env(&[(API_BASE_KEY, "https://staging.example.com")]);
         assert_eq!(base_url(&secure, false), "https://staging.example.com");
+    }
+
+    #[test]
+    fn a_config_file_saved_with_a_byte_order_mark_is_read() {
+        let text = "\u{feff}{\"LEARNLAYER_SITE_BASE\": \"https://site-file.example\"}";
+        assert_eq!(
+            parse_file_values(text).get(SITE_BASE_KEY).map(String::as_str),
+            Some("https://site-file.example")
+        );
+        assert!(parse_file_values("not json").is_empty());
     }
 
     #[test]
