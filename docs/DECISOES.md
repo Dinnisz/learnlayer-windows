@@ -311,3 +311,10 @@ Cada entrada: data, dúvida, escolha, porquê.
 
 ## 2026-11-18 — Uma só mascote nas cenas de física (MascotStart, figureHoldsBody)
 - **Feito:** a esfera de uma cena de física (carro, lançamento, plano inclinado) parte agora de onde a esfera do palco repousa, levada para as unidades da cena e mantida dentro da imagem (`MascotStart.world`, `core/illustrations/mascotStart.ts`, com os casos de `FinalUXFixTests`), e não de um canto fixo. Enquanto a esfera da cena está em viagem, a do palco esconde-se (0,35 s), para haver sempre um só corpo; com várias figuras, fica escondida enquanto alguma o tiver.
+
+## 2026-11-19 — Numeração dos exames decidida no documento todo (diferente do Mac)
+- **Dúvida:** na Biologia e Geologia, na História A e no Português de 2026, uns itens de um grupo saíam com o prefixo e outros sem ele («II.1», «2», «3»), e os passos numerados do procedimento da Biologia (p. 11) contavam como itens. No Mac acontece o mesmo, porque `numberingRestarts` e `withoutRepeatedLabels` só olham para uma página.
+- **Escolha:** no Windows, (1) a decisão de numerar por grupo é tomada sobre o documento todo; (2) o grupo de uma página é o do último título de qualquer página anterior, não só da anterior (a História tem o título sozinho numa página, os documentos na seguinte e os itens depois); (3) uma lista 1, 2, … n seguida, no mesmo grupo, de um «1.» é uma lista do enunciado e sai (`withoutNumberedLists`); (4) grupos cuja numeração continua a do grupo anterior («Parte A» 1–3, «Parte B» 4–6) ficam sem prefixo.
+- **Resultado:** Biologia I.1–I.20, II.1–II.3, III.1–III.5; História I.1–IV.5; Português 1–7, II.1–II.7, III.1–III.2; Inglês com B.1–B.6. Os outros exames de `exames/`, os 17 PDFs de `Tools/TestPDFs/` e os PDFs de exemplo do Mac ficam iguais. Testes em `core/problems/examNumbering.test.ts`.
+- **Porquê:** a Tauri vai ser a base única, e a regra antiga dava etiquetas diferentes para itens do mesmo grupo. O Mac deve receber a mesma mudança (PARA-O-DINIS).
+

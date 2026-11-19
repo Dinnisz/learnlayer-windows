@@ -121,9 +121,7 @@ Depois, num Windows limpo:
 3. Liga «Abrir com o Windows» e reinicia: só devem aparecer a pílula e o ícone na área de notificação.
 
 ## Etiquetas dos exames (Mac e Windows)
-Nos exames de 2026 de Biologia e Geologia, História A e Português, o detetor (o mesmo nas duas apps) dá a alguns itens de um grupo o prefixo e a outros não. Por exemplo, na Biologia: «II.1» na p. 11, e depois «2» e «3» na p. 12. Também conta os passos numerados de um procedimento (Biologia, p. 11) como itens II.2 a II.6.
-
-A causa: as regras `withoutRepeatedLabels` e `numberingRestarts` do `QuestionDetector.swift` só olham para uma página. Se quiseres corrigir, muda-as no Mac para olharem para o documento todo, e eu porto a mudança. Para ver o relatório no Windows:
+**Corrigido no Windows a 2026-11-19** (DECISOES): a numeração por grupo passou a ser decidida no documento todo, o grupo passa de página em página, os passos numerados de um procedimento já não contam como itens, e as partes numeradas em seguida («Parte A» 1–3, «Parte B» 4–6) ficam sem prefixo. Biologia: I.1–I.20, II.1–II.3, III.1–III.5. História: I.1–IV.5. Português: 1–7, II.1–II.7, III.1–III.2. O Mac ainda tem a regra antiga (só olha para uma página). Se quiseres as mesmas etiquetas nas duas apps, porta para o `QuestionDetector.swift` as funções `documentNumbering`, `sectionBefore` e `withoutNumberedLists` de `core/problems/questionDetector.ts`. Para ver o relatório:
 ```
 EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts --silent=false
 ```
