@@ -24,7 +24,7 @@ import { voiceSend, voiceTurn } from "@core/voice/voiceTurn";
 import { workContext } from "@core/voice/workContext";
 import { modelClient, usesMock } from "../ai/solver";
 import { publishIsland } from "../island";
-import { onTalkKey } from "../native";
+import { dataFiles, onTalkKey } from "../native";
 import { Recorder } from "./recorder";
 import { playOpener, speak, tutorLanguage } from "./speaker";
 
@@ -182,10 +182,19 @@ export function useVoiceTutor(session: QuestionSession | null) {
 
   /** The key is let go: what was said is sent at once. */
   const end = useCallback(async () => {
+    const released = performance.now();
     const listening = recorder.current;
     recorder.current = null;
     if (!session || !listening) return;
     const wav = await listening.stop();
+    // Development builds: from the key's release to the recording leaving for its transcription (CLAUDE.md, phase 5:
+    // under 300 ms). Never in a release build.
+    if (import.meta.env.DEV && wav) {
+      void dataFiles.write(
+        "voice-debug.json",
+        JSON.stringify({ at: new Date().toISOString(), releaseToSendMs: Math.round(performance.now() - released) }),
+      );
+    }
     if (!wav && !usesMock()) {
       update({ ...idle });
       return;
@@ -249,9 +258,26 @@ export function useVoiceTutor(session: QuestionSession | null) {
 
   // The talk key, wherever the student is, while this stage is open.
   useEffect(() => {
-    const stopListening = onTalkKey((held) => void (held ? begin() : end()));
+    const stopListening = onTalkKey((held) => {
+      // Development builds: each press and release of the talk key, with what the tutor had then, to see why one did
+      // nothing (live test, 2026-11-19). Never in a release build.
+      if (import.meta.env.DEV) {
+        const line = JSON.stringify({
+          at: new Date().toISOString(),
+          held,
+          window: window.location.pathname,
+          session: session !== null,
+          recording: recorder.current !== null,
+        });
+        void dataFiles
+          .read("talk-debug.jsonl")
+          .then((before) => dataFiles.write("talk-debug.jsonl", (before ?? "") + line + "\n"))
+          .catch(() => {});
+      }
+      void (held ? begin() : end());
+    });
     return () => void stopListening.then((unlisten) => unlisten());
-  }, [begin, end]);
+  }, [begin, end, session]);
 
   useEffect(() => stop, [session, stop]);
 
