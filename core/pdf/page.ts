@@ -271,3 +271,30 @@ export function framedPage(
   }
   return lines;
 }
+
+/**
+ * Port of `Equation.bodyFontSize(of:in:)`: the font size most letters in `bounds` are printed at, to the half point
+ * (sizes outside 5–40 pt are ignored); 11 when nothing is printed there. A box is `size × 1.2` tall
+ * (`pdfjsText`), so its size is its height over 1.2.
+ */
+export function bodyFontSize(page: Pick<PageText, "text" | "boxes">, bounds: Rect): number {
+  const letters = new Map<number, number>();
+  for (let index = 0; index < page.boxes.length; index += 1) {
+    const box = page.boxes[index];
+    if (!box || /\s/.test(page.text[index] ?? " ")) continue;
+    if (!Rects.contains(bounds, { x: Rects.midX(box), y: Rects.midY(box) })) continue;
+    const size = box.height / 1.2;
+    if (size < 5 || size > 40) continue;
+    const key = Math.round(size * 2);
+    letters.set(key, (letters.get(key) ?? 0) + 1);
+  }
+  let best: number | null = null;
+  let most = 0;
+  for (const [key, count] of letters) {
+    if (count > most) {
+      best = key;
+      most = count;
+    }
+  }
+  return best === null ? 11 : best / 2;
+}
