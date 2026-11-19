@@ -15,6 +15,7 @@ import {
 } from "react";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
 import { FitToHeight } from "./FitToHeight";
+import { springDuration, springEasing, Springs } from "../styles/springs";
 import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
@@ -469,6 +470,133 @@ function Menu({ explains, onChoose, onAsk }: { explains: boolean; onChoose: (mod
   );
 }
 
+/**
+ * The question's flight from the page to the stage (QuestionOverlay: `arrived`): it shows where it was clicked, waits
+ * a beat (0.15 s), then slides to its place with the Mac's spring (0.5 / 0.86). Measured FLIP-style: the lifted crop is
+ * laid out where it settles, a transform puts it back over its box on the page, and the spring takes the transform
+ * away. It flies once its size is known (the page's letters set it); with Reduce Motion it only fades in.
+ */
+class QuestionFlight {
+  private state: "waiting" | "holding" | "flying" | "done" = "waiting";
+  private opened = 0;
+
+  /**
+   * Puts each lifted crop back over its own box on the page (the statement over the statement, the part over the
+   * part, whatever lies between them there); the transforms, or null when they can't be measured.
+   */
+  private static pin(element: HTMLElement, targets: readonly DOMRectReadOnly[]): string[] | null {
+    const crops = [...element.querySelectorAll<HTMLElement>(":scope > .stage-crop")];
+    if (crops.length === 0 || crops.length !== targets.length) return null;
+    for (const crop of crops) crop.style.transform = "";
+    const transforms: string[] = [];
+    for (const [index, crop] of crops.entries()) {
+      const settled = crop.getBoundingClientRect();
+      const target = targets[index]!;
+      if (settled.width < 1 || target.width < 1) return null;
+      const k = target.width / settled.width;
+      transforms.push(`translate(${target.left - settled.left}px, ${target.top - settled.top}px) scale(${k})`);
+    }
+    crops.forEach((crop, index) => {
+      crop.style.transformOrigin = "0 0";
+      crop.style.transform = transforms[index]!;
+    });
+    return transforms;
+  }
+
+  /** Laid out (or resized while it waits): over its box on the page, before the first paint. */
+  laidOut(element: HTMLElement, targets: readonly DOMRectReadOnly[]) {
+    if (this.state === "holding") {
+      QuestionFlight.pin(element, targets);
+      return;
+    }
+    if (this.state !== "waiting") return;
+    if (reducedMotion()) {
+      this.state = "done";
+      return;
+    }
+    element.style.animation = "none";
+    // Its size is final the moment it is known (no easing from the first guess), so the pin stays true.
+    element.classList.add("stage-question-flying");
+    this.opened = performance.now();
+    if (QuestionFlight.pin(element, targets)) {
+      this.state = "holding";
+    } else {
+      element.style.animation = "";
+      element.classList.remove("stage-question-flying");
+      this.state = "done";
+    }
+  }
+
+  /** How long until it may fly: its beat on the page, longer while its size is not known. */
+  delay(sized: boolean): number | null {
+    if (this.state !== "holding") return null;
+    const beat = Math.max(0, 150 - (performance.now() - this.opened));
+    return sized ? beat : Math.max(beat, 400);
+  }
+
+  fly(element: HTMLElement, targets: readonly DOMRectReadOnly[]) {
+    if (this.state !== "holding") return;
+    const from = QuestionFlight.pin(element, targets);
+    const crops = [...element.querySelectorAll<HTMLElement>(":scope > .stage-crop")];
+    for (const crop of crops) crop.style.transform = "";
+    if (!from) {
+      element.classList.remove("stage-question-flying");
+      this.state = "done";
+      return;
+    }
+    this.state = "flying";
+    const timing = {
+      duration: springDuration(Springs.arrive) * 1000,
+      easing: CSS.supports("animation-timing-function", "linear(0, 1)")
+        ? springEasing(Springs.arrive)
+        : "cubic-bezier(0.2, 0.9, 0.3, 1.05)",
+    };
+    const flights = crops.map((crop, index) =>
+      crop.animate([{ transform: from[index]! }, { transform: "none" }], timing),
+    );
+    const land = () => {
+      element.classList.remove("stage-question-flying");
+      this.state = "done";
+    };
+    void Promise.all(flights.map((flight) => flight.finished)).then(land, land);
+  }
+}
+
+/** Where each lifted crop was on the page, in the window: the page's box for the part, scaled to every region. */
+function sourceRects(frame: OpenedQuestion["frame"], bounds: Rect, regions: readonly Rect[]): DOMRectReadOnly[] {
+  const perPoint = frame.width / Math.max(1e-6, bounds.width);
+  return regions.map(
+    (region) =>
+      new DOMRectReadOnly(
+        frame.left + (region.x - bounds.x) * perPoint,
+        frame.top + (Rects.maxY(bounds) - Rects.maxY(region)) * perPoint,
+        region.width * perPoint,
+        region.height * perPoint,
+      ),
+  );
+}
+
+function useQuestionFlight(
+  holder: React.RefObject<HTMLDivElement | null>,
+  targets: readonly DOMRectReadOnly[],
+  laidOut: boolean,
+  sized: boolean,
+  scale: number,
+) {
+  const [flight] = useState(() => new QuestionFlight());
+  useLayoutEffect(() => {
+    if (holder.current && laidOut) flight.laidOut(holder.current, targets);
+  }, [flight, holder, targets, laidOut, scale]);
+  useEffect(() => {
+    const delay = flight.delay(sized);
+    if (delay === null) return;
+    const timer = window.setTimeout(() => {
+      if (holder.current) flight.fly(holder.current, targets);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [flight, holder, targets, laidOut, sized]);
+}
+
 /** `Stage.init`'s scale for the lifted question: its body text at `readingSize` or `compactSize` points. */
 function questionScale({
   body,
@@ -533,6 +661,12 @@ function QuestionCrop({
   const widest = Math.max(...regions.map((region) => region.width));
   const tall = regions.reduce((sum, region) => sum + region.height, 0);
   const scale = width === 0 ? 1 : questionScale({ body, compact, fits: width / widest, height: tall });
+
+  const sources = useMemo(
+    () => sourceRects(opened.frame, question.bounds, regions),
+    [opened.frame, question.bounds, regions],
+  );
+  useQuestionFlight(holder, sources, width > 0, page !== null, scale);
 
   return (
     <div className="stage-question" ref={holder}>

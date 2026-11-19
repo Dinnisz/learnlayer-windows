@@ -49,7 +49,7 @@
 /* The question lifted off the page: drawn black on clear, turned white. */
 .stage-question {
   width: 100%;
-  animation: stage-lift 420ms var(--spring);
+  animation: stage-lift var(--spring-arrive-duration) var(--spring-arrive);
 }
 
 @keyframes stage-lift {
@@ -63,8 +63,12 @@
   position: relative;
   max-width: 100%;
   transition:
-    width 300ms var(--spring),
-    height 300ms var(--spring);
+    width var(--spring-phase-duration) var(--spring-phase),
+    height var(--spring-phase-duration) var(--spring-phase);
+}
+
+.stage-question-flying .stage-crop {
+  transition: none;
 }
 
 /* Drawn in the stage's ink (PageInk): white on nothing, the page's colours in the palette's hues. */
@@ -361,7 +365,7 @@
   border-radius: 14px;
   background: linear-gradient(rgb(10 132 255 / 8%), rgb(10 132 255 / 8%)), rgb(255 255 255 / 4%);
   box-shadow: 0 2px 6px rgb(0 0 0 / 18%);
-  animation: stage-lift 300ms var(--spring);
+  animation: stage-lift var(--spring-phase-duration) var(--spring-phase);
 }
 
 .stage-answer-label {
@@ -400,7 +404,7 @@
   gap: 14px;
   padding: 4px 8px 4px 0;
   border-radius: 10px;
-  animation: stage-arrive 320ms var(--spring);
+  animation: stage-arrive var(--spring-cascade-duration) var(--spring-cascade);
 }
 
 .stage-step:hover,
@@ -1006,7 +1010,7 @@
   background: rgb(255 255 255 / 10%);
   color: #fff;
   font-size: 15px;
-  animation: stage-lift 300ms var(--spring);
+  animation: stage-lift var(--spring-phase-duration) var(--spring-phase);
 }
 
 .lesson-calc {
