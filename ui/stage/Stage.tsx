@@ -14,7 +14,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
-import { linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
+import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
@@ -441,8 +441,17 @@ function Menu({ explains, onChoose, onAsk }: { explains: boolean; onChoose: (mod
     [explains ? t("Show the explanation") : t("Show the solution"), () => onChoose("solution")],
     [t("Ask about this exercise"), onAsk],
   ];
+  // The first choice takes the focus for the screen reader, but shows it only once the keyboard moves it (ChoiceRow
+  // is plain white until the pointer or Tab reaches it).
+  const [navigated, setNavigated] = useState(false);
   return (
-    <nav className="stage-menu" aria-label={t("What do you want to do?")}>
+    <nav
+      className={`stage-menu${navigated ? " navigated" : ""}`}
+      aria-label={t("What do you want to do?")}
+      onKeyDown={(event) => {
+        if (event.key === "Tab" || event.key.startsWith("Arrow")) setNavigated(true);
+      }}
+    >
       <p className="stage-menu-title">{t("What do you want to do?")}</p>
       <ol>
         {items.map(([label, action], index) => (
@@ -456,6 +465,26 @@ function Menu({ explains, onChoose, onAsk }: { explains: boolean; onChoose: (mod
       </ol>
     </nav>
   );
+}
+
+/** `Stage.init`'s scale for the lifted question: its body text at `readingSize` or `compactSize` points. */
+function questionScale({
+  body,
+  compact,
+  fits,
+  height,
+}: {
+  body: number;
+  compact: boolean;
+  fits: number;
+  height: number;
+}) {
+  const available = window.innerHeight || 800;
+  const size = compact ? 14 : 17;
+  const share = compact ? 0.3 : 0.45;
+  const scale = Math.min(size / Math.max(1, body), fits, (available * share) / Math.max(1, height));
+  // Never below the smallest readable size.
+  return Math.max(scale, Math.min(fits, 11 / Math.max(1, body)));
 }
 
 /** The question lifted off the page: drawn by pdf.js, white on the dark stage, with the open step's data underlined. */
@@ -496,9 +525,12 @@ function QuestionCrop({
     return () => observer.disconnect();
   }, []);
 
-  // Lifted large; after «Solution» it steps back to the size of print. One scale for both crops.
+  // Sized by its letters (QuestionOverlay's Stage): body text at 17 pt while it is read, 14 pt after «Solution»,
+  // never wider than the column nor taller than its share of the window. One scale for both crops.
+  const body = useMemo(() => (page ? bodyFontSize(page, question.bounds) : 11), [page, question]);
   const widest = Math.max(...regions.map((region) => region.width));
-  const scale = width === 0 ? 1 : Math.min(compact ? 1.1 : 1.7, width / widest);
+  const tall = regions.reduce((sum, region) => sum + region.height, 0);
+  const scale = width === 0 ? 1 : questionScale({ body, compact, fits: width / widest, height: tall });
 
   return (
     <div className="stage-question" ref={holder}>
@@ -1309,6 +1341,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
         </details>
       )}
       <AnswerBox part={part} language={session.notationLanguage} />
+      <ExplainEntry session={session} />
       {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
         <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
       )}
@@ -1325,11 +1358,11 @@ function SolutionView({ session }: { session: QuestionSession }) {
         </div>
         {(formulas.length > 0 || side) && (
           <aside className="stage-formulas" aria-label={t("Formulas")}>
-            {formulas.length > 0 && <h3>{t("Formulas")}</h3>}
+            {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
             {formulas.map((formula) => (
               <div key={formula.name + formula.latex} className="stage-formula">
                 <span>{formula.name}</span>
-                <MathView latex={formula.latex} />
+                <MathView latex={formula.latex} display />
               </div>
             ))}
             {side && <SideFigures session={session} />}
@@ -1457,6 +1490,19 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
   }
 }
 
+/** «Explain It to Me» right under the answer (QuestionOverlay.explainEntry), not in the footer under every step. */
+function ExplainEntry({ session }: { session: QuestionSession }) {
+  const t = useT();
+  const lesson = useLessonState();
+  const toggleLesson = useLessonToggle();
+  if (session.mode !== "solution" || session.part === null || session.state.kind !== "ready") return null;
+  return (
+    <button type="button" className="stage-explain" onClick={toggleLesson}>
+      {lesson?.playing ? t("Stop Explaining") : t("Explain It to Me")}
+    </button>
+  );
+}
+
 function AnswerBox({ part, language }: { part: Part; language: string }) {
   const t = useT();
   // While a lesson plays, the answer waits for the lesson to work it out (`QuestionSession.showsFinalAnswer`).
@@ -1547,7 +1593,7 @@ function StepCard({
                 {card.branches.map((branch, position) => (
                   <div key={position}>
                     <span>{branch.title}</span>
-                    <MathView latex={ExamNotation.trigInLatex(branch.latex, session.notationLanguage)} />
+                    <MathView latex={ExamNotation.trigInLatex(branch.latex, session.notationLanguage)} display />
                   </div>
                 ))}
               </div>
@@ -1906,8 +1952,6 @@ const QuestionSessionDetail =
 /** The field to ask about the exercise and the other ways in, under every mode. */
 function Actions({ session }: { session: QuestionSession }) {
   const t = useT();
-  const lesson = useLessonState();
-  const toggleLesson = useLessonToggle();
   const [asked, setAsked] = useState("");
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -1920,11 +1964,6 @@ function Actions({ session }: { session: QuestionSession }) {
       session.explains ? t("Show the explanation") : t("Solution"),
       () => session.choose("solution"),
       session.mode !== "solution",
-    ],
-    [
-      lesson?.playing ? t("Stop Explaining") : t("Explain It to Me"),
-      toggleLesson,
-      session.mode === "solution" && session.part !== null && session.state.kind === "ready",
     ],
     [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant],
     [
@@ -2123,7 +2162,8 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
         }
         const text = block.text ?? "";
         if (text.trim() === "") return null;
-        if (block.type === "formula") return <MathView key={index} latex={text} display className="stage-formula" />;
+        if (block.type === "formula")
+          return <MathView key={index} latex={text} display className="stage-typeset-formula" />;
         return <MarkupText key={index} text={text} />;
       })}
     </div>
