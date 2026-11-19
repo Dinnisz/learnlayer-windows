@@ -8,6 +8,7 @@ import type { AuthTokens, Fetch } from "@core/ai/backendClient";
 import type { DataFiles } from "@core/ai/diskCache";
 import type { StreamingFetch } from "@core/ai/modelClient";
 import { platformNamed, type PlatformName } from "@core/platform";
+import { version as packageVersion } from "../package.json";
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -26,7 +27,8 @@ const browserConfig: AppConfig = {
   apiBase: productionBase,
   siteBase: productionSite,
   debug: true,
-  version: "0.0.0",
+  // The app's own version, as the native side reads it from Cargo.toml (kept equal to package.json).
+  version: packageVersion,
   // `?platform=macos` shows the other wording while working on the interface in a browser.
   platform: platformNamed(
     typeof location === "undefined" ? null : new URLSearchParams(location.search).get("platform"),
