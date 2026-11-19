@@ -105,6 +105,7 @@ type OverlaySource = StageSource | PassageSource;
 
 /** What a click opens: the stage's source, or nothing (with the app's name for the log). */
 async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<OverlaySource | null> {
+  const started = performance.now();
   const scale = read.scale || 1;
   const point = { x: read.point.x / scale, y: read.point.y / scale };
   // Global points to this window's own (the stage covers the clicked monitor): where the question flies from.
@@ -144,9 +145,14 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
         read.appName,
       )
     : null;
-  const picture = await sources.picture(read);
+  // The window's picture and the PDF behind it are fetched at once: neither needs the other.
+  const pictureAndPDF = await Promise.all([
+    sources.picture(read).then((value) => ({ value, at: performance.now() })),
+    pdfPages(read, sources.pdf).then((value) => ({ value, at: performance.now() })),
+  ]);
+  const picture = pictureAndPDF[0].value;
+  const pdf = pictureAndPDF[1].value;
   const frame = read.window ? points(read.window, scale) : null;
-  const pdf = await pdfPages(read, sources.pdf);
   const clickRead: ClickRead = {
     point,
     appName: read.appName,
@@ -165,6 +171,7 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
     pdf: pdf ? { pages: pdf.pages } : null,
   };
   const outcome = readClick(clickRead);
+  const decided = performance.now();
   // Development builds: what was read and decided, to see why a click opened what it did. Never in a release build.
   if (import.meta.env.DEV) {
     void dataFiles.write(
@@ -177,6 +184,12 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
           found: found ? { method: found.method, frame: found.frame, text: found.text.slice(0, 300) } : null,
           window: clickRead.window ? { frame: clickRead.window.frame, lines: clickRead.window.lines } : null,
           pdf: Boolean(clickRead.pdf),
+          // Milliseconds from the reading's arrival here: the picture, the PDF (fetched together) and the decision.
+          timings: {
+            picture: Math.round(pictureAndPDF[0].at - started),
+            pdf: Math.round(pictureAndPDF[1].at - started),
+            decided: Math.round(decided - started),
+          },
           outcome:
             outcome.kind === "screen"
               ? { kind: outcome.kind, region: outcome.region?.frame ?? null, sendsPicture: outcome.sendsPicture }
