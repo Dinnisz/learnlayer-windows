@@ -100,6 +100,8 @@ export interface PictureQuestion {
   picture: { url: string; width: number; height: number } | null;
   /** Where the figures are in the picture, as shares (for a typeset reading's figure blocks). */
   figureBoxes: readonly Rect[];
+  /** Where the question was on the screen, in the stage's own pixels: it flies from there. Null: it only fades in. */
+  from?: { left: number; top: number; width: number; height: number } | null;
   /** What the stage shows until the model's reading comes: the computer's own reading, typeset; null for bars. */
   draft: string | null;
   /** The model reads the picture and the stage shows that reading typeset; false: the question's text as it is. */
@@ -481,12 +483,15 @@ class QuestionFlight {
   private state: "waiting" | "holding" | "flying" | "done" = "waiting";
   private opened = 0;
 
+  /** `pieces`: what flies, inside the holder (the PDF's crops, or the screen question's one view). */
+  constructor(private readonly pieces: string) {}
+
   /**
    * Puts each lifted crop back over its own box on the page (the statement over the statement, the part over the
    * part, whatever lies between them there); the transforms, or null when they can't be measured.
    */
-  private static pin(element: HTMLElement, targets: readonly DOMRectReadOnly[]): string[] | null {
-    const crops = [...element.querySelectorAll<HTMLElement>(":scope > .stage-crop")];
+  private pin(element: HTMLElement, targets: readonly DOMRectReadOnly[]): string[] | null {
+    const crops = [...element.querySelectorAll<HTMLElement>(this.pieces)];
     if (crops.length === 0 || crops.length !== targets.length) return null;
     for (const crop of crops) crop.style.transform = "";
     const transforms: string[] = [];
@@ -494,7 +499,8 @@ class QuestionFlight {
       const settled = crop.getBoundingClientRect();
       const target = targets[index]!;
       if (settled.width < 1 || target.width < 1) return null;
-      const k = target.width / settled.width;
+      // Fitted inside its box on the screen: a typeset reading need not have the picture's shape.
+      const k = Math.min(target.width / settled.width, target.height / Math.max(1, settled.height));
       transforms.push(`translate(${target.left - settled.left}px, ${target.top - settled.top}px) scale(${k})`);
     }
     crops.forEach((crop, index) => {
@@ -507,7 +513,7 @@ class QuestionFlight {
   /** Laid out (or resized while it waits): over its box on the page, before the first paint. */
   laidOut(element: HTMLElement, targets: readonly DOMRectReadOnly[]) {
     if (this.state === "holding") {
-      QuestionFlight.pin(element, targets);
+      this.pin(element, targets);
       return;
     }
     if (this.state !== "waiting") return;
@@ -519,7 +525,7 @@ class QuestionFlight {
     // Its size is final the moment it is known (no easing from the first guess), so the pin stays true.
     element.classList.add("stage-question-flying");
     this.opened = performance.now();
-    if (QuestionFlight.pin(element, targets)) {
+    if (this.pin(element, targets)) {
       this.state = "holding";
     } else {
       element.style.animation = "";
@@ -537,8 +543,8 @@ class QuestionFlight {
 
   fly(element: HTMLElement, targets: readonly DOMRectReadOnly[]) {
     if (this.state !== "holding") return;
-    const from = QuestionFlight.pin(element, targets);
-    const crops = [...element.querySelectorAll<HTMLElement>(":scope > .stage-crop")];
+    const from = this.pin(element, targets);
+    const crops = [...element.querySelectorAll<HTMLElement>(this.pieces)];
     for (const crop of crops) crop.style.transform = "";
     if (!from) {
       element.classList.remove("stage-question-flying");
@@ -583,8 +589,9 @@ function useQuestionFlight(
   laidOut: boolean,
   sized: boolean,
   scale: number,
+  pieces = ":scope > .stage-crop",
 ) {
-  const [flight] = useState(() => new QuestionFlight());
+  const [flight] = useState(() => new QuestionFlight(pieces));
   useLayoutEffect(() => {
     if (holder.current && laidOut) flight.laidOut(holder.current, targets);
   }, [flight, holder, targets, laidOut, scale]);
@@ -2225,10 +2232,19 @@ function ScreenQuestionView({
     };
   }, [session, source]);
 
+  // Lifted from where it was clicked on the screen, like the PDF's crop from its page.
+  const holder = useRef<HTMLDivElement>(null);
+  const from = source.from ?? null;
+  const targets = useMemo(
+    () => (from ? [new DOMRectReadOnly(from.left, from.top, from.width, from.height)] : []),
+    [from],
+  );
+  useQuestionFlight(holder, targets, from !== null, true, 0, ":scope > *");
+
   const picture = source.picture;
   const scale = compact ? 0.85 : 1;
   return (
-    <div className="stage-question stage-screen-question" aria-live="polite">
+    <div className="stage-question stage-screen-question" aria-live="polite" ref={holder}>
       {shown.kind === "typeset" ? (
         <TypesetQuestion transcription={shown.transcription} source={source} />
       ) : shown.kind === "crop" && picture ? (

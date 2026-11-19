@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { readClick, draftText, type ClickRead } from "@core/anywhere/clickReading";
 import { greyImage, type LocatorLine } from "@core/anywhere/questionRegion";
 import { screenQuestionFromUIA } from "@core/anywhere/uiaQuestion";
+import { Placements } from "@core/anywhere/pdfQuestionRead";
 import {
   anywhereLogEntry,
   examQuestionFromScreen,
@@ -106,6 +107,13 @@ type OverlaySource = StageSource | PassageSource;
 async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<OverlaySource | null> {
   const scale = read.scale || 1;
   const point = { x: read.point.x / scale, y: read.point.y / scale };
+  // Global points to this window's own (the stage covers the clicked monitor): where the question flies from.
+  const onStage = (rect: Rect) => ({
+    left: rect.x - read.monitor.x / scale,
+    top: rect.y - read.monitor.y / scale,
+    width: rect.width,
+    height: rect.height,
+  });
   if (read.refused) return null;
   // Alt-click on selected text explains that text.
   if (read.selection) {
@@ -189,7 +197,8 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
       opened: {
         question,
         pageIndex: outcome.read.page.index,
-        frame: { left: 0, top: 0, width: outcome.read.screenFrame.width, height: outcome.read.screenFrame.height },
+        // The part's own box on the screen, as the reader gives it: the lifted crops fly from there.
+        frame: onStage(Placements.toScreen(outcome.read.placement, question.bounds)),
       },
     };
   }
@@ -217,6 +226,7 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
           }
         : null,
     figureBoxes: region?.figureBoxes ?? [],
+    from: region ? onStage(region.frame) : null,
     draft: outcome.transcribes ? draftText(region?.text ?? "", region?.lines ?? []) : null,
     transcribes: outcome.transcribes && images.length > 0,
     ocrText: region?.text ?? "",
