@@ -1,0 +1,10 @@
+{
+  "talk": {
+    "pt": "Mantém premidas as teclas Ctrl e Windows, diz olá e larga.",
+    "en": "Hold Ctrl and the Windows key together, say hi, then let go."
+  },
+  "tryIt": {
+    "pt": "Experimenta numa pergunta. Mantém a tecla Alt premida e clica.",
+    "en": "Try it on a question. Hold the Alt key and click."
+  }
+}

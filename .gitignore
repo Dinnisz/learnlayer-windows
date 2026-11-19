@@ -9,3 +9,4 @@ dist/
 dist-ui/
 src-tauri/gen/
 .claude/settings.local.json
+scripts/onboarding-clips/models/

@@ -342,6 +342,14 @@ describe("Windows path", () => {
     expect(onboardingClip("tryIt", "en", "windows")).toBeNull();
     expect(onboardingClip("talk", "en", mac)).toBe("clips/onboarding/onboarding_talk_en.m4a");
   });
+
+  it("plays the Windows recording of a line that names a key, once it is recorded", () => {
+    const recorded = new Set(["talk_pt", "tryIt_en"]);
+    expect(onboardingClip("talk", "pt", "windows", recorded)).toBe("clips/onboarding/onboarding_talk_windows_pt.m4a");
+    expect(onboardingClip("tryIt", "en", "windows", recorded)).toBe("clips/onboarding/onboarding_tryIt_windows_en.m4a");
+    expect(onboardingClip("talk", "en", "windows", recorded)).toBeNull();
+    expect(onboardingClip("permissions", "pt", "windows", new Set(["permissions_pt"]))).toBeNull();
+  });
 });
 
 // Port of LearnLayerTests/OnboardingScreensTests.swift @ ref 2026-11-04 (the step mapping and language cases).
