@@ -66,3 +66,31 @@ describe("the page's colours on the dark stage", () => {
     expect(InkThemes.dark("#007aff").accent).toEqual({ r: 0, g: 122, b: 255 });
   });
 });
+
+describe("a picture of the screen in the stage's ink", () => {
+  const pixels = (...colours: [number, number, number][]) =>
+    new Uint8ClampedArray(colours.flatMap(([r, g, b]) => [r, g, b, 255]));
+
+  it("clears the paper and turns black text white, its edges by their darkness", () => {
+    const data = pixels([255, 255, 255], [255, 255, 255], [255, 255, 255], [0, 0, 0], [160, 160, 160]);
+    expect(PageInk.recolourPicture(data, theme)).toBe(true);
+    expect(data[3]).toBe(0);
+    expect([...data.slice(12, 16)]).toEqual([255, 255, 255, 255]);
+    expect(data[16]).toBe(255);
+    expect(data[19]).toBeGreaterThan(40);
+    expect(data[19]).toBeLessThan(255);
+  });
+
+  it("keeps a coloured mark in the palette", () => {
+    const data = pixels([255, 255, 255], [255, 255, 255], [220, 20, 20]);
+    PageInk.recolourPicture(data, theme);
+    expect([data[8], data[9], data[10]]).toEqual([theme.red.r, theme.red.g, theme.red.b]);
+  });
+
+  it("leaves a dark page as it is", () => {
+    const data = pixels([20, 20, 20], [20, 20, 20], [255, 255, 255]);
+    const before = [...data];
+    expect(PageInk.recolourPicture(data, theme)).toBe(false);
+    expect([...data]).toEqual(before);
+  });
+});

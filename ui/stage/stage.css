@@ -828,11 +828,9 @@
   margin: 8px 0 12px;
 }
 
-.stage-figure > div {
+.stage-figure > canvas {
+  display: block;
   max-width: 100%;
-  border-radius: 8px;
-  background-color: #fff;
-  background-repeat: no-repeat;
 }
 
 .stage-figure figcaption {
@@ -844,8 +842,7 @@
 .stage-screen-crop {
   display: block;
   max-width: 100%;
-  height: auto;
-  border-radius: 10px;
+  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
 }
 
 .stage-draft {

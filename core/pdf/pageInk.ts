@@ -140,4 +140,34 @@ export const PageInk = {
       data[at + 3] = Math.round(alpha * found.alpha);
     }
   },
+
+  /**
+   * A picture of the screen (opaque, the paper painted in) in the stage's ink, as the Mac's white-ink image: the paper
+   * clear, grey and black text white with the darkness as its coverage (so anti-aliased edges stay smooth), coloured
+   * ink in the palette. False, and the picture untouched, when it is not dark ink on light paper (a dark page).
+   */
+  recolourPicture(data: Uint8ClampedArray, theme: InkTheme): boolean {
+    let light = 0;
+    let pixels = 0;
+    for (let at = 0; at + 3 < data.length; at += 16) {
+      pixels += 1;
+      if (luminanceOf({ r: data[at]! / 255, g: data[at + 1]! / 255, b: data[at + 2]! / 255 }) > 0.6) light += 1;
+    }
+    if (pixels === 0 || light / pixels < 0.5) return false;
+    for (let at = 0; at + 3 < data.length; at += 4) {
+      const color = { r: data[at]! / 255, g: data[at + 1]! / 255, b: data[at + 2]! / 255 };
+      const luminance = luminanceOf(color);
+      const coverage = Math.min(1, Math.max(0, (0.93 - luminance) / (0.93 - 0.3)));
+      if (coverage === 0) {
+        data[at + 3] = 0;
+        continue;
+      }
+      const ink = saturationOf(color) > 0.35 ? PageInk.tint(color, theme) : theme.ink;
+      data[at] = ink.r;
+      data[at + 1] = ink.g;
+      data[at + 2] = ink.b;
+      data[at + 3] = Math.round(data[at + 3]! * coverage);
+    }
+    return true;
+  },
 };

@@ -83,6 +83,7 @@ import { onIslandCommand, publishIsland } from "../island";
 import { showMain } from "../native";
 import type { ReaderDocument } from "../reader/readerDocument";
 import { stageInk } from "./stageInk";
+import { PageInk } from "@core/pdf/pageInk";
 import { HandDrawnMark } from "../components/HandDrawnMark";
 import { stageMascotSize } from "../components/Mascot";
 import type { MascotPresence, MascotTransient } from "@core/voice/mascotMotion";
@@ -2096,11 +2097,12 @@ function ScreenQuestionView({
       {shown.kind === "typeset" ? (
         <TypesetQuestion transcription={shown.transcription} source={source} />
       ) : shown.kind === "crop" && picture ? (
-        <img
+        <InkPicture
           className="stage-screen-crop"
-          src={picture.url}
-          alt={source.question.text}
-          style={{ width: picture.width * scale, height: picture.height * scale }}
+          picture={picture}
+          label={source.question.text}
+          width={picture.width * scale}
+          height={picture.height * scale}
         />
       ) : source.draft ? (
         <div className="stage-typeset stage-draft">
@@ -2130,6 +2132,69 @@ function ScreenQuestionView({
   );
 }
 
+/**
+ * Part of a picture of the screen drawn in the stage's ink (the Mac's white-ink image): white letters on nothing, the
+ * same as a question lifted from a PDF, never a white plate. A dark page, or a picture that can't be read back, is shown
+ * as it is.
+ */
+function InkPicture({
+  picture,
+  label,
+  width,
+  height,
+  region,
+  className,
+}: {
+  picture: { url: string; width: number; height: number };
+  label: string;
+  width: number;
+  height: number;
+  /** The part to draw, in the picture's points; all of it when absent. */
+  region?: Rect;
+  className?: string;
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const area = region ?? { x: 0, y: 0, width: picture.width, height: picture.height };
+  const { x, y, width: areaWidth, height: areaHeight } = area;
+  useEffect(() => {
+    const target = canvas.current;
+    if (!target) return;
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (cancelled) return;
+      const ratio = window.devicePixelRatio || 1;
+      target.width = Math.max(1, Math.round(width * ratio));
+      target.height = Math.max(1, Math.round(height * ratio));
+      const context = target.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+      // The picture's pixels per point.
+      const sx = image.naturalWidth / Math.max(1, picture.width);
+      const sy = image.naturalHeight / Math.max(1, picture.height);
+      context.drawImage(image, x * sx, y * sy, areaWidth * sx, areaHeight * sy, 0, 0, target.width, target.height);
+      try {
+        const pixels = context.getImageData(0, 0, target.width, target.height);
+        if (PageInk.recolourPicture(pixels.data, stageInk(target))) context.putImageData(pixels, 0, 0);
+      } catch {
+        // A picture the canvas can't read back stays as it was taken.
+      }
+    };
+    image.src = picture.url;
+    return () => {
+      cancelled = true;
+    };
+  }, [picture, width, height, x, y, areaWidth, areaHeight]);
+  return (
+    <canvas
+      ref={canvas}
+      className={className}
+      role="img"
+      aria-label={label}
+      style={{ width, height: "auto", aspectRatio: `${width} / ${height}` }}
+    />
+  );
+}
+
 /** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
  * cut from the picture where the reading says they are. */
 function TypesetQuestion({ transcription, source }: { transcription: QuestionTranscription; source: PictureQuestion }) {
@@ -2148,16 +2213,12 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
           const height = box.height * picture.height;
           return (
             <figure key={index} className="stage-figure">
-              <div
-                role="img"
-                aria-label={block.caption ?? ""}
-                style={{
-                  width,
-                  height,
-                  backgroundImage: `url(${picture.url})`,
-                  backgroundSize: `${picture.width}px ${picture.height}px`,
-                  backgroundPosition: `${-box.x * picture.width}px ${-box.y * picture.height}px`,
-                }}
+              <InkPicture
+                picture={picture}
+                label={block.caption ?? ""}
+                width={width}
+                height={height}
+                region={{ x: box.x * picture.width, y: box.y * picture.height, width, height }}
               />
               {block.caption ? <figcaption>{block.caption}</figcaption> : null}
             </figure>
