@@ -14,6 +14,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
+import { FitToHeight } from "./FitToHeight";
 import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
@@ -1333,44 +1334,46 @@ function SolutionView({ session }: { session: QuestionSession }) {
       (session.showsGraph && session.hasGraph) ||
       session.showsIllustration);
   return (
-    <div className="stage-panel stage-solution">
-      {solution.figure && (
-        <details className="stage-figure-reading">
-          <summary>{t("How I read the figure")}</summary>
-          <MathText text={solution.figure} />
-        </details>
-      )}
-      <AnswerBox part={part} language={session.notationLanguage} />
-      <ExplainEntry session={session} />
-      {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
-        <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
-      )}
-      {session.isConfirming && <p className="stage-progress">{t("Checking the result…")}</p>}
-      <div className="stage-solution-body">
-        <div className="stage-steps">
-          {evidence ? (
-            <EvidenceView evidence={evidence} />
-          ) : (
-            Array.from({ length: session.stepCount }, (_, index) => index)
-              .filter((index) => index < visible)
-              .map((index) => <StepCard key={index} part={part} index={index} session={session} interactive />)
+    <FitToHeight>
+      <div className="stage-panel stage-solution">
+        {solution.figure && (
+          <details className="stage-figure-reading">
+            <summary>{t("How I read the figure")}</summary>
+            <MathText text={solution.figure} />
+          </details>
+        )}
+        <AnswerBox part={part} language={session.notationLanguage} />
+        <ExplainEntry session={session} />
+        {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
+          <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
+        )}
+        {session.isConfirming && <p className="stage-progress">{t("Checking the result…")}</p>}
+        <div className="stage-solution-body">
+          <div className="stage-steps">
+            {evidence ? (
+              <EvidenceView evidence={evidence} />
+            ) : (
+              Array.from({ length: session.stepCount }, (_, index) => index)
+                .filter((index) => index < visible)
+                .map((index) => <StepCard key={index} part={part} index={index} session={session} interactive />)
+            )}
+          </div>
+          {(formulas.length > 0 || side) && (
+            <aside className="stage-formulas" aria-label={t("Formulas")}>
+              {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
+              {formulas.map((formula) => (
+                <div key={formula.name + formula.latex} className="stage-formula">
+                  <span>{formula.name}</span>
+                  <MathView latex={formula.latex} display />
+                </div>
+              ))}
+              {side && <SideFigures session={session} />}
+            </aside>
           )}
         </div>
-        {(formulas.length > 0 || side) && (
-          <aside className="stage-formulas" aria-label={t("Formulas")}>
-            {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
-            {formulas.map((formula) => (
-              <div key={formula.name + formula.latex} className="stage-formula">
-                <span>{formula.name}</span>
-                <MathView latex={formula.latex} display />
-              </div>
-            ))}
-            {side && <SideFigures session={session} />}
-          </aside>
-        )}
+        <Actions session={session} />
       </div>
-      <Actions session={session} />
-    </div>
+    </FitToHeight>
   );
 }
 
