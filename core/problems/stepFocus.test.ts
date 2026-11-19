@@ -104,3 +104,28 @@ describe("where in the crop a step is about", () => {
     expect(path.match(/M /g)).toHaveLength(3);
   });
 });
+
+describe("a step's spot on the lifted crops (live test, 2026-11-19)", () => {
+  // Matemática A, item 2.2: the model saw one picture of the group's statement (the two branches of f) above the part;
+  // its box for "ramo para x ≤ 3" (y 0.345) is on the statement, not on the part's own text.
+  const focus = (y: number): Focus => ({ x: 0.33, y, w: 0.3, h: 0.08, mark: "circle", note: "ramo", on: "question" });
+  const sent = { x: 50, y: 100, width: 500, height: 400 };
+  const statement = { x: 50, y: 300, width: 500, height: 200 };
+  const part = { x: 50, y: 100, width: 500, height: 200 };
+
+  it("puts the box on the crop it falls in, at that crop's scale", () => {
+    const onStatement = StepFocusGeometry.onCrop(focus(0.345), sent, statement, { width: 1000, height: 400 })!;
+    expect(onStatement).not.toBeNull();
+    // 0.345 of 400 = 138 below the picture's top, which is the statement's top: 276 crop pixels at twice the size.
+    expect(onStatement.y).toBeCloseTo(276);
+    expect(onStatement.x).toBeCloseTo(330);
+    expect(onStatement.width).toBeCloseTo(300);
+    expect(StepFocusGeometry.onCrop(focus(0.345), sent, part, { width: 1000, height: 400 })).toBeNull();
+  });
+
+  it("a box in the lower half is the part's", () => {
+    const onPart = StepFocusGeometry.onCrop(focus(0.7), sent, part, { width: 500, height: 200 })!;
+    expect(onPart.y).toBeCloseTo(80);
+    expect(StepFocusGeometry.onCrop(focus(0.7), sent, statement, { width: 500, height: 200 })).toBeNull();
+  });
+});

@@ -19,7 +19,7 @@ import { springDuration, springEasing, Springs } from "../styles/springs";
 import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
-import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
+import { formulasFor, type Card, type Focus, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { SelectionAsk } from "@core/problems/selectionAsk";
 import { markup } from "@core/problems/markup";
@@ -143,6 +143,13 @@ async function prepareSource(source: StageSource): Promise<{ session: QuestionSe
   const session = source.session();
   void session.openQuietly();
   return { session, page: null };
+}
+
+/** The page area the model was sent a picture of (`QuestionPages.region` on the question's own page); null when the
+ * text alone went. */
+function sentArea(page: PageText, question: ExamQuestion): Rect | null {
+  if (QuestionPages.textSuffices(question, QuestionPages.pages(question, page))) return null;
+  return QuestionPages.region(page, question, page);
 }
 
 /** The pages, pictures and source lines that go with the clicked question, then its session (no call yet). */
@@ -797,6 +804,19 @@ function CropPiece({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, region, session, version, shows],
   );
+  // The model's box is a share of the picture it was sent: the question's whole area on the page (the group, its
+  // statement and the part, QuestionPages.region), whichever crop it names. Placed on the page, it is drawn on the crop
+  // it falls in. With no picture sent, it is a share of the crop "on" names.
+  const sent = useMemo(() => (page && session ? sentArea(page, session.question) : null), [page, session]);
+  const focusOnCrop = useCallback(
+    (focus: Focus): Box | null => {
+      const size = { width: region.width * scale, height: region.height * scale };
+      if (sent) return StepFocusGeometry.onCrop(focus, sent, region, size);
+      const on = focus.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
+      return on === role ? StepFocusGeometry.rect(focus, size) : null;
+    },
+    [sent, region, scale, hasStatement, role],
+  );
   // While the mascot walks the steps, the step's datum magnified in a lens (QuoteLoupe): its spot on the crop, else
   // the first of its data underlined. Not with Reduce Motion.
   const lens = useMemo(() => {
@@ -805,8 +825,7 @@ function CropPiece({
     if (!session || session.mascotFocusStep === null || reducedMotion() || width <= 1 || height <= 1) return null;
     const crop = { width, height };
     const focus = session.part?.cards?.[session.mascotFocusStep]?.focus ?? null;
-    const on = focus?.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
-    const spot = focus && on === role ? StepFocusGeometry.rect(focus, crop) : null;
+    const spot = focus ? focusOnCrop(focus) : null;
     const line = marks.underlines[0] ?? marks.penUnderlines[0];
     const target = spot ?? (line ? cropBox(line, region, scale) : null);
     if (!target) return null;
@@ -902,8 +921,7 @@ function CropPiece({
       {session && (
         <StepFocusMark
           session={session}
-          role={role}
-          hasStatement={hasStatement}
+          place={focusOnCrop}
           width={region.width * scale}
           height={region.height * scale}
           lens={lens?.box ?? null}
@@ -1086,15 +1104,14 @@ function TintLayer({
  */
 function StepFocusMark({
   session,
-  role,
-  hasStatement,
+  place,
   width,
   height,
   lens = null,
 }: {
   session: QuestionSession;
-  role: "question" | "statement";
-  hasStatement: boolean;
+  /** Where a step's spot is on this crop, or null when it is on another one. */
+  place: (focus: Focus) => Box | null;
   width: number;
   height: number;
   /** The lens showing the spot magnified: it is the spot's one mark, and the label keeps clear of it. */
@@ -1103,9 +1120,7 @@ function StepFocusMark({
   const step = session.underlinedStep;
   const focus = step !== null ? (session.part?.cards?.[step]?.focus ?? null) : null;
   if (!focus) return null;
-  const on = focus.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
-  if (on !== role) return null;
-  const region = StepFocusGeometry.rect(focus, { width, height });
+  const region = place(focus);
   if (!region) return null;
   const note = focus.note?.trim() ? focus.note.trim() : null;
   return (
