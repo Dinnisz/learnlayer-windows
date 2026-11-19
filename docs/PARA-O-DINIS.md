@@ -104,6 +104,8 @@ Para as gravar com as mesmas vozes do Mac (Kokoro «af_heart» em en, grátis; �
 3. `python scripts/onboarding-clips/generate.py en` e `python scripts/onboarding-clips/generate.py pt --cost-cap 0.05` (lê a chave da OpenRouter do Credential Manager, `LearnLayer.OpenRouter`; regista o custo em `docs/CUSTOS.md`).
 4. Acrescenta `"talk_en", "tryIt_en", "talk_pt", "tryIt_pt"` a `windowsClips` em `core/onboarding/onboarding.ts`.
 
+**Feito em inglês a 2026-11-19, neste PC** (Python 3.12, FFmpeg e os modelos do Kokoro instalados com a tua autorização): `onboarding_talk_windows_en.m4a` (3,8 s) e `onboarding_tryIt_windows_en.m4a` (2,9 s), já em `windowsClips`. **Falta o português:** `generate.py pt` custa menos de 1 cêntimo e precisa da tua autorização e de uma chave da OpenRouter no Credential Manager (`LearnLayer.OpenRouter`). Até lá, em português, esses dois ecrãs aparecem sem voz.
+
 ### 10. Gerar o instalador (quando houver uma máquina que compile, ponto 1)
 **Feito a 2026-11-17 pelo CI:** `dist\LearnLayer_0.1.0_x64-setup.exe`, sem assinatura. Cada push para o `main` gera um novo, no artefacto «learnlayer-windows-installer» da corrida do CI. Para o trazer: `gh run download <id da corrida> --name learnlayer-windows-installer --dir dist`. Experimentado a 2026-11-17: o Smart App Control desta máquina **bloqueou o instalador** («Uma política de Controlo de Aplicações bloqueou este ficheiro») e nada foi instalado. Para o experimentar aqui é precisa a assinatura (ponto 4), ou usa outro PC.
 
