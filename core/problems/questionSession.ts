@@ -104,6 +104,13 @@ export type SolutionFigure =
   | { kind: "table"; table: SignTable }
   | { kind: "drawing"; scene: Illustration }
   | { kind: "space"; figure: SpaceFigure };
+/** What the figure box beside the steps can show (`QuestionSession.FigureTab`). */
+export type FigureTab = "figure" | "graph";
+
+/** A drawing that is one of the app's own solids or circuits (`Figure3DSpec(premade:)`), not a flat sketch. */
+export function isFigure3D(illustration: Illustration): boolean {
+  return circuitOf(illustration) !== null || solidOf(illustration) !== null;
+}
 export type IllustrationState = "loading" | "ready" | "empty" | "failed";
 
 export interface SessionInit {
@@ -383,6 +390,10 @@ export class QuestionSession {
   illustration: Illustration | null = null;
   illustrationState: IllustrationState | null = null;
   showsIllustration = false;
+  /** The student hid the drawing beside the steps with "Hide Drawing". */
+  hidesDrawing = false;
+  /** The figure box's tab the student (or "Draw It" / "Show the graph") picked last. */
+  private chosenFigureTab: FigureTab | null = null;
   private illustrationController: AbortController | null = null;
   /** Haiku's call on whether a graph or a diagram would make this clearer; null until asked. */
   visualAid: VisualAid | null = null;
@@ -924,7 +935,7 @@ export class QuestionSession {
       this.illustrationController?.abort();
       this.illustration = null;
       this.illustrationState = null;
-      if (this.showsIllustration || this.mode === "solution") this.fetchIllustration();
+      if (this.showsIllustration) this.fetchIllustration();
     }
     // A curve the solver returned is part of the answer, shown with it.
     const side = this.sideGraph;
@@ -940,6 +951,8 @@ export class QuestionSession {
     this.solveClock = { ...this.solveClock, ready: true };
     this.state = { kind: "ready" };
     if (this.mode !== null) this.considerVisual();
+    // «Resolução» chosen before the solver answered had nothing to draw from: the figure is asked for now.
+    this.fetchFigureBesideSteps();
     this.changed();
   }
 
@@ -1128,22 +1141,7 @@ export class QuestionSession {
       this.sawSolution = true;
       this.selectedStep = null;
       if (this.canDrawTiming) this.showsTiming = true;
-      // The figure beside the steps, when a template or the solver asked for one. A sign table, the continuity
-      // graph, or a complex figure that checked out already shows the point; a returned curve covers a function.
-      const part = this.part;
-      const topic = this.figureTopic;
-      const graph = this.solutionGraph;
-      const graphCoversFunction =
-        graph !== null && Graphs.isDrawable(graph) && (topic === null || topic === "function");
-      const drawsClosedForm = part !== null && this.localCurve(part) !== null;
-      if (
-        this.canDraw &&
-        part?.signTable == null &&
-        part?.continuity == null &&
-        !this.builtInFigureReady &&
-        (wants3D(this.figureTopicText) || (!graphCoversFunction && !drawsClosedForm))
-      )
-        this.fetchIllustration();
+      this.fetchFigureBesideSteps();
     }
     if (mode === "hint" || mode === "tryIt" || mode === "solution") this.considerVisual();
     this.changed();
@@ -1227,28 +1225,123 @@ export class QuestionSession {
     return value;
   }
 
+  /**
+   * The figure beside the steps, when a template or the solver asked for one (`fetchFigureBesideSteps`). Asked when
+   * the solution is opened and again when it arrives: on a first opening the solution is still on its way when
+   * «Resolução» is chosen, so there is no part (nor `canDraw`) to ask with yet.
+   */
+  fetchFigureBesideSteps(): void {
+    if (this.mode !== "solution" || !this.wantsFigureBesideSteps) return;
+    this.fetchIllustration();
+  }
+
+  /**
+   * The solution asks for a drawing beside its steps (a 3D solid, a circuit, a sketch). A sign table, the continuity
+   * graph, or a complex or space figure that checked out already shows the point; a returned curve covers a function.
+   */
+  get wantsFigureBesideSteps(): boolean {
+    const part = this.part;
+    if (!part || this.illustration) return false;
+    const topic = this.figureTopic;
+    const graph = this.solutionGraph;
+    const graphCoversFunction = graph !== null && Graphs.isDrawable(graph) && (topic === null || topic === "function");
+    const drawsClosedForm = this.localCurve(part) !== null;
+    // A volume of revolution or a circuit still asks: its 3D figure wins over the curve.
+    return (
+      this.canDraw &&
+      part.signTable == null &&
+      part.continuity == null &&
+      !this.builtInFigureReady &&
+      (wants3D(this.figureTopicText) || (!graphCoversFunction && !drawsClosedForm))
+    );
+  }
+
   /** The sign table (only when every sign checks out), the continuity graph, or the drawing; null for steps alone. */
   get solutionFigure(): SolutionFigure | null {
     const part = this.part;
-    if (!part) return null;
+    const found = part ? this.figureBesideSteps(part) : null;
+    if (!found) return null;
+    // "Hide Drawing" hides the drawing beside the steps too (it is the same one).
+    if (found.isDrawing && this.hidesDrawing) return null;
+    return found.figure;
+  }
+
+  /** The drawing is the figure beside the steps (a 3D solid, the solver's sketch): shown there once, never twice. */
+  get drawingIsBesideSteps(): boolean {
+    const part = this.part;
+    return part ? (this.figureBesideSteps(part)?.isDrawing ?? false) : false;
+  }
+
+  /** The "Draw It" panel: only for a drawing that is not already the figure beside the steps. */
+  get showsIllustrationPanel(): boolean {
+    return this.showsIllustration && !this.drawingIsBesideSteps;
+  }
+
+  /** Whether the drawing is on screen, wherever it is: what "Draw It" / "Hide Drawing" says. */
+  get drawingVisible(): boolean {
+    return this.drawingIsBesideSteps ? !this.hidesDrawing : this.showsIllustration;
+  }
+
+  private figureBesideSteps(part: Part): { figure: SolutionFigure; isDrawing: boolean } | null {
     // Complex numbers and space geometry use the app's own figure when its numbers check out.
     if (this.figureTopic === "complex") {
       const drawing = this.complexDrawing(part);
-      if (drawing) return { kind: "drawing", scene: drawing };
+      if (drawing) return { figure: { kind: "drawing", scene: drawing }, isDrawing: false };
     }
     if (this.figureTopic === "space") {
       const space = this.spaceFigure(part);
-      if (space) return { kind: "space", figure: space };
+      if (space) return { figure: { kind: "space", figure: space }, isDrawing: false };
     }
     if (part.signTable && signTableProblems(part.signTable).length === 0)
-      return { kind: "table", table: part.signTable };
+      return { figure: { kind: "table", table: part.signTable }, isDrawing: false };
     const continuity = this.continuityDrawing(part);
-    if (continuity) return { kind: "drawing", scene: continuity };
+    if (continuity) return { figure: { kind: "drawing", scene: continuity }, isDrawing: false };
+    const illustration = this.illustrationState === "ready" ? this.illustration : null;
+    // A 3D solid or circuit replaces the plot of the curve.
+    if (illustration && isFigure3D(illustration))
+      return { figure: { kind: "drawing", scene: this.gatedDrawing(illustration, part) }, isDrawing: true };
     const local = this.localCurve(part);
-    if (local) return { kind: "drawing", scene: local };
-    if (this.canDraw && this.illustration && this.illustrationState === "ready")
-      return { kind: "drawing", scene: this.gatedDrawing(this.illustration, part) };
+    if (local) return { figure: { kind: "drawing", scene: local }, isDrawing: false };
+    if (this.canDraw && illustration)
+      return { figure: { kind: "drawing", scene: this.gatedDrawing(illustration, part) }, isDrawing: true };
     return null;
+  }
+
+  // MARK: The figure box (a 3D solid and the graph, one at a time)
+
+  /** What the figure box beside the steps can show, the figure (a solid) first. */
+  get figureTabs(): FigureTab[] {
+    const tabs: FigureTab[] = [];
+    if (this.solutionFigure !== null || this.expectsFigure) tabs.push("figure");
+    if (this.showsGraph && this.sideGraph !== null) tabs.push("graph");
+    return tabs;
+  }
+
+  /** The tab on show: the one picked while it is there, else the figure. */
+  get activeFigureTab(): FigureTab | null {
+    const tabs = this.figureTabs;
+    if (this.chosenFigureTab !== null && tabs.includes(this.chosenFigureTab)) return this.chosenFigureTab;
+    return tabs[0] ?? null;
+  }
+
+  selectFigureTab(tab: FigureTab): void {
+    this.chosenFigureTab = tab;
+    this.changed();
+  }
+
+  /** The figure beside the steps is a 3D one (a solid, a circuit, a space figure), or is being drawn as one. */
+  get figureIs3D(): boolean {
+    const figure = this.solutionFigure;
+    if (figure === null)
+      return this.canDraw && this.illustrationState === "loading" && wants3D(this.question.groupText);
+    if (figure.kind === "drawing") return isFigure3D(figure.scene);
+    return figure.kind === "space";
+  }
+
+  /** The figure and the graph share one box of a fixed size: always for a 3D figure, and whenever there are both. */
+  get figureIsBoxed(): boolean {
+    const tabs = this.figureTabs;
+    return tabs.length > 1 || (tabs.includes("figure") && this.figureIs3D);
   }
 
   /** A figure is coming (the drawing is on its way), or a passage with its quotes: the layout keeps its column. */
@@ -1390,6 +1483,8 @@ ${part.label}`,
 
   toggleGraph(): void {
     this.showsGraph = !this.showsGraph;
+    if (this.showsGraph) this.chosenFigureTab = "graph";
+    else if (this.chosenFigureTab === "graph") this.chosenFigureTab = null;
     this.changed();
   }
 
@@ -1410,10 +1505,21 @@ ${part.label}`,
     this.changed();
   }
 
-  /** Asked for once, on the first "Draw It"; saved after that. */
+  /**
+   * Asked for once, on the first "Draw It"; saved after that. One drawing, shown or hidden: the one beside the steps
+   * when it is there, else the panel.
+   */
   toggleIllustration(): void {
-    this.showsIllustration = !this.showsIllustration;
-    if (this.showsIllustration) this.fetchIllustration();
+    if (this.drawingVisible) {
+      this.showsIllustration = false;
+      this.hidesDrawing = true;
+      this.changed();
+      return;
+    }
+    this.hidesDrawing = false;
+    this.showsIllustration = true;
+    this.chosenFigureTab = "figure";
+    this.fetchIllustration();
     this.changed();
   }
 

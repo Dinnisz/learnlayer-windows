@@ -40,7 +40,8 @@ import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import type { ExamQuestion } from "@core/problems/questionDetector";
 import { QuestionPages } from "@core/problems/questionPages";
 import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
-import { QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
+import { isFigure3D, QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
+import { FigureBoxSize } from "./figureBox";
 import { CurveGraph, type GraphControlling } from "../figures/CurveGraph";
 import { FunctionPlot } from "@core/illustrations/graph";
 import { ConceptSlug } from "@core/memory/memory";
@@ -1460,7 +1461,7 @@ function hasStageExtras(session: QuestionSession | null): boolean {
   if (!session || session.mode === null || session.mode === "solution" || session.mode === "variant") return false;
   return (
     (session.showsGraph && Boolean(session.sideGraph) && session.hasGraph) ||
-    session.showsIllustration ||
+    session.showsIllustrationPanel ||
     formulasAtHand(session).length > 0
   );
 }
@@ -1470,7 +1471,7 @@ function StageExtras({ session, atSide }: { session: QuestionSession; atSide: bo
   const graph = session.sideGraph;
   return (
     <>
-      {session.showsIllustration && <IllustrationPanel session={session} />}
+      {session.showsIllustrationPanel && <IllustrationPanel session={session} />}
       <div className="stage-formulas">
         <FormulaList formulas={formulasAtHand(session)} />
       </div>
@@ -1758,7 +1759,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
     (session.solutionFigure !== null ||
       session.expectsFigure ||
       (session.showsGraph && session.hasGraph) ||
-      session.showsIllustration);
+      session.showsIllustrationPanel);
   const columns = solutionColumns(bodyWidth, side, formulas.length > 0);
   const above = evidence !== null || answerIsAbove(part, columns);
   const answer = <AnswerBox part={part} language={session.notationLanguage} />;
@@ -1835,9 +1836,24 @@ function SideFigures({
   // pointing at figures, a step that adds nothing points at the figure as a whole.
   const guided = session.mascotFocusStep;
   const pointer = guided !== null && (questionPlan(session)?.pointer ?? false);
+  // The 3D figure and the graph share one box of a fixed size, one at a time (QuestionPanel.figureBox).
+  if (session.figureIsBoxed) {
+    if (show === "rest") return session.showsIllustrationPanel ? <IllustrationPanel session={session} /> : null;
+    return (
+      <div className={`stage-figures${show === "figure" ? " stage-figures-above" : ""}`}>
+        <FigureBox session={session} graphRing={lessonGraphRing} />
+        {show === "all" && session.showsIllustrationPanel && <IllustrationPanel session={session} />}
+      </div>
+    );
+  }
   return (
     <div className={`stage-figures${show === "figure" ? " stage-figures-above" : ""}`}>
-      {show === "rest" ? null : figure?.kind === "table" ? (
+      {show === "rest" ? null : figure?.kind === "drawing" &&
+        session.drawingIsBesideSteps &&
+        isFigure3D(figure.scene) ? (
+        // A solid or a circuit beside the steps is drawn by its own view, once.
+        <IllustrationPanel session={session} />
+      ) : figure?.kind === "table" ? (
         <div className="stage-figure-fit">
           {/* Drawn at its own size, often wider than the column: made smaller to fit, never larger. */}
           <FitWidth>
@@ -1858,20 +1874,81 @@ function SideFigures({
           focus={guided === null ? null : { step: guided, text: session.stepText(guided), wholeFigure: pointer }}
           bodySize={mascotSize}
         />
-      ) : session.expectsFigure && !session.showsIllustration ? (
+      ) : session.expectsFigure && !session.showsIllustrationPanel ? (
         // The drawing on its way, or why it isn't there (the drawing's own item shows it otherwise).
         <IllustrationPanel session={session} />
       ) : null}
       {show !== "figure" && session.showsGraph && graph && session.hasGraph && (
         <CurveGraph graph={graph} session={session} height={graphHeight} ring={lessonGraphRing} />
       )}
-      {show !== "figure" && session.showsIllustration && <IllustrationPanel session={session} />}
+      {show !== "figure" && session.showsIllustrationPanel && <IllustrationPanel session={session} />}
+    </div>
+  );
+}
+
+/** The box's fixed height for this window (`FigureBoxSize`): the work is what is left under the stage's margins. */
+function figureBoxHeight(): number {
+  const overlay = stageHeight();
+  return FigureBoxSize.height(overlay, overlay - 2 * StageGeometry.edge(overlay <= compactStageHeight));
+}
+
+/**
+ * The 3D figure and the graph, one at a time, in a box of a fixed size under the formulas, with a «3D | Graph» selector
+ * when there are both (QuestionPanel.figureBox). A step about the solid shows the solid, so the mascot points into it.
+ */
+function FigureBox({ session, graphRing }: { session: QuestionSession; graphRing: { x: number; y: number } | null }) {
+  const t = useT();
+  const height = figureBoxHeight();
+  const tabs = session.figureTabs;
+  const active = session.activeFigureTab ?? "figure";
+  const figure = session.solutionFigure;
+  const graph = session.sideGraph;
+  // Windows draws a circuit as a flat schematic, so only a solid or a space figure is called «3D».
+  const flatCircuit = figure?.kind === "drawing" && circuitOf(figure.scene) !== null;
+  const figureName = session.figureIs3D && !flatCircuit ? t("3D") : t("Figure");
+  const explaining = session.mascotFocusStep !== null;
+  useEffect(() => {
+    if (explaining && tabs.includes("figure") && active !== "figure") session.selectFigureTab("figure");
+  }, [explaining, tabs, active, session]);
+  return (
+    <div className="stage-figure-box">
+      {tabs.length > 1 && (
+        <div className="stage-figure-tabs" role="tablist">
+          {(["figure", "graph"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={active === tab}
+              className={active === tab ? "selected" : undefined}
+              onClick={() => session.selectFigureTab(tab)}
+            >
+              {tab === "figure" ? figureName : t("Graph")}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="stage-figure-box-body" style={{ height }}>
+        {active === "graph" && graph ? (
+          <CurveGraph graph={graph} session={session} height={height} ring={graphRing} />
+        ) : figure?.kind === "space" ? (
+          <SpaceFigureView figure={figure.figure} step={session.figureStep} highlight={spaceStepHighlight(session)} />
+        ) : figure?.kind === "drawing" && !isFigure3D(figure.scene) ? (
+          <IllustrationView scene={figure.scene} revealed={session.figureRevealed} step={session.figureStep} />
+        ) : figure?.kind === "table" ? (
+          <FitWidth>
+            <SignTableView table={figure.table} />
+          </FitWidth>
+        ) : (
+          <IllustrationPanel session={session} height={height - FigureBoxSize.titleRoom} />
+        )}
+      </div>
     </div>
   );
 }
 
 /** The question's drawing, or what is happening with it: never a spinner with nothing behind it. */
-function IllustrationPanel({ session }: { session: QuestionSession }) {
+function IllustrationPanel({ session, height }: { session: QuestionSession; height?: number }) {
   const t = useT();
   const lessonFigure3D = useLessonState()?.figure3D ?? null;
   switch (session.illustrationState) {
@@ -1908,6 +1985,7 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
           highlight={lit}
           assembleStep={assembleStep}
           yaw={asked?.yaw ?? null}
+          height={height}
         />
       ) : (
         <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
@@ -2457,7 +2535,7 @@ function Actions({ session }: { session: QuestionSession }) {
     [session.explains ? t("Explain") : t("Solution"), () => session.choose("solution"), session.mode !== "solution"],
     [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant && session.mode !== "variant"],
     [
-      session.showsIllustration ? t("Hide Drawing") : t("Draw It"),
+      session.drawingVisible ? t("Hide Drawing") : t("Draw It"),
       () => session.toggleIllustration(),
       session.canDraw && session.part !== null,
     ],

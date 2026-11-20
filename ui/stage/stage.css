@@ -1374,6 +1374,49 @@
   overflow-x: auto;
 }
 
+/* The 3D figure and the graph, one at a time, in a box of one height for the window (QuestionPanel.figureBox). */
+.stage-figure-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stage-figure-box-body {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* The «3D | Graph» selector: a segmented control at its own width. */
+.stage-figure-tabs {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 10%);
+}
+
+.stage-figure-tabs button {
+  min-width: 64px;
+  padding: 3px 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: rgb(255 255 255 / 75%);
+  font: 500 12px/16px var(--font-ui, "Segoe UI Variable", "Segoe UI", sans-serif);
+  cursor: pointer;
+}
+
+.stage-figure-tabs button.selected {
+  background: rgb(255 255 255 / 22%);
+  color: #fff;
+}
+
+.stage-figure-tabs button:focus-visible {
+  outline: 2px solid var(--accent, #0a84ff);
+  outline-offset: 1px;
+}
+
 /* One column (a narrow window): the figure above the steps, small enough for the steps to fit under it (a sign table
    in 360 wide, a drawing or a space figure 300 wide). */
 .stage-figures-above {
