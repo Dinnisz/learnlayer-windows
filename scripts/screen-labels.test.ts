@@ -61,6 +61,9 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     const cut: string[] = [];
     const leaks: string[] = [];
     const drafts: string[] = [];
+    let elsewhereClicks = 0;
+    let elsewhereRight = 0;
+    const elsewhereMissed: string[] = [];
     for (const name of readdirSync(folder).filter((file) => file.endsWith(".lines.json"))) {
       const page = name.replace(/\.lines\.json$/u, "");
       // "EX-FQA715-p4", or a browser window around it ("EX-FQA715-p4-s300", `scripts/browser-window.mjs`).
@@ -119,10 +122,36 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
           cut.push(
             `  ${page}: ${question.label} leaves out ${left.map((line) => `«${line.text.slice(0, 40)}»`).join(", ")}`,
           );
+        // Elsewhere in it: the middle of its area (a figure, often) and its last line of text.
+        const inside = lines.filter(
+          (line) =>
+            contains(bounds, centre(line.rect)) && centre(line.rect).y >= seenTop && centre(line.rect).y <= height,
+        );
+        const last = inside.reduce<LocatorLine | null>(
+          (lowest, line) => (!lowest || line.rect.y > lowest.rect.y ? line : lowest),
+          null,
+        );
+        const middle = centre(bounds);
+        const elsewhere = [
+          ...(middle.y >= seenTop && middle.y <= height ? [{ where: "middle", point: middle }] : []),
+          ...(last ? [{ where: "last line", point: centre(last.rect) }] : []),
+        ];
+        for (const { where, point: at } of elsewhere) {
+          const there = QuestionLocator.locate({ image, window: { x: 0, y: 0, width, height }, point: at, lines });
+          elsewhereClicks += 1;
+          const label = there ? bare(there.part ?? there.label ?? "—") : "nothing";
+          if (label === bare(question.label) || label === ungrouped(question.label)) elsewhereRight += 1;
+          else elsewhereMissed.push(`  ${page}: ${question.label}, ${where} (y ${Math.round(at.y)}) → ${label}`);
+        }
         const others = questions.filter(
           (other) =>
             other !== question &&
-            !question.groupLabels.includes(other.label) &&
+            !question.groupLabels.some(
+              (own) =>
+                own === other.label ||
+                ungrouped(own) === ungrouped(other.label) ||
+                ungrouped(question.label).startsWith(`${ungrouped(other.label)}.`),
+            ) &&
             region.crops.some((crop) => contains(crop, centre(onPicture(other.labelBounds)))),
         );
         if (others.length > 0)
@@ -131,6 +160,9 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     }
     console.log(`${right} of ${clicks} questions of the PDF found from the screen\n${missed.join("\n")}`);
     console.log(`${cut.length} crops short of their question\n${cut.join("\n")}`);
+    console.log(
+      `${elsewhereRight} of ${elsewhereClicks} clicks elsewhere in a question found it\n${elsewhereMissed.join("\n")}`,
+    );
     console.log(`${leaks.length} crops taking in another question\n${leaks.join("\n")}`);
     if (drafts.length > 0) console.log(drafts.join("\n"));
   },
