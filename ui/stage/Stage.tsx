@@ -2633,9 +2633,24 @@ function InkPicture({
   );
 }
 
-/** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
- * cut from the picture where the reading says they are. */
-/** The open step's data under the typeset question's words (`RenderedUnderlines`): the same blue line, fading in. */
+/** Between a step's quotes in one key: a quote's key never holds a line break (`StatementQuotes.key`). */
+const quoteSeparator = String.fromCharCode(10);
+
+/** One line under a datum, and the datum's own box, in the typeset question's pixels. */
+interface TypesetLine {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  /** Which of the step's quotes it is under, in the step's order. */
+  quote: number;
+}
+
+/**
+ * The open step's data under the typeset question's words (`RenderedUnderlines`): the same blue line, fading in. While
+ * the mascot walks the steps, the step's first datum is magnified in place instead (`QuoteLoupe`), and is not
+ * underlined as well.
+ */
 function TypesetUnderlines({
   session,
   container,
@@ -2645,11 +2660,13 @@ function TypesetUnderlines({
 }) {
   const step = session?.underlinedStep ?? null;
   const quotes = step !== null && session ? session.verifiedQuotes(step).map((found) => found.quote) : [];
-  const key = quotes.join("\u0000");
+  const key = quotes.join(quoteSeparator);
   // Measured for one set of quotes: lines of another set (or of none) are never drawn.
-  const [measured, setMeasured] = useState<{ key: string; lines: { left: number; top: number; width: number }[] }>({
+  const [measured, setMeasured] = useState<{ key: string; lines: TypesetLine[]; width: number; height: number }>({
     key: "",
     lines: [],
+    width: 0,
+    height: 0,
   });
   const lines = measured.key === key ? measured.lines : [];
   useLayoutEffect(() => {
@@ -2658,14 +2675,19 @@ function TypesetUnderlines({
     const measure = () => {
       const origin = element.getBoundingClientRect();
       const zoom = cssZoom(element) || 1;
-      const found = key.split("\u0000").flatMap((quote) => quoteRects(element, quote));
+      const found = key
+        .split(quoteSeparator)
+        .flatMap((quote, index) => quoteRects(element, quote).map((rect) => ({ rect, quote: index })));
       setMeasured({
         key,
-        lines: found.map((rect) => ({
+        width: element.offsetWidth,
+        height: element.offsetHeight,
+        lines: found.map(({ rect, quote }) => ({
           left: (rect.left - origin.left) / zoom,
-          // 2 pt under the letters (the glyphs' box without the line's leading).
-          top: (rect.top - origin.top + rect.height * 0.88) / zoom + 2 - 1.25,
+          top: (rect.top - origin.top) / zoom,
           width: Math.max(4, rect.width / zoom),
+          height: rect.height / zoom,
+          quote,
         })),
       });
     };
@@ -2674,18 +2696,76 @@ function TypesetUnderlines({
     observer.observe(element);
     return () => observer.disconnect();
   }, [container, key]);
+  const first = lines[0] ?? null;
+  const loupe =
+    first && session?.mascotFocusStep !== null && session?.mascotFocusStep === step && !reducedMotion()
+      ? (() => {
+          const target = { x: first.left, y: first.top, width: first.width, height: first.height };
+          const box = StepFocusGeometry.lens(target, QuoteLoupeScale, {
+            x: 0,
+            y: 0,
+            width: measured.width,
+            height: measured.height,
+          });
+          return { box, anchor: StepFocusGeometry.zoomAnchor(target, box, QuoteLoupeScale) };
+        })()
+      : null;
   return (
     <>
-      {lines.map((line, index) => (
-        <span
-          key={`${key}-${index}`}
-          className="stage-underline"
-          data-underline-skip=""
-          aria-hidden="true"
-          style={{ left: line.left, top: line.top, width: line.width }}
-        />
-      ))}
+      {lines
+        .filter((line) => !(loupe && line.quote === first?.quote))
+        .map((line, index) => (
+          <span
+            key={`${key}-${index}`}
+            className="stage-underline"
+            data-underline-skip=""
+            data-overlay=""
+            aria-hidden="true"
+            // 2 pt under the letters (the glyphs' box without the line's leading).
+            style={{ left: line.left, top: line.top + line.height * 0.88 + 2 - 1.25, width: line.width }}
+          />
+        ))}
+      {loupe && <TypesetLoupe container={container} box={loupe.box} anchor={loupe.anchor} />}
     </>
+  );
+}
+
+/**
+ * The datum magnified in a lens over the typeset question (the Mac's QuoteLoupe): a copy of the question's words,
+ * scaled about the point that carries the datum to the lens' centre, on a dark ground that hides the words under it.
+ */
+function TypesetLoupe({
+  container,
+  box,
+  anchor,
+}: {
+  container: React.RefObject<HTMLDivElement | null>;
+  box: Box;
+  anchor: { x: number; y: number };
+}) {
+  const inner = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const source = container.current;
+    const target = inner.current;
+    if (!source || !target) return;
+    const copy = source.cloneNode(true) as HTMLElement;
+    for (const overlay of copy.querySelectorAll("[data-overlay]")) overlay.remove();
+    copy.removeAttribute("style");
+    copy.style.width = `${source.offsetWidth}px`;
+    target.replaceChildren(copy);
+  }, [container, box]);
+  // A point x of the question is drawn at anchor + zoom·(x − anchor), less the lens' own corner.
+  const transform = `translate(${-box.x}px, ${-box.y}px) translate(${anchor.x}px, ${anchor.y}px) scale(${QuoteLoupeScale}) translate(${-anchor.x}px, ${-anchor.y}px)`;
+  return (
+    <div
+      className="stage-lens"
+      data-underline-skip=""
+      data-overlay=""
+      aria-hidden="true"
+      style={{ left: box.x, top: box.y, width: box.width, height: box.height }}
+    >
+      <div ref={inner} className="stage-lens-copy" style={{ transform }} />
+    </div>
   );
 }
 
@@ -2731,6 +2811,8 @@ function TypesetFigureFocus({
   );
 }
 
+/** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
+ * cut from the picture where the reading says they are. */
 function TypesetQuestion({
   transcription,
   source,

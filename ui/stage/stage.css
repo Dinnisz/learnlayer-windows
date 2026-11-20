@@ -146,6 +146,14 @@
   filter: none;
 }
 
+/* The typeset question's words copied into its lens, magnified about the datum. */
+.stage-lens-copy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
 /* What can be selected and asked about (SelectableText): the open step's words, the hint, the answers written for the
    student and the question typeset from its reading. Other steps stay plain, so a click still opens them. */
 .stage-step.selected .stage-step-note,
