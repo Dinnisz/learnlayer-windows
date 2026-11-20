@@ -443,8 +443,10 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                 className={`stage-column${compact ? " stage-compact" : ""}`}
                 style={extrasAtSide ? { width: `min(1272px, calc(100% - ${sideWidth + 36}px))` } : undefined}
               >
+                {/* A similar question is drawn where the exam's was; the exam's waits, hidden (`VariantStage`). */}
+                {mode === "variant" && session && <VariantHeader session={session} />}
                 {/* A click on the compact question opens it to its reading size, and back (`toggleQuestion`). */}
-                <div className="stage-question-toggle" onClick={toggleQuestion}>
+                <div className={`stage-question-toggle${mode === "variant" ? " away" : ""}`} onClick={toggleQuestion}>
                   {source.kind === "pdf" ? (
                     <QuestionCrop
                       document={source.document}
@@ -2224,6 +2226,28 @@ function followUpContext(session: QuestionSession, asked: string): string {
 }
 
 /** The same question with new numbers: the app wrote the numbers in and knows the answer. */
+/**
+ * A similar question drawn where the exam's was (`VariantStage`): the blue «Similar question» capsule and «Original»
+ * (or Esc), which brings the exam's question back.
+ */
+function VariantHeader({ session }: { session: QuestionSession }) {
+  const t = useT();
+  return (
+    <div className="stage-variant-header">
+      <span className="stage-variant-badge">{t("Similar question")}</span>
+      <button
+        type="button"
+        className="stage-variant-original"
+        title={t("Back to the exam’s question (Esc)")}
+        onClick={() => session.backToOriginal()}
+      >
+        <Icon symbol="arrow.uturn.backward" size={12} />
+        {t("Original")}
+      </button>
+    </div>
+  );
+}
+
 function VariantView({ session }: { session: QuestionSession }) {
   const t = useT();
   const [typed, setTyped] = useState("");
@@ -2258,13 +2282,12 @@ function VariantView({ session }: { session: QuestionSession }) {
         : Variant.format(session.variantAnswer);
   const unreadable = variant.kind === "function" ? t("I couldn’t read that expression.") : t("Type just the number.");
   return (
-    <div className="stage-panel">
-      <p className="stage-menu-title">{t("Similar question")}</p>
-      <p className="stage-hint">
+    <div className="stage-panel stage-variant">
+      <p className="stage-variant-question">
         <MathText text={session.variantText} />
       </p>
       <form
-        className="stage-try"
+        className={`stage-try stage-variant-answer${result === "matches" ? " matches" : ""}`}
         onSubmit={(event) => {
           event.preventDefault();
           if (typed.trim() !== "") session.checkVariant(typed);
@@ -2278,11 +2301,18 @@ function VariantView({ session }: { session: QuestionSession }) {
           aria-label={t("Your answer")}
         />
       </form>
-      {result && (
-        <p className={`stage-result stage-result-${result}`} role="status">
-          {result === "matches" ? t("That’s right.") : result === "differs" ? t("Not yet.") : unreadable}
-        </p>
-      )}
+      <div className="stage-variant-help">
+        <span>
+          {variant.kind === "function"
+            ? t("A function of %@, like exp(-t)*cos(3*t).", variant.variable ?? "t")
+            : t("A number; 2.5e-3 for 2.5 × 10⁻³.")}
+        </span>
+        {result && (
+          <span className={`stage-result stage-result-${result}`} role="status">
+            {result === "matches" ? t("That’s right.") : result === "differs" ? t("Not yet.") : unreadable}
+          </span>
+        )}
+      </div>
       {session.showsVariantHint && variant.hint !== "" && (
         <p className="stage-step-note">
           <MathText text={variant.hint} />

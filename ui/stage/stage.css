@@ -79,6 +79,71 @@
   display: contents;
 }
 
+/* The exam's question while a similar one is drawn in its place. */
+.stage-question-toggle.away {
+  display: none;
+}
+
+/* VariantStage (Mac): the similar question as a new exam question, at 21 pt, its answer field right under it. */
+.stage-variant-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stage-variant-badge,
+.stage-variant-original {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 600 12px var(--font-text);
+}
+
+.stage-variant-badge {
+  background: var(--stage-accent);
+  color: #fff;
+}
+
+.stage-variant-original {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  background: transparent;
+  color: rgb(255 255 255 / 75%);
+  font-weight: 500;
+}
+
+.stage-variant {
+  gap: 12px;
+}
+
+.stage-variant-question {
+  margin: 0;
+  font-size: 21px;
+  user-select: text;
+}
+
+.stage-try.stage-variant-answer input {
+  font: 18px var(--font-mono);
+}
+
+.stage-try.stage-variant-answer.matches input {
+  border-bottom-color: var(--stage-accent);
+}
+
+.stage-variant-help {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: rgb(255 255 255 / 50%);
+}
+
+.stage-variant-help .stage-result {
+  margin: 0;
+  font-size: 14px;
+}
+
 /* The question lifted off the page: drawn black on clear, turned white. */
 .stage-question {
   width: 100%;
