@@ -1023,6 +1023,14 @@
   position: relative;
 }
 
+/* A step's spot on a block of the typeset question, over the whole question. */
+.stage-typeset-focus {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
 .stage-typeset-formula {
   display: block;
   margin: 0 0 12px;

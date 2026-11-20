@@ -55,6 +55,34 @@ const optionPattern = /^\s*\(?[A-Ha-h][.)]\s/u;
 export const Transcriptions = {
   isFigure: (block: TranscriptionBlock) => block.type === "figure",
 
+  /**
+   * The text or formula block a step's focus falls in, by index (`RenderedQuestion.focus` @ 5701363): the first one
+   * whose band of the picture holds the focus's centre. Null when the centre is on a figure (`figures`, the figure
+   * boxes as drawn: the figure has its own mark) or on no block with a box, so no mark is better than a wrong one.
+   */
+  focusedBlock(
+    focus: { x: number; y: number; w: number; h: number },
+    blocks: readonly TranscriptionBlock[],
+    figures: readonly Rect[],
+  ): number | null {
+    const centre = { x: focus.x + focus.w / 2, y: focus.y + focus.h / 2 };
+    if (![centre.x, centre.y].every(Number.isFinite)) return null;
+    const onFigure = figures.some(
+      (box) =>
+        centre.x >= box.x - 0.01 &&
+        centre.x <= box.x + box.width + 0.01 &&
+        centre.y >= box.y - 0.01 &&
+        centre.y <= box.y + box.height + 0.01,
+    );
+    if (onFigure) return null;
+    const index = blocks.findIndex((block) => {
+      if (block.type === "figure") return false;
+      const box = Transcriptions.rect(block);
+      return box !== null && centre.y >= box.y && centre.y <= box.y + box.height;
+    });
+    return index >= 0 ? index : null;
+  },
+
   /** The box as a rectangle in the unit square, kept inside it; null when it is not one. */
   rect(block: TranscriptionBlock): Rect | null {
     const box = block.box;

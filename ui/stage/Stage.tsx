@@ -39,7 +39,11 @@ import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import type { ExamQuestion } from "@core/problems/questionDetector";
 import { QuestionPages } from "@core/problems/questionPages";
-import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
+import {
+  Transcriptions,
+  type QuestionTranscription,
+  type TranscriptionBlock,
+} from "@core/problems/questionTranscription";
 import { isFigure3D, QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
 import { FigureBoxSize } from "./figureBox";
 import { CurveGraph, type GraphControlling } from "../figures/CurveGraph";
@@ -2974,6 +2978,71 @@ function TypesetFigureFocus({
   );
 }
 
+/**
+ * A step's spot on a text or formula block of the typeset question (`RenderedQuestion.focus` @ 5701363): the model's
+ * box, on the picture it read, carried to the block drawn from that band of the picture. A line of text is marked
+ * across the column, a formula with a little room round it; on a figure the figure's own mark is drawn
+ * (`TypesetFigureFocus`), elsewhere nothing.
+ */
+function TypesetBlockFocus({
+  session,
+  container,
+  blocks,
+  figures,
+}: {
+  session: QuestionSession | null;
+  container: React.RefObject<HTMLDivElement | null>;
+  blocks: readonly TranscriptionBlock[];
+  figures: readonly Rect[];
+}) {
+  const step = session?.underlinedStep ?? null;
+  const focus = step !== null ? (session?.part?.cards?.[step]?.focus ?? null) : null;
+  const index = focus ? Transcriptions.focusedBlock(focus, blocks, figures) : null;
+  const [spot, setSpot] = useState<{ index: number; region: Box; width: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (!element || index === null) return;
+    const measure = () => {
+      const target = element.querySelector<HTMLElement>(`[data-typeset-block="${index}"]`);
+      if (!target) return setSpot(null);
+      const zoom = cssZoom(element) || 1;
+      const origin = element.getBoundingClientRect();
+      const inner = (target.querySelector(".stage-typeset-formula .katex") as HTMLElement | null) ?? target;
+      const rect = inner.getBoundingClientRect();
+      const top = (rect.top - origin.top) / zoom;
+      const height = rect.height / zoom;
+      const region =
+        target.dataset.kind === "formula"
+          ? { x: (rect.left - origin.left) / zoom - 4, y: top - 3, width: rect.width / zoom + 8, height: height + 6 }
+          : { x: 0, y: top - 2, width: element.offsetWidth, height: height + 4 };
+      setSpot({ index, region, width: element.offsetWidth, height: element.offsetHeight });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [container, index]);
+  if (!focus || index === null || spot?.index !== index) return null;
+  const note = focus.note?.trim() ? focus.note.trim() : null;
+  return (
+    <div
+      className="stage-typeset-focus"
+      data-underline-skip=""
+      data-overlay=""
+      aria-hidden="true"
+      style={{ width: spot.width, height: spot.height }}
+    >
+      <FocusPointer
+        region={spot.region}
+        arrow={StepFocusGeometry.isArrow(focus)}
+        note={note}
+        width={spot.width}
+        height={spot.height}
+      />
+    </div>
+  );
+}
+
 /** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
  * cut from the picture where the reading says they are. */
 function TypesetQuestion({
@@ -3030,6 +3099,11 @@ function TypesetQuestion({
   const figureOrder = transcription.blocks.map(
     (_, index) => transcription.blocks.slice(0, index).filter((block) => block.type === "figure").length,
   );
+  const figureBoxes = transcription.blocks.flatMap((block, index) => {
+    if (block.type !== "figure") return [];
+    const box = Transcriptions.rect(block) ?? source.figureBoxes[figureOrder[index]!] ?? null;
+    return box ? [box] : [];
+  });
   return (
     <div className="stage-typeset" ref={container} style={{ zoom: scale }}>
       {transcription.blocks.map((block, index) => {
@@ -3056,11 +3130,18 @@ function TypesetQuestion({
         }
         const text = block.text ?? "";
         if (text.trim() === "") return null;
-        if (block.type === "formula")
-          return <MathView key={index} latex={text} display className="stage-typeset-formula" />;
-        return <MarkupText key={index} text={text} />;
+        return (
+          <div key={index} data-typeset-block={index} data-kind={block.type}>
+            {block.type === "formula" ? (
+              <MathView latex={text} display className="stage-typeset-formula" />
+            ) : (
+              <MarkupText text={text} />
+            )}
+          </div>
+        );
       })}
       <TypesetUnderlines session={session} container={container} />
+      <TypesetBlockFocus session={session} container={container} blocks={transcription.blocks} figures={figureBoxes} />
     </div>
   );
 }
