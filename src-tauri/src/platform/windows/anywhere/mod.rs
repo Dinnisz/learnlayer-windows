@@ -151,9 +151,11 @@ pub fn start(app: &AppHandle, enabled: bool) -> Result<(), String> {
                         let _ = app.emit_to(overlay::LABEL, "anywhere-escape", ());
                     }
                     hook::HookEvent::TalkBegan => {
+                        log_talk_key(&crate::config::data_dir(), true);
                         let _ = app.emit("talk", true);
                     }
                     hook::HookEvent::TalkEnded => {
+                        log_talk_key(&crate::config::data_dir(), false);
                         let _ = app.emit("talk", false);
                     }
                     hook::HookEvent::Removed => {
@@ -165,6 +167,25 @@ pub fn start(app: &AppHandle, enabled: bool) -> Result<(), String> {
         })
         .map_err(|error| error.to_string())?;
     Ok(())
+}
+
+/// The talk key's presses as the hook saw them, in `talk-keys.jsonl`: the time and whether it is held, nothing else.
+/// It tells a talk key the hook never sees from one the interface drops (the live test of 2026-11-19, where Ctrl + Win
+/// did nothing). Kept to its last 200 or so lines.
+fn log_talk_key(folder: &std::path::Path, held: bool) {
+    const KEEP: usize = 200;
+    let path = folder.join("talk-keys.jsonl");
+    let at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|since| since.as_millis())
+        .unwrap_or_default();
+    let before = std::fs::read_to_string(&path).unwrap_or_default();
+    let mut lines: Vec<&str> = before.lines().filter(|line| !line.trim().is_empty()).collect();
+    let line = format!("{{\"at\":{at},\"held\":{held}}}");
+    lines.push(&line);
+    let from = lines.len().saturating_sub(KEEP);
+    let _ = std::fs::create_dir_all(folder);
+    let _ = std::fs::write(&path, lines[from..].join("\n") + "\n");
 }
 
 /// One click: read everything that can be read there, keep the pixels and the PDF for the interface, and hand over.
@@ -481,6 +502,21 @@ pub fn pdf(id: u64) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_talk_keys_are_logged_with_only_their_time_and_state() {
+        let folder = std::env::temp_dir().join(format!("learnlayer-talk-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        for index in 0..205 {
+            log_talk_key(&folder, index % 2 == 0);
+        }
+        let text = std::fs::read_to_string(folder.join("talk-keys.jsonl")).expect("log");
+        let lines: Vec<&str> = text.lines().collect();
+        assert_eq!(lines.len(), 200);
+        assert!(lines[199].ends_with("\"held\":true}"));
+        assert!(lines.iter().all(|line| line.starts_with("{\"at\":")));
+        let _ = std::fs::remove_dir_all(&folder);
+    }
 
     #[test]
     fn exam_browsers_and_password_managers_are_never_read() {

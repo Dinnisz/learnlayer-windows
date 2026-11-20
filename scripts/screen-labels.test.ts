@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { QuestionBand } from "../core/anywhere/questionBand";
 import { QuestionLocator, greyImage, type LocatorLine } from "../core/anywhere/questionRegion";
 import { questionsOn } from "../core/problems/questionDetector";
+import { draftText } from "../core/anywhere/clickReading";
 import { pdfPages } from "../core/testing/testPages";
 
 const folder = process.env.SCREEN_LABELS ?? "";
@@ -59,6 +60,7 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     const missed: string[] = [];
     const cut: string[] = [];
     const leaks: string[] = [];
+    const drafts: string[] = [];
     for (const name of readdirSync(folder).filter((file) => file.endsWith(".lines.json"))) {
       const page = name.replace(/\.lines\.json$/u, "");
       const [exam, number] = [page.replace(/-p\d+$/u, ""), Number(/-p(\d+)$/u.exec(page)![1])];
@@ -91,6 +93,11 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
             `  ${page}: ${question.label} → ${region ? `${region.label ?? "—"} ${region.part ?? ""}` : "nothing"}`,
           );
         if (!region) continue;
+        // `SCREEN_DRAFTS=1`: the draft the stage shows while the model reads the picture, under the PDF's own text.
+        if (process.env.SCREEN_DRAFTS === "1")
+          drafts.push(
+            `── ${page} ${question.label}\n${draftText(region.text, region.lines) ?? "(no draft)"}\n·· PDF\n${question.text.trim()}`,
+          );
         // What it shows: the question's own area on the page, and no other question's label.
         // Each line read inside the question's area is in the crop (its middle, give or take a few pixels).
         const bounds = onPicture(question.bounds);
@@ -116,6 +123,7 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     console.log(`${right} of ${clicks} questions of the PDF found from the screen\n${missed.join("\n")}`);
     console.log(`${cut.length} crops short of their question\n${cut.join("\n")}`);
     console.log(`${leaks.length} crops taking in another question\n${leaks.join("\n")}`);
+    if (drafts.length > 0) console.log(drafts.join("\n"));
   },
   600000,
 );

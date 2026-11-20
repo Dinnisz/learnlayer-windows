@@ -40,6 +40,11 @@ Quando uma destas estiver feita, diz «continua» e eu retomo a parte nativa a p
 ### 0. Trabalho do Mac que não está no GitHub (2026-11-20)
 A cópia `referencia-mac/` que me deste tinha alterações que não estão em nenhum ramo do `Dinnisz/LearnLayer`: `TextHelp` v5 e `VoiceTutorPrompt` v24 (o `main` tem v4 e v23), a resposta a uma dúvida a partir da resolução no ecrã («explica o ponto 2»: `TextHelpContext.followUp(solution:step:)`, `StepRequest`, `SelectionAsk`) e `FollowUpAnswer` no `QuestionOverlay`. Juntei-as ao `main` na referência do Windows. Se forem para ficar, faz push desse ramo do Mac; se foram experiências, diz-me e volto ao `main`. A cópia antiga está em `referencia-mac-2026-11-05/`.
 
+### 0a. Ctrl + Win não começa a ouvir (2026-11-20)
+Com uma pergunta aberta no palco, mantém **Ctrl+Win** carregado um segundo e larga, duas ou três vezes. Depois abre `%APPDATA%LearnLayer	alk-keys.jsonl` (funciona na app instalada e na de desenvolvimento). Cada linha tem só a hora e se a tecla estava premida.
+- **Sem o ficheiro, ou sem linhas novas:** o Windows não deixa o gancho ver o Ctrl+Win neste teclado. Diz-me a marca do teclado ou do portátil, e experimenta em Definições › Geral a tecla **Ctrl direito**.
+- **Com linhas:** o gancho vê as teclas e o problema está na interface. Na app de desenvolvimento (`npm run tauri dev`) também fica `talk-debug.jsonl`, com o que o palco tinha nesse momento. Manda-me os dois ficheiros.
+
 ### 0b. Cabeçalho `X-LearnLayer-Step` (painel de administração)
 O servidor passou a ler `X-LearnLayer-Step` (`explain`, `hint`, `attempt`, `solution`, `other`) para o painel de administração (a0b88dd), mas nem o Mac (em 5701363) nem o Windows o enviam, por isso a coluna fica vazia. Se o quiseres, diz-me que valor cada pedido deve levar e ponho-o nos dois clientes (no Windows é uma linha em `core/ai/modelClient.ts`). O `X-LearnLayer-Continuation`, esse, já vai: na confirmação pelo modelo forte e na lição da mascote.
 
