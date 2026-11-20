@@ -378,3 +378,9 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** no caminho do ecrã, quando a faixa da pergunta não encontra o rodapé, o `locate` do Mac toma por rodapé qualquer linha que pareça um número de página abaixo do clique. O OCR do Windows lê o denominador de «θ ∈ ]0, π/6[» como uma linha «6»: o item 10 da Matemática A ficava só com a primeira linha (e o mesmo nos itens 2, 8 e 9 da mesma prova).
 - **Escolha:** uma linha destas só é rodapé quando não há texto por baixo dela (`core/anywhere/fractionFooter.test.ts`, com as linhas reais da página).
 - **Porquê:** um rodapé está no fundo da página; um número com texto por baixo é parte da página. O relatório de ponta a ponta passou de 7 recortes que deixavam linhas de fora para 3, e os 3 que restam são o «FIM» (que não é da pergunta) e duas perguntas maiores do que 70 % da página (ver PROGRESSO, reparos ao Mac).
+
+## 2026-11-20 — Letra pequena no ecrã: sem segunda leitura ampliada
+
+- **Dúvida:** com as páginas desenhadas a 1,0× (página com ~600 px de largura, linhas com ~10 px), o relatório de ponta a ponta encontra 92 de 132 perguntas, contra 132 de 132 a 1,5×. Ler outra vez a janela inteira ampliada 2× quando a linha mediana tem menos de 13 px?
+- **Escolha:** não.
+- **Porquê:** medido, sobe só para 100 de 132, com perguntas novas que deixam de ser encontradas: ampliar uma imagem já desenhada pequena não devolve o detalhe, e o OCR passa a custar 4 vezes mais. Num portátil com escala de 125 % e o PDF à largura da janela, a página fica a 1,5× ou mais; a letra tão pequena é um caso raro (duas páginas lado a lado num ecrã pequeno).
