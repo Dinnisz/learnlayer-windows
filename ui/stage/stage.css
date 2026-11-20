@@ -809,6 +809,7 @@
 }
 
 .stage-typeset {
+  position: relative;
   max-width: 720px;
   color: var(--stage-text, #fff);
   font-size: 19px;
@@ -821,6 +822,11 @@
 
 .stage-typeset p {
   margin: 0 0 8px;
+}
+
+/* A figure of the typeset question, with the open step's spot ringed on it. */
+.stage-figure-marks {
+  position: relative;
 }
 
 .stage-typeset-formula {

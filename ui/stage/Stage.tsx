@@ -18,6 +18,7 @@ import { compactStageHeight, FitToHeight, stageFitFloor } from "./FitToHeight";
 import { questionScale, StageGeometry } from "./questionScale";
 import { ExplanationLayout } from "@core/problems/explanationLayout";
 import { LatexText } from "@core/math/latexText";
+import { quoteRects } from "./typesetUnderlines";
 import { springDuration, springEasing, Springs } from "../styles/springs";
 import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
@@ -1638,7 +1639,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
           </div>
           {(formulas.length > 0 || side) && (
             <aside className="stage-formulas" aria-label={t("Formulas")}>
-              {stacked && <SideFigures session={session} show="rest" graphHeight={260} />}
+              {stacked && <SideFigures session={session} show="rest" />}
               {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
               {formulas.map((formula) => (
                 <div key={formula.name + formula.latex} className="stage-formula">
@@ -1669,7 +1670,7 @@ function spaceStepHighlight(session: QuestionSession): string | null {
 function SideFigures({
   session,
   show = "all",
-  graphHeight = 220,
+  graphHeight = 260,
 }: {
   session: QuestionSession;
   /** In one column the figure goes above the steps and the rest after them. */
@@ -2391,7 +2392,7 @@ function ScreenQuestionView({
   return (
     <div className="stage-question stage-screen-question" aria-live="polite" ref={holder}>
       {shown.kind === "typeset" ? (
-        <TypesetQuestion transcription={shown.transcription} source={source} />
+        <TypesetQuestion transcription={shown.transcription} source={source} session={session} />
       ) : shown.kind === "crop" && picture ? (
         <InkPicture
           className="stage-screen-crop"
@@ -2493,14 +2494,119 @@ function InkPicture({
 
 /** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
  * cut from the picture where the reading says they are. */
-function TypesetQuestion({ transcription, source }: { transcription: QuestionTranscription; source: PictureQuestion }) {
+/** The open step's data under the typeset question's words (`RenderedUnderlines`): the same blue line, fading in. */
+function TypesetUnderlines({
+  session,
+  container,
+}: {
+  session: QuestionSession | null;
+  container: React.RefObject<HTMLDivElement | null>;
+}) {
+  const step = session?.underlinedStep ?? null;
+  const quotes = step !== null && session ? session.verifiedQuotes(step).map((found) => found.quote) : [];
+  const key = quotes.join("\u0000");
+  // Measured for one set of quotes: lines of another set (or of none) are never drawn.
+  const [measured, setMeasured] = useState<{ key: string; lines: { left: number; top: number; width: number }[] }>({
+    key: "",
+    lines: [],
+  });
+  const lines = measured.key === key ? measured.lines : [];
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (!element || key === "") return;
+    const measure = () => {
+      const origin = element.getBoundingClientRect();
+      const zoom = cssZoom(element) || 1;
+      const found = key.split("\u0000").flatMap((quote) => quoteRects(element, quote));
+      setMeasured({
+        key,
+        lines: found.map((rect) => ({
+          left: (rect.left - origin.left) / zoom,
+          // 2 pt under the letters (the glyphs' box without the line's leading).
+          top: (rect.top - origin.top + rect.height * 0.88) / zoom + 2 - 1.25,
+          width: Math.max(4, rect.width / zoom),
+        })),
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [container, key]);
+  return (
+    <>
+      {lines.map((line, index) => (
+        <span
+          key={`${key}-${index}`}
+          className="stage-underline"
+          data-underline-skip=""
+          aria-hidden="true"
+          style={{ left: line.left, top: line.top, width: line.width }}
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * A step's spot on a figure of the typeset question (`RenderedQuestion.focus`): the model's box, a share of the
+ * picture it saw, carried into the figure drawn here when it falls on that figure; nothing when it falls elsewhere
+ * (no mark is better than a wrong one).
+ */
+function TypesetFigureFocus({
+  session,
+  box,
+  width,
+  height,
+}: {
+  session: QuestionSession | null;
+  box: { x: number; y: number; width: number; height: number };
+  width: number;
+  height: number;
+}) {
+  const step = session?.underlinedStep ?? null;
+  const focus = step !== null ? (session?.part?.cards?.[step]?.focus ?? null) : null;
+  if (!focus || box.width <= 0 || box.height <= 0) return null;
+  const centre = { x: focus.x + focus.w / 2, y: focus.y + focus.h / 2 };
+  if (centre.x < box.x || centre.x > box.x + box.width || centre.y < box.y || centre.y > box.y + box.height)
+    return null;
+  // In the figure's own share, at least 0.08 of it on each side and inside it.
+  const share = (value: number, from: number, size: number) => (value - from) / size;
+  let w = Math.max(0.08, focus.w / box.width);
+  let h = Math.max(0.08, focus.h / box.height);
+  w = Math.min(1, w);
+  h = Math.min(1, h);
+  const x = Math.min(1 - w, Math.max(0, share(centre.x, box.x, box.width) - w / 2));
+  const y = Math.min(1 - h, Math.max(0, share(centre.y, box.y, box.height) - h / 2));
+  const note = focus.note?.trim() ? focus.note.trim() : null;
+  return (
+    <FocusPointer
+      region={{ x: x * width, y: y * height, width: w * width, height: h * height }}
+      arrow={StepFocusGeometry.isArrow(focus)}
+      note={note}
+      width={width}
+      height={height}
+    />
+  );
+}
+
+function TypesetQuestion({
+  transcription,
+  source,
+  session,
+}: {
+  transcription: QuestionTranscription;
+  source: PictureQuestion;
+  session: QuestionSession | null;
+}) {
   const picture = source.picture;
+  const container = useRef<HTMLDivElement>(null);
   // The i-th figure block without a box of its own takes the i-th figure found on the picture.
   const figureOrder = transcription.blocks.map(
     (_, index) => transcription.blocks.slice(0, index).filter((block) => block.type === "figure").length,
   );
   return (
-    <div className="stage-typeset">
+    <div className="stage-typeset" ref={container}>
       {transcription.blocks.map((block, index) => {
         if (block.type === "figure") {
           const box = Transcriptions.rect(block) ?? source.figureBoxes[figureOrder[index]!] ?? null;
@@ -2508,14 +2614,17 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
           const width = box.width * picture.width;
           const height = box.height * picture.height;
           return (
-            <figure key={index} className="stage-figure">
-              <InkPicture
-                picture={picture}
-                label={block.caption ?? ""}
-                width={width}
-                height={height}
-                region={{ x: box.x * picture.width, y: box.y * picture.height, width, height }}
-              />
+            <figure key={index} className="stage-figure" data-underline-skip="">
+              <div className="stage-figure-marks" style={{ width, height }}>
+                <InkPicture
+                  picture={picture}
+                  label={block.caption ?? ""}
+                  width={width}
+                  height={height}
+                  region={{ x: box.x * picture.width, y: box.y * picture.height, width, height }}
+                />
+                <TypesetFigureFocus session={session} box={box} width={width} height={height} />
+              </div>
               {block.caption ? <figcaption>{block.caption}</figcaption> : null}
             </figure>
           );
@@ -2526,6 +2635,7 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
           return <MathView key={index} latex={text} display className="stage-typeset-formula" />;
         return <MarkupText key={index} text={text} />;
       })}
+      <TypesetUnderlines session={session} container={container} />
     </div>
   );
 }
