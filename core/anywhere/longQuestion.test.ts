@@ -3,7 +3,7 @@
 // label read at each end the span is the statement's: a click on it takes the figure too, not the first paragraph.
 
 import { describe, expect, it } from "vitest";
-import { QuestionLocator, type GreyImage, type LocatorLine } from "./questionRegion";
+import { InkMap, QuestionLocator, type GreyImage, type LocatorLine } from "./questionRegion";
 
 const width = 1600;
 const height = 1000;
@@ -83,5 +83,22 @@ describe("a group's statement taller than most of the window", () => {
     expect(region.frame.y + region.frame.height).toBeGreaterThan(890);
     expect(region.frame.y + region.frame.height).toBeLessThan(928);
     expect(region.hasFigure).toBe(true);
+  });
+});
+
+describe("a page that runs on past the window's bottom edge", () => {
+  const picture = (bottomRow: (column: number) => number): GreyImage => {
+    const pixels = new Uint8Array(200 * 100).fill(255);
+    for (let column = 0; column < 200; column += 1) pixels[99 * 200 + column] = bottomRow(column);
+    return { width: 200, height: 100, pixels };
+  };
+
+  it("is told by text cut by the edge, not by a canvas or a bar across the whole row", () => {
+    // Words cut by the edge: some of the row is ink.
+    expect(new InkMap(picture((column) => (column % 7 < 3 ? 20 : 255))).reachesBottom([0, 199], 4)).toBe(true);
+    // The canvas under a page that ends in the window, or a scroll bar's track: the whole row.
+    expect(new InkMap(picture(() => 60)).reachesBottom([0, 199], 4)).toBe(false);
+    // Blank paper.
+    expect(new InkMap(picture(() => 255)).reachesBottom([0, 199], 4)).toBe(false);
   });
 });

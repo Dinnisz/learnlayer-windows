@@ -51,4 +51,4 @@ Resultado depois das correções de 2026-11-20 (ver DECISOES). O relatório clic
 | 2–9 a 2,0× | 131 de 132 (um «1.» lido «I.» sem nada que o desfaça) | 262 de 262 |
 | 2–9 a 1,0× (página com ~600 px) | 92 de 132 | — |
 
-Nas páginas inteiras nenhum recorte deixa de fora uma linha da sua pergunta nem leva a etiqueta de outra; nas janelas ficam dois enunciados cuja página continua abaixo da borda. A 1,0× o próprio motor lê mal o texto de 10 px; ver DECISOES, «Letra pequena no ecrã».
+Nas páginas inteiras nenhum recorte deixa de fora uma linha da sua pergunta nem leva a etiqueta de outra; nas janelas também não, com a página a continuar abaixo da borda. A 1,0× o próprio motor lê mal o texto de 10 px; ver DECISOES, «Letra pequena no ecrã».
