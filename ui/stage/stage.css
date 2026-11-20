@@ -606,6 +606,28 @@
   font-weight: 600;
 }
 
+/* A short window (`compactSolution`): the figure beside the steps at most 200 tall, the rest under them. */
+.stage-compact-figure {
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.stage-compact-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* A short window (`SolutionOverview.compact`): tighter rows, the title a size smaller until the step is opened. */
+.stage-step.compact {
+  padding: 1px 4px;
+}
+
+.stage-step.compact:not(.selected) .stage-step-body h4 {
+  font-size: 13px;
+}
+
 .stage-step-latex {
   display: block;
   font-size: 17px;

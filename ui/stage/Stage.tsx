@@ -1764,12 +1764,16 @@ function SolutionView({ session }: { session: QuestionSession }) {
       session.expectsFigure ||
       (session.showsGraph && session.hasGraph) ||
       session.showsIllustrationPanel);
-  const columns = solutionColumns(bodyWidth, side, formulas.length > 0);
+  // A short window (`compactSolution`): beside the steps only the figure, at most 200 tall; the formulas and the
+  // graph (150) under them.
+  const shortWindow = stageHeight() <= compactStageHeight && evidence === null;
+  const columns = solutionColumns(bodyWidth, side, formulas.length > 0 && !shortWindow);
   const above = evidence !== null || answerIsAbove(part, columns);
   const answer = <AnswerBox part={part} language={session.notationLanguage} />;
   // One column with a figure (a narrow window): the figure above the steps, small; the graph and the drawing after
   // the work, then the formulas.
   const stacked = side && bodyWidth > 0 && !columns.figureColumn;
+  const compactSide = shortWindow && side && !stacked;
   return (
     <FitToHeight floor={stageFitFloor(stageHeight())} onNatural={panelHeight.measured}>
       <div className="stage-panel stage-solution">
@@ -1794,17 +1798,42 @@ function SolutionView({ session }: { session: QuestionSession }) {
             ) : (
               Array.from({ length: session.stepCount }, (_, index) => index)
                 .filter((index) => index < visible)
-                .map((index) => <StepCard key={index} part={part} index={index} session={session} interactive />)
+                .map((index) => (
+                  <StepCard
+                    key={index}
+                    part={part}
+                    index={index}
+                    session={session}
+                    interactive
+                    compact={columns.compactWindow}
+                  />
+                ))
             )}
           </div>
-          {(formulas.length > 0 || side) && (
-            <aside className="stage-formulas" aria-label={t("Formulas")}>
-              {stacked && <SideFigures session={session} show="rest" />}
-              <FormulaList formulas={formulas} />
-              {side && !stacked && <SideFigures session={session} />}
-            </aside>
-          )}
+          {shortWindow
+            ? compactSide && (
+                <aside className="stage-formulas stage-compact-figure">
+                  <SideFigures session={session} show="figure" />
+                </aside>
+              )
+            : (formulas.length > 0 || side) && (
+                <aside className="stage-formulas" aria-label={t("Formulas")}>
+                  {stacked && <SideFigures session={session} show="rest" />}
+                  <FormulaList formulas={formulas} />
+                  {side && !stacked && <SideFigures session={session} />}
+                </aside>
+              )}
         </div>
+        {shortWindow && (formulas.length > 0 || side) && (
+          <div className="stage-compact-extras">
+            {formulas.length > 0 && (
+              <aside className="stage-formulas" aria-label={t("Formulas")}>
+                <FormulaList formulas={formulas} />
+              </aside>
+            )}
+            {side && <SideFigures session={session} show="rest" graphHeight={150} />}
+          </div>
+        )}
         <Actions session={session} />
       </div>
     </FitToHeight>
@@ -2075,6 +2104,7 @@ function StepCard({
   session,
   interactive = false,
   advanced = false,
+  compact = false,
 }: {
   part: Part;
   index: number;
@@ -2082,6 +2112,8 @@ function StepCard({
   interactive?: boolean;
   /** The student has just moved one step on to this one: its formula grows out of the last. */
   advanced?: boolean;
+  /** A short window (`SolutionOverview.compact`): the step shows its title until it is opened. */
+  compact?: boolean;
 }) {
   const card: Card | null = part.cards && part.cards.length > 0 ? (part.cards[index] ?? null) : null;
   const selected = session.selectedStep === index;
@@ -2095,8 +2127,12 @@ function StepCard({
   const numberLit = open || session.revealingStep === index || session.mascotFocusStep === index;
   const faded = lesson?.step != null && !lit;
   const quotes = open ? session.verifiedQuotes(index).map((found) => found.quote) : [];
+  // In a short window the formula and the note wait until the step is opened, unless they are all the step says.
+  const untitled = (card?.title ?? "").trim() === "";
+  const detailed = !compact || open || untitled;
   const classes = [
     "stage-step",
+    compact ? "compact" : "",
     open ? "selected" : "",
     numberLit ? "number-lit" : "",
     lit ? "lesson-lit" : "",
@@ -2118,7 +2154,7 @@ function StepCard({
             <h4>
               <MathText text={card.title} />
             </h4>
-            {card.latex.trim() !== "" && !NoteMath.formulaRepeats(card.latex, card.note ?? "") && (
+            {detailed && card.latex.trim() !== "" && !NoteMath.formulaRepeats(card.latex, card.note ?? "") && (
               <StepFormula
                 part={part}
                 index={index}
@@ -2137,7 +2173,7 @@ function StepCard({
                 ))}
               </div>
             )}
-            {card.note && (
+            {detailed && card.note && (
               <p className="stage-step-note">
                 <NoteText
                   text={CodeText.mapProse(card.note, (prose) =>
