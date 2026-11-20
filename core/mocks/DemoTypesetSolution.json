@@ -96,8 +96,7 @@
           "latex": "R_1 = 2\\ \\text{k}\\Omega,\\quad R_2 = 3\\ \\text{k}\\Omega",
           "note": "Os valores vêm do enunciado.",
           "quotes": [
-            "R1 = 2 kΩ",
-            "R2 = 3 kΩ"
+            "circuito da figura"
           ],
           "focus": {
             "x": 0.6,
@@ -119,7 +118,10 @@
             "h": 0.18,
             "mark": "circle",
             "note": null
-          }
+          },
+          "quotes": [
+            "entre a e b"
+          ]
         },
         {
           "title": "Somar",
