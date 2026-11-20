@@ -64,6 +64,7 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     let elsewhereClicks = 0;
     let elsewhereRight = 0;
     const elsewhereMissed: string[] = [];
+    const figureless: string[] = [];
     for (const name of readdirSync(folder).filter((file) => file.endsWith(".lines.json"))) {
       const page = name.replace(/\.lines\.json$/u, "");
       // "EX-FQA715-p4", or a browser window around it ("EX-FQA715-p4-s300", `scripts/browser-window.mjs`).
@@ -122,6 +123,11 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
           cut.push(
             `  ${page}: ${question.label} leaves out ${left.map((line) => `«${line.text.slice(0, 40)}»`).join(", ")}`,
           );
+        // A question with a "Figura N" caption in its crop has a figure (a caption: alone, or with its title after a
+        // dash; "Figura 5, deve-se…" is a sentence about one).
+        const caption = region.lines.find((line) => /^\s*Figura\s+\d+\s?[A-Z]?\s*(?:$|[—–-])/u.test(line.text));
+        if (caption && !region.hasFigure)
+          figureless.push(`  ${page}: ${question.label} («${caption.text.slice(0, 30)}»)`);
         // Elsewhere in it: the middle of its area (a figure, often) and its last line of text.
         const inside = lines.filter(
           (line) =>
@@ -164,6 +170,7 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
       `${elsewhereRight} of ${elsewhereClicks} clicks elsewhere in a question found it\n${elsewhereMissed.join("\n")}`,
     );
     console.log(`${leaks.length} crops taking in another question\n${leaks.join("\n")}`);
+    console.log(`${figureless.length} crops with a figure's caption and no figure\n${figureless.join("\n")}`);
     if (drafts.length > 0) console.log(drafts.join("\n"));
   },
   600000,
