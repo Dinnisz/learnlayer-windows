@@ -37,6 +37,9 @@ Quando uma destas estiver feita, diz «continua» e eu retomo a parte nativa a p
 - **Causa (vista na página de faturação):** não há pagamento em falta. A conta é GitHub Free e os minutos grátis de novembro já se gastaram (12,46 USD de uso, quase todo do repositório do Mac, «LearnLayer»). Com o limite de gastos a 0 USD, o GitHub para os trabalhos em vez de cobrar.
 - **Decisão: não pagar.** A 17/11 o Dinis tornou o repositório **público**, e o Actions é grátis e sem limite em repositórios públicos. O CI corre a cada push.
 
+### 0. Trabalho do Mac que não está no GitHub (2026-11-20)
+A cópia `referencia-mac/` que me deste tinha alterações que não estão em nenhum ramo do `Dinnisz/LearnLayer`: `TextHelp` v5 e `VoiceTutorPrompt` v24 (o `main` tem v4 e v23), a resposta a uma dúvida a partir da resolução no ecrã («explica o ponto 2»: `TextHelpContext.followUp(solution:step:)`, `StepRequest`, `SelectionAsk`) e `FollowUpAnswer` no `QuestionOverlay`. Juntei-as ao `main` na referência do Windows. Se forem para ficar, faz push desse ramo do Mac; se foram experiências, diz-me e volto ao `main`. A cópia antiga está em `referencia-mac-2026-11-05/`.
+
 ### 1b. Identidade dos commits
 Os commits estão com `Dinis Santos <dinis@learnlayer.invalid>` (só na configuração local deste repositório), para não pôr um e-mail verdadeiro no histórico sem tu decidires. Antes do primeiro push: `git config user.email "o-teu@email"` e, se quiseres corrigir os commits antigos, `git rebase -r --root --exec "git commit --amend --no-edit --reset-author"`.
 
