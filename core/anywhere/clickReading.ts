@@ -7,7 +7,7 @@ import { Rects, type PageText, type Rect } from "../pdf/page";
 import { repairedDraft } from "./localRepair";
 import { transcribeLines, type LayoutLine } from "./localTranscriber";
 import { looksFlattened } from "../problems/flattenedMath";
-import { transcriptionLooksGarbled } from "../problems/textChecks";
+import { TextLayerMath, transcriptionLooksGarbled } from "../problems/textChecks";
 import { normalizeText, unsafeCharacters } from "../problems/textNormalizer";
 import { PDFQuestionReading, type PDFQuestionRead } from "./pdfQuestionRead";
 import { characterCount } from "./questionBand";
@@ -45,6 +45,18 @@ export type ClickOutcome =
       isPicture: boolean;
     }
   | { kind: "nothing" };
+
+/** Text the model must read from the picture rather than be shown as it is (`AnywhereController.textNeedsPicture`
+ * @ 5701363): garbled, flattened maths, a text layer's debris, or a character plain text can't stand for. */
+export function textNeedsPicture(text: string): boolean {
+  const composed = text.normalize("NFC");
+  return (
+    transcriptionLooksGarbled(text) ||
+    looksFlattened(composed) ||
+    TextLayerMath.looksGarbled(composed) ||
+    unsafeCharacters(composed).length > 0
+  );
+}
 
 /** Text with formulas run into stray symbols is not shown as it is: the model reads the picture. */
 export function isGarbled(text: string): boolean {
@@ -159,9 +171,11 @@ export function regionAround(
  * What the stage shows while the model reads the picture: the computer's own reading, when it is readable, with the
  * units and small formulas it garbles repaired by rule (`Repair`, the Mac's LocalTranscriptionRepair).
  */
-export function draftText(ocrText: string, lines: readonly LayoutLine[] = []): string | null {
+export function draftText(ocrText: string, lines: readonly LayoutLine[] = [], screenText = ""): string | null {
   const text = ocrText.trim();
-  if (text === "" || transcriptionLooksGarbled(text) || looksFlattened(text)) return null;
+  // Never when the window's own text is a garbled formula either: the computer reads the same formula from the picture
+  // no better, only plausibly wrong («(2 - 1)(3 - 1)'» for (2−λ)(3−λ)², «tr (A')») (@ 5701363).
+  if (text === "" || textNeedsPicture(text) || textNeedsPicture(screenText)) return null;
   // With the lines' places, the layout is rebuilt as the Mac's LocalTranscriber does: wrapped lines joined into
   // paragraphs, each option of a multiple choice on its own line.
   const blocks = transcribeLines(lines);
