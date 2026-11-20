@@ -27,6 +27,10 @@ export const TutorLanguage = {
   promptName(language: TutorLanguage): string {
     return language === "pt" ? "Portuguese (Portugal)" : "English";
   },
+  /** The language a prompt name stands for: `promptName` read back. */
+  fromPromptName(name: string): TutorLanguage {
+    return name.toLowerCase().startsWith("portug") ? "pt" : "en";
+  },
 };
 
 /**

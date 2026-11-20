@@ -20,7 +20,7 @@ describe("cache keys", () => {
     expect(await cacheKey("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
 
-  it("depend on the prompt version, the routing, the route, the question, the note and the pages", async () => {
+  it("depend on the prompt version, the routing, the route, the language, the question, the note and the pages", async () => {
     const base = {
       groupText: "1. Q",
       figureNote: null,
@@ -28,9 +28,11 @@ describe("cache keys", () => {
       route: "fast" as const,
       promptVersion: "33",
       config: "cheapFirst" as const,
+      language: "pt" as const,
     };
     const key = await solutionCacheKey(base);
-    expect(key).toBe(await cacheKey("33-Bfast", "1. Q", "", ""));
+    // The Mac's `cacheIdentity` @ 5701363: the tutor's language after the route.
+    expect(key).toBe(await cacheKey("33-Bfast-pt", "1. Q", "", ""));
     const variants = await Promise.all([
       solutionCacheKey({ ...base, promptVersion: "34" }),
       solutionCacheKey({ ...base, config: "current" }),
@@ -39,8 +41,9 @@ describe("cache keys", () => {
       solutionCacheKey({ ...base, figureNote: "note" }),
       solutionCacheKey({ ...base, imagesKey: "x" }),
       solutionCacheKey({ ...base, usesMock: true }),
+      solutionCacheKey({ ...base, language: "en" }),
     ]);
-    expect(new Set([key, ...variants]).size).toBe(8);
+    expect(new Set([key, ...variants]).size).toBe(9);
   });
 
   it("an image digest follows the content, not the byte length", async () => {

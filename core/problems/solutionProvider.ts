@@ -25,7 +25,7 @@ import { decodeProblemSolution, restrictedTo, type ProblemSolution } from "./pro
 import { decodeFromContent } from "../ai/replyDecoding";
 import { decodeVariant, VariantPrompt, type ProblemVariant } from "./problemVariant";
 import { RouteDecision, type Classification, type RouteOutcome } from "./routeDecision";
-import { solution as plainSolution, streamedSolution, type SolveOptions } from "./solutionRequest";
+import { solution as plainSolution, streamedSolution, TutorLanguage, type SolveOptions } from "./solutionRequest";
 
 /** What the solver needs from the app: where answers are saved, how to reach a model, and the settings. */
 export interface SolverServices {
@@ -97,6 +97,7 @@ export class SolutionProvider {
       route,
       promptVersion: ProblemPrompt.version,
       config: this.services.config(),
+      language: TutorLanguage.fromPromptName(this.services.language()),
       usesMock: this.usesMock,
     });
   }

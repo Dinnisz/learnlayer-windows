@@ -5,14 +5,10 @@
 // themselves; such an answer goes to the stronger model.
 
 import type { Part, ProblemSolution } from "./problemSolution";
-
-/** The tutor's language, as `TutorLanguage`. */
-export type TutorLanguage = "en" | "pt";
+import { TutorLanguage } from "./solutionRequest";
 
 /** The tutor's language from the name the prompts use ("Portuguese (Portugal)", "English"). */
-export function tutorLanguageOf(promptName: string): TutorLanguage {
-  return promptName.toLowerCase().startsWith("portug") ? "pt" : "en";
-}
+export const tutorLanguageOf = (promptName: string): TutorLanguage => TutorLanguage.fromPromptName(promptName);
 
 /** Portuguese words that are not English ("do", "no", "a", "e" are both, or maths). */
 const portugueseWords = new Set([

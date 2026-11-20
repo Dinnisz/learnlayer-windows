@@ -31,8 +31,9 @@ export async function imagesFingerprint(images: readonly Uint8Array[]): Promise<
 }
 
 /**
- * The key of a saved solution: the prompt version, the routing (B's answers are its own), the route, the
- * question, the figure note and the pages sent. `usesMock` keeps answers from the mock file apart.
+ * The key of a saved solution: the prompt version, the routing (B's answers are its own), the route, the tutor's
+ * language (switched, a saved answer in the other language is not reused), the question, the figure note and the pages
+ * sent. `usesMock` keeps answers from the mock file apart (`SolutionProvider.cacheIdentity` @ 5701363).
  */
 export function solutionCacheKey(options: {
   groupText: string;
@@ -41,11 +42,18 @@ export function solutionCacheKey(options: {
   route: SolverRoute;
   promptVersion: string;
   config: RoutingConfig;
+  /** `TutorLanguage` ("pt", "en"), as the Mac's `rawValue`. */
+  language: "pt" | "en";
   usesMock?: boolean;
 }): Promise<string> {
   const routing = options.config === "cheapFirst" ? "-B" : "";
   const prefix = (options.usesMock ? "mock-" : "") + options.promptVersion + routing;
-  return cacheKey(prefix + options.route, options.groupText, options.figureNote ?? "", options.imagesKey);
+  return cacheKey(
+    prefix + options.route + "-" + options.language,
+    options.groupText,
+    options.figureNote ?? "",
+    options.imagesKey,
+  );
 }
 
 /** Where the cache files live: `%APPDATA%\LearnLayer\<name>` through the native side, memory in tests. */
