@@ -1839,7 +1839,10 @@ function SideFigures({
     <div className={`stage-figures${show === "figure" ? " stage-figures-above" : ""}`}>
       {show === "rest" ? null : figure?.kind === "table" ? (
         <div className="stage-figure-fit">
-          <SignTableView table={figure.table} />
+          {/* Drawn at its own size, often wider than the column: made smaller to fit, never larger. */}
+          <FitWidth>
+            <SignTableView table={figure.table} />
+          </FitWidth>
         </div>
       ) : figure?.kind === "space" ? (
         <SpaceFigureView
