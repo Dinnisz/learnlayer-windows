@@ -2498,10 +2498,32 @@ function ScreenQuestionView({
     () => (from ? [new DOMRectReadOnly(from.left, from.top, from.width, from.height)] : []),
     [from],
   );
-  useQuestionFlight(holder, targets, from !== null, true, 0, ":scope > *");
-
+  // Sized as the PDF's crop is (Stage.init), its body text taken as 13 pt on the screen (the Mac's `softened` crop):
+  // 17 pt to read, 14 once the solution is open, giving the work only the room it needs.
   const picture = source.picture;
-  const scale = compact ? 0.85 : 1;
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const element = holder.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const panel = useContext(PanelHeight).height;
+  const available = stageHeight();
+  const scale =
+    picture && width > 0
+      ? questionScale({
+          body: 13,
+          compact,
+          fits: width / Math.max(1, picture.width),
+          height: picture.height,
+          available,
+          panel,
+          compactWindow: available <= compactStageHeight,
+        })
+      : 1;
+  useQuestionFlight(holder, targets, from !== null, true, scale, ":scope > *");
   return (
     <div className="stage-question stage-screen-question" aria-live="polite" ref={holder}>
       {shown.kind === "typeset" ? (
