@@ -4,6 +4,7 @@
 
 import mockSolution from "@core/mocks/MockSolution.json";
 import sampleSolution from "@core/mocks/SampleQuestionSolution.json";
+import typesetSolution from "@core/mocks/DemoTypesetSolution.json";
 import mockTextHelp from "@core/mocks/MockTextHelp.json";
 import mockIllustrations from "@core/mocks/MockIllustrations.json";
 import { decodeIllustration, type Illustration } from "@core/illustrations/illustration";
@@ -99,12 +100,20 @@ const read = (key: string) => {
 
 let provider: SolutionProvider | null = null;
 
+/** `overlay.html?demo=typeset`: the circuit question solved by a mock that reads the question back. */
+const typesetDemo = () => new URLSearchParams(window.location.search).get("demo") === "typeset";
+
 /** One solver for the window, so its caches and in-flight requests are shared by every question. */
 export function solutionProvider(): SolutionProvider {
   if (provider) return provider;
   const mock = usesMock();
   provider = new SolutionProvider({
-    solutions: new DiskCache<ProblemSolution>("solutions.json", 100, dataFiles),
+    // The typeset demo answers the same picture as `?demo=anywhere` with another mock: kept in a file of its own.
+    solutions: new DiskCache<ProblemSolution>(
+      mock && typesetDemo() ? "demo-typeset-solutions.json" : "solutions.json",
+      100,
+      dataFiles,
+    ),
     escalated: new DiskCache<boolean>("escalated-answers.json", 300, dataFiles),
     client: (options) => new ModelClient(environment, options),
     // Signed-in is checked by the call itself (no token: `signedOut`); the classifier needs it known first.
@@ -115,8 +124,12 @@ export function solutionProvider(): SolutionProvider {
       TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages)),
     // A question read from the screen (labelled "Q", as the onboarding's sample) has a mock of its own: the exam's parts
     // would never match it.
+    // `?demo=typeset`: the circuit question with its reading of the picture and a focus on each step.
     mockSolution: mock
-      ? (request) => decodeProblemSolution(request.labels.includes("Q") ? sampleSolution : mockSolution)
+      ? (request) =>
+          decodeProblemSolution(
+            request.labels.includes("Q") ? sampleSolution : typesetDemo() ? typesetSolution : mockSolution,
+          )
       : undefined,
     transcribing: (images) => transcriptionRequests.isRequested(images),
   });

@@ -430,7 +430,9 @@ export function OverlayWindow() {
       );
       return;
     }
-    const demo = demoKind === "anywhere";
+    // `?demo=typeset`: the same click, solved by a mock that reads the question back (typeset, with a focus on
+    // each step), as a model's transcription would.
+    const demo = demoKind === "anywhere" || demoKind === "typeset";
     if (demo) {
       void demoClick().then(({ read, picture }) =>
         open(read, { picture: async () => picture, pdf: async () => new ArrayBuffer(0) }),
