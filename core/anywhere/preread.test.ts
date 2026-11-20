@@ -42,8 +42,9 @@ describe("PrereadPlan", () => {
     expect(PrereadPlan.keywords("contestem, agrupou, valor, examiná-lo").size).toBe(0);
   });
 
-  it("puts the pages in view first, then outward", () => {
-    expect(PrereadPlan.order(6, [2], "document")).toEqual([2, 3, 1, 4, 0, 5]);
+  // The Mac's `pagesInViewComeFirstThenTheFollowingOnesThenTheEarlierOnes` @ 5701363.
+  it("puts the pages in view first, then the following ones, then the earlier ones", () => {
+    expect(PrereadPlan.order(6, [2], "document")).toEqual([2, 3, 4, 5, 1, 0]);
     expect(PrereadPlan.order(6, [3, 4], "document")).toEqual([3, 4, 5, 2, 1, 0]);
     expect(PrereadPlan.order(3, [0], "document")).toEqual([0, 1, 2]);
   });
