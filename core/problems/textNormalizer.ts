@@ -188,8 +188,66 @@ export function unsafeCharacters(text: string): string[] {
   });
 }
 
+/** The long solidus (U+0338) LaTeX sets over a sign to negate it. */
+const solidus = String.fromCharCode(0x0338);
+
+/** The signs a long solidus is set over to negate them: ≠ ≮ ≯ ≰ ≱ ∉ ∌ ⊄ ⊅ ⊈ ⊉ ≢ ∄ ≁ ≄ ≇ ≉ ∤ ∦ … */
+const negatable = new Set(
+  [
+    0x3d, 0x3c, 0x3e, 0x2264, 0x2265, 0x2208, 0x220b, 0x2282, 0x2283, 0x2286, 0x2287, 0x2261, 0x2203, 0x223c, 0x2243,
+    0x2245, 0x2248, 0x2223, 0x2225, 0x227a, 0x227b, 0x2272, 0x2273, 0x2276, 0x2277, 0x2291, 0x2292, 0x22a2, 0x22b2,
+    0x22b3, 0x22b4, 0x22b5,
+  ].map((code) => String.fromCodePoint(code)),
+);
+
+/** The sign with the solidus over it as one character, when Unicode has one. */
+function negated(sign: string): string | null {
+  const composed = (sign + solidus).normalize("NFC");
+  return Array.from(composed).length === 1 ? composed : null;
+}
+
+/**
+ * LaTeX PDFs set ≠, ∉, ⊄ … as a long solidus over the sign, and the text layer keeps the two apart, the slash often
+ * before the sign («(t\u0338= 0)» for «(t ≠ 0)»): read as the one symbol, so the model sees «≠» and a check that counts
+ * relations does not take it for a second «=» (`TextNormalizer.negatedRelations` @ 5701363).
+ */
+export function negatedRelations(text: string): string {
+  if (!text.includes(solidus)) return text;
+  const scalars = Array.from(text);
+  let out = "";
+  let index = 0;
+  while (index < scalars.length) {
+    const scalar = scalars[index]!;
+    // The slash before its sign, perhaps a space apart: «\u0338=», «\u0338 =».
+    if (scalar === solidus) {
+      let next = index + 1;
+      while (next < scalars.length && scalars[next] === " ") next += 1;
+      const sign = next < scalars.length && negatable.has(scalars[next]!) ? negated(scalars[next]!) : null;
+      if (sign !== null) {
+        out += sign;
+        index = next + 1;
+        continue;
+      }
+    }
+    // The sign, then its slash.
+    if (negatable.has(scalar) && scalars[index + 1] === solidus) {
+      const sign = negated(scalar);
+      if (sign !== null) {
+        out += sign;
+        index += 2;
+        continue;
+      }
+    }
+    out += scalar;
+    index += 1;
+  }
+  return out;
+}
+
 export function normalizeText(text: string): string {
-  const characters = Array.from(mathLettersToPlain(withLigaturesSpelled(withSymbolCodesSpelled(text))));
+  const characters = Array.from(
+    mathLettersToPlain(withLigaturesSpelled(withSymbolCodesSpelled(negatedRelations(text)))),
+  );
   let result = "";
   let index = 0;
   while (index < characters.length) {

@@ -9,7 +9,7 @@
 
 import { linesOf, Rects, selectionBounds, selectionIn, type PageText, type Rect } from "../pdf/page";
 import { headingBounds, questionsOn, type ExamQuestion } from "../problems/questionDetector";
-import { normalizeText } from "../problems/textNormalizer";
+import { negatedRelations, normalizeText } from "../problems/textNormalizer";
 import type { PassageLine } from "../problems/passage";
 import { passageLinesOf } from "../pdf/passageLines";
 import { characterCount } from "./questionBand";
@@ -693,6 +693,53 @@ export const PDFQuestionReading = {
     return /^Prova \d|P[aá]gina \d+\s*\/\s*\d+|^Page \d+ of \d+|^[–-]?\s*\d{1,2}\s*[–-]?$|^\d+\s*\/\s*\d+$/.test(
       line.trim(),
     );
+  },
+
+  /**
+   * The first relation sign `text` (the text layer) has more of than `reading` (LaTeX or Unicode), or null. The text
+   * layer keeps relation signs on the line even where it flattens the rest: a reading with fewer lost a side of the
+   * formula (CDI 1(e) read as «\frac{1}{x},» for «x < 1/x,») (`PDFQuestionRead.lostRelation` @ 5701363).
+   */
+  lostRelation(text: string, reading: string): string | null {
+    return PDFQuestionReading.relationCounts(text, reading).find((count) => count.reading < count.text)?.sign ?? null;
+  },
+
+  /** Each relation sign, as often as `text` (the text layer, its negated signs composed) and `reading` have it. */
+  relationCounts(text: string, reading: string): { sign: string; text: number; reading: number }[] {
+    const count = (pattern: RegExp, string: string) => Array.from(string.matchAll(pattern)).length;
+    const signs: [string, RegExp, RegExp][] = [
+      ["≤", /≤|⩽/g, /≤|⩽|\\leq?(?![A-Za-z])|\\leqslant/g],
+      ["≥", /≥|⩾/g, /≥|⩾|\\geq?(?![A-Za-z])|\\geqslant/g],
+      ["<", /</g, /<|\\lt(?![A-Za-z])/g],
+      [">", />/g, />|\\gt(?![A-Za-z])/g],
+      ["≠", /≠/g, /≠|\\neq?(?![A-Za-z])/g],
+      ["=", /=/g, /(?<![<>!\\])=|\\eq(?![A-Za-z])/g],
+    ];
+    const composed = negatedRelations(text);
+    return signs.map(([sign, onPage, inReading]) => ({
+      sign,
+      text: count(onPage, composed),
+      reading: count(inReading, reading),
+    }));
+  },
+
+  /**
+   * The reading is one relation sign short of the text layer, and no more: the page has two or more and the reading
+   * kept all the others, none swapped for another. A layer that stores a sign twice or splits one is the likelier
+   * cause, so the reading may still be shown rather than the crop. Not when the only relation is lost (a side of it
+   * gone), nor a sign read as another («=» for «≠»: wrong maths) (`isMinorRelationShortfall` @ 5701363).
+   */
+  isMinorRelationShortfall(text: string, reading: string): boolean {
+    const counts = PDFQuestionReading.relationCounts(text, reading);
+    const shortfall = counts.reduce((sum, count) => sum + Math.max(0, count.text - count.reading), 0);
+    const swapped = counts.some((count) => count.reading > count.text);
+    const onPage = counts.reduce((sum, count) => sum + count.text, 0);
+    return shortfall === 1 && !swapped && onPage >= 2;
+  },
+
+  /** The reading writes a root with an index: «\sqrt[3]{…}», «\root 3 \of», «∛». */
+  readsRootIndex(text: string): boolean {
+    return text.includes("\\sqrt[") || text.includes("\\root") || text.includes("∛") || text.includes("∜");
   },
 
   /** «os textos A e B», «Texto A», «both texts»: the question is about more than the last passage. */
