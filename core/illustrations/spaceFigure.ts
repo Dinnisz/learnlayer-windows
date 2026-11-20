@@ -112,18 +112,31 @@ export function decodeSpaceFigure(value: unknown): SpaceFigure | null {
   return { points: points as Vertex[], edges: strings(value.edges), line, plane };
 }
 
-/** "AB" or "A-B" → the two points. */
+/** "AB", "A-B", "AA'", "A1B1" → the two points. */
 function ends(edge: string, named: Map<string, Vector3>): [Vector3, Vector3] | null {
-  const parts = edge.includes("-") ? edge.split("-") : [...edge].length === 2 ? [...edge] : [];
-  if (parts.length !== 2) return null;
-  const a = named.get(parts[0]!);
-  const b = named.get(parts[1]!);
-  return a && b ? [a, b] : null;
+  if (edge.includes("-")) {
+    const parts = edge.split("-");
+    if (parts.length !== 2) return null;
+    const a = named.get(parts[0]!);
+    const b = named.get(parts[1]!);
+    return a && b ? [a, b] : null;
+  }
+  // Every split into two known names; one only, so "AB1" is never read two ways.
+  const characters = [...edge];
+  const splits: [Vector3, Vector3][] = [];
+  for (let cut = 1; cut < Math.max(characters.length, 1); cut++) {
+    const a = named.get(characters.slice(0, cut).join(""));
+    const b = named.get(characters.slice(cut).join(""));
+    if (a && b) splits.push([a, b]);
+  }
+  return splits.length === 1 ? splits[0]! : null;
 }
 
+/** The points by name; "O" is the origin unless a point is named so. */
 function namedPoints(points: readonly Vertex[]): Map<string, Vector3> {
   const named = new Map<string, Vector3>();
   for (const point of points) if (!named.has(point.name)) named.set(point.name, vector(point));
+  if (!named.has("O")) named.set("O", new Vector3(0, 0, 0));
   return named;
 }
 
@@ -404,8 +417,16 @@ export const SpaceFigures = {
    */
   validated(input: SpaceFigure): SpaceFigure | null {
     const figure = SpaceFigures.fillingRectangularBox(input);
+    // "O" is the origin, drawn once beside A: a point of that name at the origin, or anywhere in a box (where the
+    // exam's O is the origin and a misplaced one lands inside it), would be a second mark. It still names the origin
+    // for edges, lines and planes ("OA", "through O"). An O elsewhere with no box (a sphere's centre) is a point of
+    // its own (@ 5701363).
+    const isBox = (figure.edges ?? []).join() === boxEdges.join();
     const points = figure.points.filter(
-      (point) => [point.x, point.y, point.z].every(Number.isFinite) && point.name !== "" && point.name !== "O",
+      (point) =>
+        [point.x, point.y, point.z].every(Number.isFinite) &&
+        point.name !== "" &&
+        !(point.name === "O" && (isBox || vector(point).length < 1e-9)),
     );
     const named = namedPoints(points);
     const scale = Math.max(1, ...points.map((point) => vector(point).length));
@@ -466,8 +487,22 @@ export const SpaceFigures = {
       const letters = [...match[1]!];
       if (!letters.every((letter) => names.has(letter))) continue;
       if ((folded.includes("piramide") || folded.includes("pyramid")) && letters.length >= 4) {
-        const base = letters.slice(0, -1);
-        const apex = letters[letters.length - 1]!;
+        // The apex is the vertex off the others' plane: last in [ABCDV], first in [VABCD].
+        const at = namedPoints(figure.points);
+        // A base is flat: every corner on the plane of its first three.
+        const isFlat = (base: readonly string[]) => {
+          const corners = base.map((name) => at.get(name)).filter((corner): corner is Vector3 => corner !== undefined);
+          if (corners.length !== base.length || corners.length < 3) return false;
+          const n = corners[1]!.minus(corners[0]!).cross(corners[2]!.minus(corners[0]!));
+          if (n.length <= 1e-9) return false;
+          return corners.every((corner) => {
+            const d = corner.minus(corners[0]!);
+            return Math.abs(d.dot(n)) <= 1e-6 * n.length * Math.max(1, d.length);
+          });
+        };
+        const apexFirst = !isFlat(letters.slice(0, -1)) && isFlat(letters.slice(1));
+        const base = apexFirst ? letters.slice(1) : letters.slice(0, -1);
+        const apex = apexFirst ? letters[0]! : letters[letters.length - 1]!;
         return {
           ...figure,
           edges: [
