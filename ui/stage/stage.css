@@ -21,7 +21,8 @@
   backdrop-filter: blur(10px) saturate(110%);
   color: var(--stage-text);
   font-family: var(--font-text);
-  animation: stage-in 180ms var(--ease-out);
+  /* The ground fades in over 0.25 s (QuestionOverlay's backdrop). */
+  animation: stage-in 250ms var(--ease-out);
 }
 
 @media (prefers-reduced-transparency: reduce) {
