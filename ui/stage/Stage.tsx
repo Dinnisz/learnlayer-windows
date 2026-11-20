@@ -1391,7 +1391,41 @@ function cropMarks(
   return { underlines, penUnderlines, circles, answer, highlights, strikes, pointers, tints };
 }
 
-/** The formulas the solution uses (`FormulaList`): «Formulas», then each one's name small and its formula under it. */
+/** Content scaled down (never up) to the width it is given, keeping its top left (the Mac's `scaledToFit` formulas). */
+function FitWidth({ children }: { children: React.ReactNode }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const box = outer.current;
+    const content = inner.current;
+    if (!box || !content) return;
+    // Both in their own pixels, which the content's zoom does not change: no loop.
+    const measure = () => {
+      const natural = content.offsetWidth;
+      const room = box.clientWidth;
+      const next = natural > room && room > 0 ? room / natural : 1;
+      setScale((now) => (Math.abs(now - next) < 0.005 ? now : next));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={outer} className="stage-fit-width">
+      <div ref={inner} className="stage-fit-width-content" style={scale < 1 ? { zoom: scale } : undefined}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The formulas the solution uses (`FormulaList`): «Formulas», then each one's name small and its formula under it,
+ * made smaller to fit the column, never cut or slid sideways.
+ */
 function FormulaList({ formulas }: { formulas: readonly { name: string; latex: string }[] }) {
   const t = useT();
   if (formulas.length === 0) return null;
@@ -1401,7 +1435,9 @@ function FormulaList({ formulas }: { formulas: readonly { name: string; latex: s
       {formulas.map((formula) => (
         <div key={formula.name + formula.latex} className="stage-formula">
           <span>{formula.name}</span>
-          <MathView latex={formula.latex} display />
+          <FitWidth>
+            <MathView latex={formula.latex} display />
+          </FitWidth>
         </div>
       ))}
     </>

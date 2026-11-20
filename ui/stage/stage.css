@@ -691,8 +691,18 @@
   color: rgb(255 255 255 / 60%);
 }
 
+/* A formula shrunk to its column's width (FitWidth): the box takes the width, the content its own. */
+.stage-fit-width {
+  width: 100%;
+  min-width: 0;
+}
+
+.stage-fit-width-content {
+  display: inline-block;
+  max-width: none;
+}
+
 .stage-formula .katex-display {
-  max-width: 100%;
   margin: 0;
   overflow-x: auto;
   /* Only sideways: auto on one axis makes the other auto too, and a fraction a few pixels taller than its line got a
