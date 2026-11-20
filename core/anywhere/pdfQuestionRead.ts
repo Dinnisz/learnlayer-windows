@@ -104,18 +104,156 @@ export function similarity(a: string, b: string): number {
   return 1 - previous[b.length]! / Math.max(a.length, b.length);
 }
 
-const pageLineCache = new WeakMap<PageText, { key: string; rect: Rect }[]>();
+/** Below this a line is nothing like another: never the best match (>= 0.72) nor close enough to it (0.08) to make it
+ * ambiguous, so its exact score is not worked out. */
+const scoreFloor = 0.64;
 
-/** The text lines of a page, each with its box and its letters and digits alone. */
-function pageLines(page: PageText): { key: string; rect: Rect }[] {
+/** A folded line ready to compare: its characters' codes, and how many of each letter and digit it has. */
+export class LineKey {
+  readonly codes: number[];
+  readonly counts: Int16Array;
+  constructor(key: string) {
+    this.codes = Array.from(key, (character) => character.charCodeAt(0));
+    this.counts = LineKey.counts(this.codes);
+  }
+
+  static counts(codes: readonly number[]): Int16Array {
+    const counts = new Int16Array(37);
+    for (const code of codes) {
+      if (code >= 48 && code <= 57) counts[code - 48]! += 1;
+      else if (code >= 97 && code <= 122) counts[code - 87]! += 1;
+      else if (code >= 65 && code <= 90) counts[code - 55]! += 1;
+      else counts[36]! += 1;
+    }
+    return counts;
+  }
+}
+
+/** The edit distance, or null once every way through is past `limit`. */
+function boundedDistance(a: readonly number[], b: readonly number[], limit: number): number | null {
+  const width = b.length + 1;
+  let last = Array.from({ length: width }, (_, index) => index);
+  let current = new Array<number>(width).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    current[0] = i;
+    let smallest = i;
+    const ai = a[i - 1];
+    for (let j = 1; j < width; j++) {
+      const substitution = last[j - 1]! + (ai === b[j - 1] ? 0 : 1);
+      const value = Math.min(substitution, Math.min(last[j]!, current[j - 1]!) + 1);
+      current[j] = value;
+      if (value < smallest) smallest = value;
+    }
+    if (smallest > limit) return null;
+    [last, current] = [current, last];
+  }
+  return last[b.length]! <= limit ? last[b.length]! : null;
+}
+
+/** `similarity`, but 0 for anything under `scoreFloor`, found without the whole edit distance: lines whose letters
+ * alone differ by more than allowed are set aside at once, and the distance stops once it is too far. */
+export function boundedSimilarity(
+  x: readonly number[],
+  y: readonly number[],
+  keyCounts: Int16Array,
+  otherCounts: Int16Array | null,
+): number {
+  if (x.length === 0 || y.length === 0) return 0;
+  const longer = Math.max(x.length, y.length);
+  if (Math.min(x.length, y.length) / longer < 0.6) return 0;
+  const allowed = Math.trunc((1 - scoreFloor) * longer);
+  // Each edit changes the letter counts by at most one up and one down: the larger side is a lower bound.
+  const other = otherCounts ?? LineKey.counts(y);
+  let more = 0;
+  let fewer = 0;
+  for (let index = 0; index < 37; index++) {
+    const difference = keyCounts[index]! - other[index]!;
+    if (difference > 0) more += difference;
+    else fewer -= difference;
+  }
+  if (Math.max(more, fewer) > allowed) return 0;
+  const distance = boundedDistance(x, y, allowed);
+  if (distance === null) return 0;
+  const score = 1 - distance / longer;
+  return score >= scoreFloor ? score : 0;
+}
+
+/** Which part of a page line a line read on the screen is. */
+export type LineEdge = "whole" | "start" | "end";
+
+interface Best {
+  index: number;
+  score: number;
+  second: number;
+}
+
+/**
+ * The page line (by index in `keys`) that the folded line `key` read on the screen is, and which part of it. Alike
+ * enough, and clearly more than the next line (a repeated line is no anchor). A line the page has whole may come in
+ * pieces from the screen's reading, each too short for it: when nothing matches whole, a piece is matched to the
+ * start or the end of a page line, by the same measures. A sparse page (two questions, four lines) has its third
+ * anchor so (`PDFFigureSource.lineMatch` @ 5701363).
+ */
+export function lineMatch(
+  key: string | LineKey,
+  keys: readonly (string | LineKey)[],
+): { index: number; edge: LineEdge } | null {
+  const own = typeof key === "string" ? new LineKey(key) : key;
+  const others = keys.map((other) => (typeof other === "string" ? new LineKey(other) : other));
+  const best = (score: (candidate: LineKey) => number): Best | null => {
+    let found: Best | null = null;
+    let second = 0;
+    others.forEach((candidate, index) => {
+      const value = score(candidate);
+      if (value > (found?.score ?? 0)) {
+        second = found?.score ?? 0;
+        found = { index, score: value, second: 0 };
+      } else if (value > second) second = value;
+    });
+    const top = found as Best | null;
+    return top ? { ...top, second } : null;
+  };
+  const accepted = (found: Best | null) =>
+    found && found.score >= 0.72 && found.score - found.second >= 0.08 ? found.index : null;
+  const whole = accepted(
+    best((candidate) => boundedSimilarity(own.codes, candidate.codes, own.counts, candidate.counts)),
+  );
+  if (whole !== null) return { index: whole, edge: "whole" };
+  if (own.codes.length < 12) return null;
+  const piece = (candidate: LineKey, edge: "start" | "end") => {
+    if (candidate.codes.length <= own.codes.length) return 0;
+    const part =
+      edge === "start"
+        ? candidate.codes.slice(0, own.codes.length)
+        : candidate.codes.slice(candidate.codes.length - own.codes.length);
+    return boundedSimilarity(own.codes, part, own.counts, null);
+  };
+  const start = best((candidate) => piece(candidate, "start"));
+  const end = best((candidate) => piece(candidate, "end"));
+  if ((start?.score ?? 0) >= (end?.score ?? 0)) {
+    const index = accepted(start);
+    return index === null ? null : { index, edge: "start" };
+  }
+  const index = accepted(end);
+  return index === null ? null : { index, edge: "end" };
+}
+
+const pageLineCache = new WeakMap<PageText, { key: string; rect: Rect; match: LineKey }[]>();
+
+/** The text lines of a page, each with its box, its letters and digits alone, and those ready to compare. */
+function pageLines(page: PageText): { key: string; rect: Rect; match: LineKey }[] {
   const cached = pageLineCache.get(page);
   if (cached) return cached;
   const found = linesOf(page, 0, page.text.length)
     .map((line) => ({ key: fold(line.text), rect: line.bounds }))
-    .filter((line) => line.key.length >= 10 && line.rect.width > 8);
+    .filter((line) => line.key.length >= 10 && line.rect.width > 8)
+    .map((line) => ({ ...line, match: new LineKey(line.key) }));
   pageLineCache.set(page, found);
   return found;
 }
+
+/** The page placed by the last click, searched first on the next. */
+let lastPlacedPage: PageText | null = null;
 
 type Anchor = { screen: { x: number; y: number }; page: { x: number; y: number } };
 
@@ -161,36 +299,48 @@ export function fit(
  * A reading of a screen is rough (accents dropped, a letter wrong, a line cut short), so a line is matched to the
  * page's line it most resembles, and the pairs that don't agree on one scaling are dropped.
  */
-export function placeLines(lines: readonly LocatorLine[], pages: readonly PageText[]): Placement | null {
-  const seen = lines.map((line) => ({ line, key: fold(line.text) })).filter((item) => item.key.length >= 10);
+export function placeLines(
+  lines: readonly LocatorLine[],
+  pages: readonly PageText[],
+  only: readonly number[] | null = null,
+): Placement | null {
+  const seen = lines
+    .map((line) => ({ line, key: new LineKey(fold(line.text)) }))
+    .filter((item) => item.key.codes.length >= 10);
   if (seen.length < 3) return null;
+  // The page placed last is tried first: a page most of whose lines are on the screen is the one, and the others are
+  // not searched. `only`: the only pages tried (a spread's other page), in order.
+  const last = lastPlacedPage;
+  const order = only
+    ? only
+        .map((index) => pages.find((page) => page.index === index))
+        .filter((page): page is PageText => page !== undefined)
+    : last && pages.includes(last)
+      ? [last, ...pages.filter((page) => page !== last)]
+      : [...pages];
+  const enough = Math.max(4, Math.ceil(seen.length * 0.6));
   let best: { page: PageText; anchors: Anchor[] } | null = null;
-  for (const page of pages) {
+  for (const page of order) {
     const candidates = pageLines(page);
     if (candidates.length < 3) continue;
+    const keys = candidates.map((candidate) => candidate.match);
     const anchors: Anchor[] = [];
     for (const { line, key } of seen) {
-      let top: { score: number; rect: Rect } | null = null;
-      let second = 0;
-      for (const candidate of candidates) {
-        const score = similarity(key, candidate.key);
-        if (score > (top?.score ?? 0)) {
-          second = top?.score ?? 0;
-          top = { score, rect: candidate.rect };
-        } else if (score > second) {
-          second = score;
-        }
-      }
-      // Alike enough, and clearly more than the next one (a repeated line is no anchor).
-      if (!top || top.score < 0.72 || top.score - second < 0.08) continue;
-      anchors.push({
-        screen: { x: minX(line.rect), y: midY(line.rect) },
-        page: { x: minX(top.rect), y: midY(top.rect) },
-      });
+      const match = lineMatch(key, keys);
+      if (!match) continue;
+      const rect = candidates[match.index]!.rect;
+      // A line read whole or as its start is pinned by its left edge; its end, by its right edge.
+      anchors.push(
+        match.edge === "end"
+          ? { screen: { x: maxX(line.rect), y: midY(line.rect) }, page: { x: maxX(rect), y: midY(rect) } }
+          : { screen: { x: minX(line.rect), y: midY(line.rect) }, page: { x: minX(rect), y: midY(rect) } },
+      );
     }
     if (anchors.length > (best?.anchors.length ?? 2)) best = { page, anchors };
+    if (anchors.length >= enough) break;
   }
   if (!best || best.anchors.length < 3) return null;
+  lastPlacedPage = best.page;
   const found = fit(best.anchors);
   if (!found || found.used < 3) return null;
   return {
@@ -201,6 +351,40 @@ export function placeLines(lines: readonly LocatorLine[], pages: readonly PageTe
     residual: found.residual,
     anchors: found.used,
   };
+}
+
+/**
+ * `page` placed beside `placement`'s page from geometry alone: a spread shows its two pages at one scale, side by side
+ * with their tops level. At a small zoom the screen's reading of the other page is too rough to match by text, but
+ * each line still sits at its page line's height and starts at its left edge: the lines are paired by height, and the
+ * left edges that agree give where the page starts. Null when fewer than three agree (`placeBeside` @ 5701363).
+ */
+export function placeBeside(lines: readonly LocatorLine[], placement: Placement, page: PageText): Placement | null {
+  const scale = placement.pageUnitsPerPoint;
+  const ty = placement.ty + (maxY(page.mediaBox) - maxY(placement.page.mediaBox));
+  const rects = pageLines(page).map((line) => line.rect);
+  if (rects.length < 3) return null;
+  const offsets: number[] = [];
+  for (const line of lines) {
+    if (line.rect.width <= 20) continue;
+    const y = -scale * midY(line.rect) + ty;
+    const near = rects.filter((rect) => Math.abs(midY(rect) - y) <= Math.max(2, rect.height * 0.5));
+    if (near.length !== 1) continue;
+    offsets.push(minX(near[0]!) - scale * minX(line.rect));
+  }
+  if (offsets.length < 3) return null;
+  offsets.sort((a, b) => a - b);
+  // The largest group within 4 page units of each other: the lines read from their start.
+  let group: number[] = [];
+  let low = 0;
+  for (let high = 0; high < offsets.length; high++) {
+    while (offsets[high]! - offsets[low]! > 4) low += 1;
+    if (high - low + 1 > group.length) group = offsets.slice(low, high + 1);
+  }
+  if (group.length < 3 || group.length < offsets.length * 0.4) return null;
+  const tx = group[Math.trunc(group.length / 2)]!;
+  const residual = group.reduce((sum, offset) => sum + Math.abs(offset - tx), 0) / group.length;
+  return { page, pageUnitsPerPoint: scale, tx, ty, residual, anchors: group.length };
 }
 
 export interface PDFQuestionRead {
@@ -226,13 +410,62 @@ export const PDFQuestionReading = {
     point: { x: number; y: number },
     pages: readonly PageText[],
   ): PDFQuestionRead | null {
-    const placement = placeLines(lines, pages);
+    let placement = placeLines(lines, pages);
     if (!placement || placement.residual > 4) return null;
+    let click = Placements.toPage(placement, point);
+    // Two pages side by side (or a scroll with the next page in view): most lines placed the other page, and the
+    // click is off it. The lines that are not on that page place the one under the click.
+    if (!Rects.contains(placement.page.mediaBox, click)) {
+      const other = PDFQuestionReading.placeOtherPage(lines, placement, point, pages);
+      if (other) {
+        placement = other;
+        click = Placements.toPage(other, point);
+      }
+    }
     const page = placement.page;
-    const click = Placements.toPage(placement, point);
     if (!Rects.contains(page.mediaBox, click)) return null;
     const question = PDFQuestionReading.question(click, page);
     return question ? PDFQuestionReading.make(question, page, placement) : null;
+  },
+
+  /** The page under `point` when `placement` placed another one shown beside or above it: placed from the lines that
+   * lie off `placement`'s page, on the click's side of it. Null when they don't place a page holding the point
+   * (`placeOtherPage` @ 5701363). */
+  placeOtherPage(
+    lines: readonly LocatorLine[],
+    placement: Placement,
+    point: { x: number; y: number },
+    pages: readonly PageText[],
+  ): Placement | null {
+    const shown = Placements.toScreen(placement, placement.page.mediaBox);
+    const toRight = point.x > maxX(shown);
+    const toLeft = point.x < minX(shown);
+    const below = point.y > maxY(shown);
+    const above = point.y < minY(shown);
+    const off = lines.filter((line) => {
+      const mid = { x: line.rect.x + line.rect.width / 2, y: midY(line.rect) };
+      return (
+        (toRight && mid.x > maxX(shown)) ||
+        (toLeft && mid.x < minX(shown)) ||
+        (below && mid.y > maxY(shown)) ||
+        (above && mid.y < minY(shown))
+      );
+    });
+    if (off.length < 3) return null;
+    // The page beside it first (the next one to the right or below): a spread's other page, at once.
+    const index = placement.page.index;
+    const neighbours = toRight || below ? [index + 1, index - 1] : [index - 1, index + 1];
+    const holdsPoint = (other: Placement) =>
+      other.residual <= 4 &&
+      other.page !== placement.page &&
+      Rects.contains(other.page.mediaBox, Placements.toPage(other, point));
+    const byText = placeLines(off, pages, neighbours) ?? placeLines(off, pages);
+    if (byText && holdsPoint(byText)) return byText;
+    // Read too roughly to match by text (a spread at a small zoom): the page beside it, level with it.
+    if (!toRight && !toLeft) return null;
+    const beside = pages.find((page) => page.index === (toRight ? index + 1 : index - 1));
+    const level = beside ? placeBeside(off, placement, beside) : null;
+    return level && holdsPoint(level) ? level : null;
   },
 
   /**
