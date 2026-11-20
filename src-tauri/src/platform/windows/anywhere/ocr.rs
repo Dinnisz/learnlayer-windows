@@ -64,7 +64,7 @@ fn within(picture: &Picture, limit: i32) -> (i32, i32, Vec<u8>, f64) {
 
 /// The lines the OCR reads on `picture`; empty when there is no OCR for any language here.
 pub fn lines(picture: &Picture) -> Vec<Line> {
-    read(picture).unwrap_or_default()
+    read(&without_fills(picture)).unwrap_or_default()
 }
 
 /// `lines`, with the question numbers set apart in a margin column read again (`QuestionRegion.withGutterLabels` @
@@ -72,7 +72,8 @@ pub fn lines(picture: &Picture) -> Vec<Line> {
 /// reading, which kept one of them. The strip of that margin is read on its own, enlarged, and each number found there
 /// is added as a line of its own. Without them a question runs on into the next.
 pub fn lines_with_gutter_labels(picture: &Picture) -> Vec<Line> {
-    let lines = lines(picture);
+    let picture = &without_fills(picture);
+    let lines = read(picture).unwrap_or_default();
     let Some((left, right)) = gutter_strip(&lines) else {
         return lines;
     };
@@ -94,6 +95,109 @@ fn gutter_zoom(height: i32, limit: i32) -> i32 {
         return 1;
     }
     (limit / height).clamp(1, 3)
+}
+
+/// A light flat fill: a box of one colour, in pixels, `[left, right)` × `[top, bottom)`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Fill {
+    colour: [u8; 3],
+    left: usize,
+    right: usize,
+    top: usize,
+    bottom: usize,
+}
+
+/// The picture with the small light fills behind its labels made white (the grey pill round an exam's item number,
+/// "* 1.1."): the engine drops dark text on such a fill. A fill is found from rows with a run of at least
+/// `FILL_RUN` pixels of one light colour, joined with the runs of that colour on the rows next to it; inside a
+/// fill no larger than a label, and a few pixels past its rounded ends, every light pixel becomes white. Text
+/// elsewhere, and a page or a panel with a tinted background, is left as it was.
+pub fn without_fills(picture: &Picture) -> Picture {
+    const LIGHT_INK: u32 = 180;
+    const PAST_ENDS: usize = 3;
+    let mut bgra = picture.bgra.clone();
+    let width = picture.width.max(0) as usize;
+    let height = picture.height.max(0) as usize;
+    for fill in label_fills(&picture.bgra, width, height) {
+        let left = fill.left.saturating_sub(PAST_ENDS);
+        let right = (fill.right + PAST_ENDS).min(width);
+        let top = fill.top.saturating_sub(1);
+        let bottom = (fill.bottom + 1).min(height);
+        for row in top..bottom {
+            for column in left..right {
+                let at = (row * width + column) * 4;
+                if luma([bgra[at], bgra[at + 1], bgra[at + 2]]) >= LIGHT_INK {
+                    bgra[at..at + 3].copy_from_slice(&[255, 255, 255]);
+                }
+            }
+        }
+    }
+    Picture {
+        width: picture.width,
+        height: picture.height,
+        bgra,
+    }
+}
+
+fn luma(colour: [u8; 3]) -> u32 {
+    (u32::from(colour[2]) * 3 + u32::from(colour[1]) * 6 + u32::from(colour[0])) / 10
+}
+
+/// The light fills of a label's size: at most `MAX_HEIGHT` tall and `MAX_WIDTH` wide, so a tinted page or panel
+/// (where thinning the letters would cost more than it gains) is never one.
+fn label_fills(bgra: &[u8], width: usize, height: usize) -> Vec<Fill> {
+    const FILL_RUN: usize = 12;
+    const LIGHT: u32 = 160;
+    const SAME: i32 = 6;
+    const MAX_HEIGHT: usize = 80;
+    const MAX_WIDTH: usize = 400;
+    let close =
+        |a: [u8; 3], b: [u8; 3]| (0..3).all(|channel| (i32::from(a[channel]) - i32::from(b[channel])).abs() <= SAME);
+    let mut fills: Vec<Fill> = Vec::new();
+    if bgra.len() < width * height * 4 {
+        return fills;
+    }
+    for row in 0..height {
+        let pixel = |column: usize| {
+            let at = (row * width + column) * 4;
+            [bgra[at], bgra[at + 1], bgra[at + 2]]
+        };
+        let mut start = 0;
+        while start < width {
+            let first = pixel(start);
+            let mut end = start + 1;
+            while end < width && close(pixel(end), first) {
+                end += 1;
+            }
+            if end - start >= FILL_RUN && first != [255, 255, 255] && luma(first) >= LIGHT {
+                // The fill this run continues: the same colour, on the row above, overlapping it.
+                let joined = fills.iter_mut().rev().find(|fill| {
+                    close(fill.colour, first) && fill.bottom >= row && fill.left < end && start < fill.right
+                });
+                match joined {
+                    Some(fill) => {
+                        fill.left = fill.left.min(start);
+                        fill.right = fill.right.max(end);
+                        fill.bottom = row + 1;
+                    }
+                    None => fills.push(Fill {
+                        colour: first,
+                        left: start,
+                        right: end,
+                        top: row,
+                        bottom: row + 1,
+                    }),
+                }
+            }
+            start = end;
+        }
+    }
+    fills
+        .into_iter()
+        .filter(|fill| {
+            fill.bottom - fill.top >= 4 && fill.bottom - fill.top <= MAX_HEIGHT && fill.right - fill.left <= MAX_WIDTH
+        })
+        .collect()
 }
 
 /// A question's number standing alone: "1.", "12)", "(3)".
@@ -330,6 +434,110 @@ mod tests {
         assert_eq!((strip.width, strip.height), (6, 6));
         assert_eq!(strip.bgra.len(), 6 * 6 * 4);
         assert!(enlarged_strip(&picture, 3.0, 3.0, 3).is_none());
+    }
+
+    /// A measurement, not a check: reads a page saved as raw BGRA (`<base>.bgra` and `<base>.txt` with "width
+    /// height") and prints the lines as the app reads them, "+" where the engine alone, on the untouched picture,
+    /// reads that line otherwise or not at all. `LEARNLAYER_OCR_PAGE=<base> cargo test
+    /// ocr_on_a_saved_page -- --ignored --nocapture`; `scripts/render-page.mjs` saves a PDF page that way.
+    #[test]
+    #[ignore]
+    fn ocr_on_a_saved_page() {
+        let base = std::env::var("LEARNLAYER_OCR_PAGE").expect("LEARNLAYER_OCR_PAGE");
+        let size = std::fs::read_to_string(format!("{base}.txt")).expect("size");
+        let mut parts = size.split_whitespace().map(|part| part.parse::<i32>().expect("number"));
+        let (width, height) = (parts.next().expect("width"), parts.next().expect("height"));
+        let bgra = std::fs::read(format!("{base}.bgra")).expect("pixels");
+        assert_eq!(bgra.len(), (width * height * 4) as usize);
+        let picture = Picture { width, height, bgra };
+        let started = std::time::Instant::now();
+        let _ = without_fills(&picture);
+        println!("fills: {:?}", started.elapsed());
+        let engine = read(&picture).unwrap_or_default();
+        println!("margin strip: {:?}", gutter_strip(&engine));
+        for line in &lines_with_gutter_labels(&picture) {
+            let added = !engine.iter().any(|seen| seen.text == line.text);
+            println!(
+                "{} {:>6.0} {:>6.0} {:>6.0}  {}",
+                if added { "+" } else { " " },
+                line.rect.x,
+                line.rect.y,
+                line.rect.width,
+                line.text
+            );
+        }
+    }
+
+    /// A white picture `width` × `height`, with `paint(column, row)` giving the pixels that are not white.
+    fn painted(width: i32, height: i32, paint: impl Fn(i32, i32) -> Option<[u8; 3]>) -> Picture {
+        let mut bgra = Vec::with_capacity((width * height * 4) as usize);
+        for row in 0..height {
+            for column in 0..width {
+                let [b, g, r] = paint(column, row).unwrap_or([255, 255, 255]);
+                bgra.extend_from_slice(&[b, g, r, 255]);
+            }
+        }
+        Picture { width, height, bgra }
+    }
+
+    fn colour(picture: &Picture, column: i32, row: i32) -> [u8; 3] {
+        let at = ((row * picture.width + column) * 4) as usize;
+        [picture.bgra[at], picture.bgra[at + 1], picture.bgra[at + 2]]
+    }
+
+    const PILL: [u8; 3] = [199, 197, 196];
+    const INK: [u8; 3] = [53, 46, 44];
+    const EDGE: [u8; 3] = [210, 208, 207];
+
+    #[test]
+    fn the_grey_pill_round_an_item_number_is_made_white_and_its_ink_kept() {
+        // A pill 60 × 20 at (10, 10); a stroke of ink inside it with a light edge, a grey letter outside.
+        let picture = painted(120, 40, |column, row| {
+            let inside = (10..70).contains(&column) && (10..30).contains(&row);
+            if inside && (30..33).contains(&column) && (14..26).contains(&row) {
+                Some(INK)
+            } else if inside && column == 33 && (14..26).contains(&row) {
+                Some(EDGE)
+            } else if inside {
+                Some(PILL)
+            } else if column == 90 && row == 20 {
+                Some([150, 150, 150])
+            } else {
+                None
+            }
+        });
+        let fills = label_fills(&picture.bgra, 120, 40);
+        assert_eq!(fills.len(), 1);
+        assert_eq!(
+            (fills[0].left, fills[0].right, fills[0].top, fills[0].bottom),
+            (10, 70, 10, 30)
+        );
+        let clean = without_fills(&picture);
+        assert_eq!(colour(&clean, 12, 12), [255, 255, 255]);
+        assert_eq!(colour(&clean, 50, 20), [255, 255, 255]);
+        assert_eq!(colour(&clean, 33, 20), [255, 255, 255]);
+        assert_eq!(colour(&clean, 31, 20), INK);
+        // Outside the pill nothing changes.
+        assert_eq!(colour(&clean, 90, 20), [150, 150, 150]);
+    }
+
+    #[test]
+    fn a_tinted_panel_and_short_runs_are_not_fills() {
+        // A panel larger than a label, and short grey dashes: both as they were.
+        let picture = painted(600, 200, |column, row| {
+            if (0..500).contains(&column) && (0..120).contains(&row) {
+                Some([240, 240, 240])
+            } else if row == 150 && column % 10 < 5 {
+                Some([200, 200, 200])
+            } else {
+                None
+            }
+        });
+        assert!(label_fills(&picture.bgra, 600, 200).is_empty());
+        assert_eq!(without_fills(&picture).bgra, picture.bgra);
+        // A dark fill (a black box) is ink, never a fill.
+        let dark = painted(100, 30, |_, row| (5..25).contains(&row).then_some([40, 40, 40]));
+        assert!(label_fills(&dark.bgra, 100, 30).is_empty());
     }
 
     #[test]
