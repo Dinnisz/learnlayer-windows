@@ -41,14 +41,14 @@ cd src-tauri && LEARNLAYER_OCR_JSON=1 LEARNLAYER_OCR_PAGE=<pasta>\EX-FQA715-p4 c
 SCREEN_LABELS=<pasta> npx vitest run scripts/screen-labels.test.ts
 ```
 
-O relatório clica em cada pergunta que o texto do PDF tem: na primeira linha, a meio e na última linha. Para cada clique compara a etiqueta encontrada e verifica que o recorte tem todas as linhas da pergunta, nenhuma etiqueta de outra pergunta e, se houver uma legenda «Figura N», a figura. `SCREEN_DRAFTS=1` mostra o rascunho local ao lado do texto do PDF.
+Resultado depois das correções de 2026-11-20 (ver DECISOES). O relatório clica em cada pergunta que o texto do PDF tem: na primeira linha, a meio e na última linha. Para cada clique compara a etiqueta encontrada e verifica que o recorte tem todas as linhas da pergunta, nenhuma etiqueta de outra pergunta e, se houver uma legenda «Figura N», a figura. `SCREEN_DRAFTS=1` mostra o rascunho local ao lado do texto do PDF.
 
 | Páginas | Perguntas encontradas | Cliques a meio e na última linha |
 |---|---|---|
 | 2–9 dos 9 exames, a 1,5× | 132 de 132 | 264 de 264 |
 | 10–16, a 1,5× | 71 de 71 | 142 de 142 |
 | 2–9 numa janela de browser 1600×1000, scroll 0 e 300 | 201 de 201 | 396 de 396 |
-| 2–9 a 2,0× | 131 de 132 | 262 de 262 |
+| 2–9 a 2,0× | 131 de 132 (um «1.» lido «I.» sem nada que o desfaça) | 262 de 262 |
 | 2–9 a 1,0× (página com ~600 px) | 92 de 132 | — |
 
-A 1,0× o próprio motor lê mal o texto de 10 px; ver DECISOES, «Letra pequena no ecrã».
+Nas páginas inteiras nenhum recorte deixa de fora uma linha da sua pergunta nem leva a etiqueta de outra; nas janelas ficam dois enunciados cuja página continua abaixo da borda. A 1,0× o próprio motor lê mal o texto de 10 px; ver DECISOES, «Letra pequena no ecrã».

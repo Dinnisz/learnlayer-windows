@@ -20,13 +20,13 @@ O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado
   - créditos Plus 120 e Pro 280 por dia;
   - resolução compacta para janelas curtas.
 - O que fica de fora e porquê: `DECISOES.md`, «O que do porte de 5701363 fica de fora».
-- **Testes:** 2027 de TypeScript e 28 de Rust passam; lint, typecheck, `cargo fmt` e `clippy` limpos. O CI no GitHub está parado pela faturação da conta; corri tudo nesta máquina.
+- **Testes:** 2033 de TypeScript e 38 de Rust passam (no fim do dia); lint, typecheck, `cargo fmt` e `clippy` limpos. O CI no GitHub está parado pela faturação da conta; corri tudo nesta máquina.
 - **Por verificar ao vivo:** Ctrl+Win (precisa de carregar nas teclas; ver `PROGRESSO.md`, Falta 1), a pergunta tipografada com uma transcrição real, e os números na margem com um Alt-clique.
 - **Depois, no mesmo dia: o Alt-clique sobre um PDF mostrado como imagem, medido de ponta a ponta.** As páginas dos 9 exames de `exames/` foram desenhadas, lidas pelo OCR do Windows e clicadas em cada pergunta que o texto do PDF tem (`scripts/render-page.mjs`, `scripts/browser-window.mjs`, `scripts/screen-labels.test.ts`). De 89 de 132 perguntas encontradas passou a todas. Isto foi conseguido com várias correções:
   - o OCR lê os números dentro da etiqueta cinzenta dos itens obrigatórios («✱ 1.1.»), que antes deixava cair;
   - devolve o ponto final a «2.3» e lê «l.» e «I.» como «1.» onde só pode ser um 1;
   - um «6» de uma fração já não é tomado por número de página;
-  - um enunciado com figura entre duas etiquetas já não é cortado por ser alto.
+  - um enunciado com figura entre duas etiquetas, ou até ao rodapé lido, já não é cortado por ser alto (o rodapé lido pelo OCR, «Página 4,' 13» ou partido em dois, já é reconhecido).
   - Nas janelas de browser compostas, as 201 perguntas visíveis são encontradas. Os cliques no meio e na última linha de cada pergunta também a encontram, e nenhum recorte leva outra pergunta.
   - A Ctrl+Win regista agora cada toque que o gancho vê em `talk-keys.jsonl` (`PARA-O-DINIS.md`, ponto 0a).
   - A demo `overlay.html?demo=typeset` mostra a pergunta tipografada com o foco de cada passo.
