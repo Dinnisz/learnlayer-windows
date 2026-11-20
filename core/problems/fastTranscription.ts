@@ -103,6 +103,17 @@ function isOnlyLatex(text: string): boolean {
   return !/\p{L}{3,}/u.test(rest);
 }
 
+/** A LaTeX command the model wrote with one backslash where JSON has an escape of that letter (a form feed and
+ * «rac» for «\frac», a tab and «imes» for «\times»). */
+const latexEscape =
+  /(?<!\\)\\((?:f(?:rac|orall)|b(?:eta|inom|ar|egin|oxed|igg?[lr]?|mod)|n(?:eq|abla|ot|eg|leq|geq)|r(?:ight|ho|angle|ceil|floor|m)|t(?:imes|heta|ext(?:bf|rm)?|an|anh|au|o|op|frac|ilde|riangle))(?![A-Za-z]))/gu;
+
+/** Its backslash doubled, so the command survives the JSON (CDI sheet 1(f) came back as «rac{rac{x}{x+1}}{x-1}»).
+ * A real escape (a \n before a word) is left as it is (@ 5701363). */
+export function withLatexEscapesRepaired(text: string): string {
+  return text.replace(latexEscape, "\\\\$1");
+}
+
 /** The blocks from the reply: `{"question": [...]}`, or the bare array a model sometimes writes instead; boxes
  * brought to the app's shares. */
 export function transcriptionFromContent(content: string): QuestionTranscription | null {
@@ -113,6 +124,7 @@ export function transcriptionFromContent(content: string): QuestionTranscription
     const fence = text.lastIndexOf("```");
     if (fence >= 0) text = text.slice(0, fence);
   }
+  text = withLatexEscapesRepaired(text);
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -171,6 +183,9 @@ export class FastTranscriptionReader {
   private readonly failedAhead = new Set<string>();
   /** The readings ahead still on their way, by key: a click joins one rather than start a second. */
   private readonly prereads = new Map<string, Promise<QuestionTranscription | null>>();
+  /** Questions whose reading was set aside and asked for once more, and that answer set aside too: a click on them
+   * again is not charged for a third reading the check would set aside as well (while the reader lives). */
+  private readonly rejectedAgain = new Set<string>();
 
   constructor(private readonly services: FastTranscriptionServices) {}
 
@@ -231,7 +246,8 @@ export class FastTranscriptionReader {
   }
 
   /** The reading of `images` if the caller `accepts` it; one it sets aside is asked for once more in what is left of
-   * `placeholderLimit` (at least `minimumRetry`), and that answer, if accepted, is saved in its place. */
+   * `placeholderLimit` (at least `minimumRetry`), and that answer, if accepted, is saved in its place. A question whose
+   * second answer was set aside as well is not asked again (`rejectedAgain`): the same picture reads the same way. */
   async accepted(
     images: readonly Uint8Array[],
     accepts: (found: QuestionTranscription) => boolean,
@@ -241,6 +257,8 @@ export class FastTranscriptionReader {
     const found = await this.transcription(images);
     if (!found) return null;
     if (accepts(found)) return found;
+    const id = await this.key(images);
+    if (this.rejectedAgain.has(id)) return null;
     const left = Prompt.placeholderLimit - (now() - start);
     if (left < Prompt.minimumRetry) return null;
     let content: string;
@@ -250,8 +268,11 @@ export class FastTranscriptionReader {
       return null;
     }
     const again = transcriptionFromContent(content);
-    if (!again || !this.isKeepable(again) || !accepts(again)) return null;
-    await this.services.cache.store(again, await this.key(images));
+    if (!again || !this.isKeepable(again) || !accepts(again)) {
+      this.rejectedAgain.add(id);
+      return null;
+    }
+    await this.services.cache.store(again, id);
     return again;
   }
 

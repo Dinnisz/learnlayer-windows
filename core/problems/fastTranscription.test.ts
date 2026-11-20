@@ -14,6 +14,7 @@ import {
   firstWholeQuestion,
   shareOfCorners,
   transcriptionFromContent,
+  withLatexEscapesRepaired,
 } from "./fastTranscription";
 import { Transcriptions, type QuestionTranscription } from "./questionTranscription";
 
@@ -233,6 +234,36 @@ describe("FastTranscription", () => {
     const { reader: wrong, calls: wrongCalls } = reader(async () => readsThree);
     expect(await wrong.accepted(picture(), (reading) => Transcriptions.isOf(reading, "ii"))).toBeNull();
     expect(wrongCalls.value).toBe(2);
+  });
+
+  // The Mac's aQuestionSetAsideTwiceIsNotAskedForAgainOnTheNextClick @ 5701363.
+  it("does not ask again for a question set aside twice", async () => {
+    const readsThree = JSON.stringify({
+      question: [{ type: "text", text: "(iii) Averigue.", box: null, caption: null }],
+    });
+    const { reader: fast, calls } = reader(async () => readsThree);
+    const images = picture();
+    const ofTwo = (reading: QuestionTranscription) => Transcriptions.isOf(reading, "ii");
+    expect(await fast.accepted(images, ofTwo)).toBeNull();
+    expect(calls.value).toBe(2);
+    // Clicked again (and again): the saved reading is checked, and no third reading is paid for.
+    expect(await fast.accepted(images, ofTwo)).toBeNull();
+    expect(await fast.accepted(images, ofTwo)).toBeNull();
+    expect(calls.value).toBe(2);
+    // A check the saved reading passes still gets it.
+    expect(await fast.accepted(images, () => true)).not.toBeNull();
+    expect(calls.value).toBe(2);
+  });
+
+  // CDI sheet 1(f) came back as «rac{rac{x}{x+1}}{x-1}»: \f is a JSON escape (@ 5701363).
+  it("keeps a LaTeX command written with one backslash", () => {
+    const reply = String.raw`{"question":[{"type":"formula","text":"\frac{\frac{x}{x+1}}{x-1} \times 2 \neq \theta","box":null,"caption":null}]}`;
+    const found = transcriptionFromContent(reply)!;
+    expect(found.blocks[0]!.text).toBe(String.raw`\frac{\frac{x}{x+1}}{x-1} \times 2 \neq \theta`);
+    // Already escaped, or a real escape before a word: left alone.
+    expect(withLatexEscapesRepaired(String.raw`"\\frac{1}{2}"`)).toBe(String.raw`"\\frac{1}{2}"`);
+    expect(withLatexEscapesRepaired(String.raw`"a\nb"`)).toBe(String.raw`"a\nb"`);
+    expect(withLatexEscapesRepaired(String.raw`"\frame"`)).toBe(String.raw`"\frame"`);
   });
 
   it("keeps the numbers the computer read, or asks once more", async () => {
