@@ -96,12 +96,7 @@ describe("the question a click picks", () => {
   });
 
   it("sends the stanzas printed above a reading question with it", async () => {
-    // The Mac's case reads question 1 («… pertencem as estâncias transcritas»), which `refersToText` (the same rule on
-    // the Mac) does not take for a question about a text: no «poema», «estrofe» or «texto» in it. The stanzas are
-    // read for it all the same, and question 2 («o assunto do poema») is sent with them (docs/DECISOES.md).
-    const poem = await page("poem-reading");
-    expect(read("1", poem).supportText).toContain("Cessem do sábio Grego");
-    const made = read("2", poem);
+    const made = read("1", await page("poem-reading"));
     expect(QuestionSessionRules.supportPassage(made.supportText, made.exam.groupText)).toContain(
       "Cessem do sábio Grego",
     );

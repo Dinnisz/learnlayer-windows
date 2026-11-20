@@ -198,9 +198,10 @@ export const QuestionSessionRules = {
   refersToText(text: string): boolean {
     const folded = foldDiacritics(text);
     const pattern = new RegExp(
-      "\\b(sujeito poetico|eu (poetico|lirico)|poema|poesia|estrofes?|versos?|excertos?|fragmentos?|narrador|cronista|autora?|" +
+      "\\b(sujeito poetico|eu (poetico|lirico)|poema|poesia|estrofes?|estancias?|versos?|excertos?|fragmentos?|passagem|" +
+        "(texto|estancias?|versos?|excertos?|passagem|fragmentos?) (transcrit|apresentad|acima)[oa]s?|cantigas?|sonetos?|narrador|cronista|autora?|" +
         "(d?o|no|deste|neste|desse|nesse) texto|textos? [ab12]\\b|(linhas?|ll?\\.|vv?\\.) ?\\d|" +
-        "the (text|passage|poem|extract|excerpt|speaker|narrator)|lines? \\d)",
+        "the (text|passage|poem|extract|excerpt|speaker|narrator)|stanzas?|lines? \\d)",
     );
     return pattern.test(folded);
   },
