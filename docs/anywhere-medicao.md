@@ -29,3 +29,26 @@ Tempos: do clique ao palco, descontando o arranque do utilitário de teste (~0,9
 - **PDF por caminho:** a barra de endereço do Edge e do Chrome (`file:///…pdf`), ou o nome do ficheiro no título da janela procurado em Transferências, Ambiente de trabalho, Documentos e OneDrive. O PDF abre-se localmente com o pdf.js e a pergunta sai do texto do ficheiro.
 - **UI Automation:** texto do documento quando a app tem `TextPattern` (Word, leitores de PDF que o expõem), senão o bloco de elementos à volta do ponto e os vizinhos (páginas web).
 - **Imagem + OCR:** a janela desenha-se a si própria (`PrintWindow`), o `Windows.Media.Ocr` lê as linhas, e o `QuestionLocator` encontra a região da pergunta. Só essa região vai para o modelo, e só quando o texto não chega.
+
+## Um PDF mostrado como imagem, sem a app (2026-11-20)
+
+Quando a app não sabe o caminho do PDF, lê a pergunta pelo OCR do ecrã. Esse caminho mede-se sem ninguém a clicar, com os exames de `exames/`:
+
+```bash
+node scripts/render-page.mjs exames/EX-FQA715-F1-2026-V1_net.pdf 4 1.5 <pasta>/EX-FQA715-p4
+node scripts/browser-window.mjs <pasta>/EX-FQA715-p4 300 <pasta-janelas>/EX-FQA715-p4-s300
+cd src-tauri && LEARNLAYER_OCR_JSON=1 LEARNLAYER_OCR_PAGE=<pasta>\EX-FQA715-p4 cargo test --release --lib ocr_on_a_saved_page -- --ignored
+SCREEN_LABELS=<pasta> npx vitest run scripts/screen-labels.test.ts
+```
+
+O relatório clica em cada pergunta que o texto do PDF tem: na primeira linha, a meio e na última linha. Para cada clique compara a etiqueta encontrada e verifica que o recorte tem todas as linhas da pergunta, nenhuma etiqueta de outra pergunta e, se houver uma legenda «Figura N», a figura. `SCREEN_DRAFTS=1` mostra o rascunho local ao lado do texto do PDF.
+
+| Páginas | Perguntas encontradas | Cliques a meio e na última linha |
+|---|---|---|
+| 2–9 dos 9 exames, a 1,5× | 132 de 132 | 264 de 264 |
+| 10–16, a 1,5× | 71 de 71 | 142 de 142 |
+| 2–9 numa janela de browser 1600×1000, scroll 0 e 300 | 201 de 201 | 396 de 396 |
+| 2–9 a 2,0× | 131 de 132 | 262 de 262 |
+| 2–9 a 1,0× (página com ~600 px) | 92 de 132 | — |
+
+A 1,0× o próprio motor lê mal o texto de 10 px; ver DECISOES, «Letra pequena no ecrã».

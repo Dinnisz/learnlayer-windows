@@ -113,7 +113,7 @@ fn with_fill_labels(mut lines: Vec<Line>, picture: &Picture, fills: &[Fill]) -> 
         };
         let found = read(&part).unwrap_or_default();
         let text = found.iter().map(|line| line.text.trim()).collect::<Vec<_>>().join(" ");
-        let Some(label) = leading_item_label(&text) else {
+        let Some(label) = leading_item_label(&with_one_for_l(&text)) else {
             continue;
         };
         // What the page-wide reading made of the number: a line inside the fill goes, and the dots it left at the
@@ -122,7 +122,20 @@ fn with_fill_labels(mut lines: Vec<Line>, picture: &Picture, fills: &[Fill]) -> 
         lines.retain(|line| !(on_row(line, &fill) && line.rect.x >= from && line.rect.x + line.rect.width <= to));
         for line in lines.iter_mut() {
             if on_row(line, &fill) && line.rect.x >= from && line.rect.x < to {
-                line.text = line.text.trim_start_matches(['.', ' ', '*', '✱', '★', '•']).to_string();
+                // Its misread number ("l." for 1.) as well as its dots: the number is the label's line now.
+                let fixed = with_one_for_l(&line.text);
+                line.text = match leading_item_label(&fixed) {
+                    Some(misread) => fixed[fixed.find(&misread).unwrap_or(0) + misread.len()..]
+                        .trim_start()
+                        .to_string(),
+                    None => line.text.trim_start_matches(['.', ' ', '*', '✱', '★', '•']).to_string(),
+                };
+                // Its words start past the fill, where the label's line ends.
+                let start = fill.right as f64 + 2.0;
+                if line.rect.x < start {
+                    line.rect.width = (line.rect.x + line.rect.width - start).max(0.0);
+                    line.rect.x = start;
+                }
             }
         }
         lines.retain(|line| !line.text.trim().is_empty());
@@ -200,6 +213,7 @@ fn with_label_dots(mut lines: Vec<Line>) -> Vec<Line> {
     for line in &mut lines {
         line.text = with_one_for_l(&line.text);
     }
+    with_one_over_its_parts(&mut lines);
     for index in 0..lines.len() {
         let text = lines[index].text.trim();
         let number = text.trim_start_matches(['*', '✱', '★', '•', ' ']);
@@ -223,14 +237,44 @@ fn with_label_dots(mut lines: Vec<Line>) -> Vec<Line> {
     lines
 }
 
-/// "✱ l. Compare…" is "✱ 1. Compare…": in the font of an exam's numbers the engine reads a 1 as a small L, and a
-/// small L with a dot never starts an item.
+/// "✱ l. Compare…" and "✱ I. Releia…" are "✱ 1. …": in the font of an exam's numbers the engine reads a 1 as a small
+/// L or a capital I. A small L with a dot never starts an item; a capital I may (a Roman one), but not after the mark
+/// of an item's label (sections are "GRUPO I", "PARTE I").
 fn with_one_for_l(text: &str) -> String {
     let rest = text.trim_start_matches(['*', '✱', '★', '•', ' ']);
     let mark = &text[..text.len() - rest.len()];
-    match rest.strip_prefix("l. ") {
+    let after = rest
+        .strip_prefix("l. ")
+        .or_else(|| (!mark.trim().is_empty()).then(|| rest.strip_prefix("I. ")).flatten());
+    match after {
         Some(after) => format!("{mark}1. {after}"),
         None => text.to_string(),
+    }
+}
+
+/// "I. Choisissez…" over "1.1.", "1.2.": in a font where 1 and I look alike, a Roman I at the start of a line with item
+/// 1's parts under it is item 1.
+fn with_one_over_its_parts(lines: &mut [Line]) {
+    let starts_part_of_one = |text: &str| {
+        let rest = text.trim_start_matches(['*', '✱', '★', '•', ' ']);
+        rest.strip_prefix("1.")
+            .and_then(|tail| tail.chars().next())
+            .is_some_and(|c| c.is_ascii_digit())
+    };
+    let parts: Vec<(f64, f64)> = lines
+        .iter()
+        .filter(|line| starts_part_of_one(&line.text))
+        .map(|line| (line.rect.x, line.rect.y))
+        .collect();
+    for line in lines.iter_mut() {
+        let rest = line.text.trim_start_matches(['*', '✱', '★', '•', ' ']);
+        let mark = &line.text[..line.text.len() - rest.len()];
+        let Some(after) = rest.strip_prefix("I. ") else {
+            continue;
+        };
+        if parts.iter().any(|&(x, y)| y > line.rect.y && x >= line.rect.x - 4.0) {
+            line.text = format!("{mark}1. {after}");
+        }
     }
 }
 
@@ -808,8 +852,26 @@ mod tests {
         assert_eq!(with_one_for_l("* l. Compare as duas"), "* 1. Compare as duas");
         assert_eq!(with_one_for_l("l. Explique"), "1. Explique");
         assert_eq!(with_one_for_l("I. Grupo"), "I. Grupo");
+        assert_eq!(with_one_for_l("* I. Releia o primeiro"), "* 1. Releia o primeiro");
+        assert_eq!(with_one_for_l("✱ I. Releia"), "✱ 1. Releia");
         assert_eq!(with_one_for_l("lá fora. Os"), "lá fora. Os");
         assert_eq!(with_one_for_l("l.1. Outro"), "l.1. Outro");
+    }
+
+    #[test]
+    fn a_roman_one_over_item_ones_parts_is_item_one() {
+        let mut lines = vec![
+            line("Texte I", 113.0, 273.0, 65.0),
+            line("I. Choisissez l'alinéa adéquat (A, B ou C).", 115.0, 376.0, 379.0),
+            line("1.1. Les progrès dans le secteur", 143.0, 482.0, 565.0),
+            line("I. Une section sans parties sous elle", 115.0, 1300.0, 300.0),
+        ];
+        lines[3].rect.y = 1300.0;
+        with_one_over_its_parts(&mut lines);
+        assert_eq!(lines[1].text, "1. Choisissez l'alinéa adéquat (A, B ou C).");
+        assert_eq!(lines[0].text, "Texte I");
+        // Nothing of item 1 under it.
+        assert_eq!(lines[3].text, "I. Une section sans parties sous elle");
     }
 
     #[test]
