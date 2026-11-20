@@ -2356,21 +2356,13 @@ function Actions({ session }: { session: QuestionSession }) {
   const actions: [string, () => void, boolean][] = [
     [t("Hint"), () => session.showFirstStep(), session.mode !== "hint"],
     [t("Let me try"), () => session.choose("tryIt"), session.mode !== "tryIt"],
-    [
-      session.explains ? t("Show the explanation") : t("Solution"),
-      () => session.choose("solution"),
-      session.mode !== "solution",
-    ],
-    [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant],
+    // QuestionOverlay.footerButtons, in its order.
+    [session.explains ? t("Explain") : t("Solution"), () => session.choose("solution"), session.mode !== "solution"],
+    [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant && session.mode !== "variant"],
     [
       session.showsIllustration ? t("Hide Drawing") : t("Draw It"),
       () => session.toggleIllustration(),
       session.canDraw && session.part !== null,
-    ],
-    [
-      session.showsTiming ? t("Hide Waveforms") : t("Draw Waveforms"),
-      () => session.toggleTiming(),
-      session.canDrawTiming,
     ],
     [
       session.showsGraph ? t("Hide Graph") : t("Show the graph"),
@@ -2378,9 +2370,14 @@ function Actions({ session }: { session: QuestionSession }) {
       session.hasGraph && session.mode !== null,
     ],
     [
+      session.showsTiming ? t("Hide Waveforms") : t("Draw Waveforms"),
+      () => session.toggleTiming(),
+      session.canDrawTiming,
+    ],
+    [
       t("Explain Better"),
       () => session.solveWithStrongerModel(),
-      session.mode === "solution" && session.part !== null && !session.solvedByStrongerModel,
+      session.part !== null && !session.solvedByStrongerModel && !session.isConfirming,
     ],
   ];
   return (
