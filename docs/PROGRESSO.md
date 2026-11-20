@@ -152,6 +152,6 @@ Falta do porte de 5701363 (por ordem de valor):
 
 Falta:
 1. **Ctrl + Windows não começa a ouvir** no PC do Dinis (clicar na mascote funciona). Em 2026-11-20 ainda não havia `%APPDATA%\LearnLayer\talk-debug.jsonl`: carregar nas teclas com uma pergunta aberta e ler o ficheiro; se não houver linhas, o evento não sai do hook; se houver, ver `session`/`recording`. O caminho no Rust (`hook.rs`, `talk_key_event`/`update_talk`) e o evento `talk` parecem certos.
-2. ✅ Caixa de figura com separadores: feita em 2026-11-20 com a referência nova (abaixo).
+2. ✅ Caixa de figura com separadores: feita em 2026-11-20 com a referência nova (abaixo); vista no browser (`overlay.html?demo=anywhere`, 1366×768): «Figura | Gráfico» trocam, a caixa fica abaixo das fórmulas e chega-se a ela com scroll, como no Mac (o painel fica ao seu tamanho). Os sólidos de `?demo=circuit` cabem inteiros na vista 3D com a câmara nova.
 3. Focos de blocos de texto na pergunta tipografada (precisa de saber onde cada bloco estava na imagem); resolução numa janela compacta (≤ 420 pt: figura ao lado dos passos com 200 de altura, gráfico de 150, passos só com o título até serem abertos), que no Windows só acontece com escalas muito altas.
 4. Ver ao vivo, numa pergunta lida do ecrã com transcrição, os sublinhados, a lente e o tamanho da pergunta tipografada.
