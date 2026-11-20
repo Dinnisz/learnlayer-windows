@@ -372,8 +372,8 @@ describe("PlanDefaults (SettingsTests)", () => {
     expect(PlanDefaults.paidMonthlyCredits).toBe(700);
     expect(PlanDefaults.proMonthlyCents).toBe(5_000);
     expect(PlanDefaults.freeDailyCredits).toBe(10);
-    expect(PlanDefaults.paidDailyCredits).toBe(70);
-    expect(PlanDefaults.proDailyCredits).toBe(160);
+    expect(PlanDefaults.paidDailyCredits).toBe(120);
+    expect(PlanDefaults.proDailyCredits).toBe(280);
     expect(PlanDefaults.proYearlyCents).toBe(48_000);
     expect(PlanDefaults.proWeeklyCredits).toBe(560);
     expect(PlanDefaults.proMonthlyCredits).toBe(1_600);
