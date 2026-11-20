@@ -1563,15 +1563,30 @@ function TryView({ session }: { session: QuestionSession }) {
   const [attempt, setAttempt] = useState("");
   const part = session.part;
   const result = session.attemptResult;
+  // QuestionPanel.tryIt: what is asked, the field, the names it may use, then what the check found.
   const messages: Record<string, string> = {
-    matches: t("That’s right."),
+    matches: t("That matches."),
     differs: t("Not yet: it differs from the expected result."),
     unreadable: t("I couldn’t read that expression."),
     checking: t("Checking the expected result…"),
   };
+  if (part && session.state.kind !== "loading" && !session.canTry) {
+    return (
+      <div className="stage-panel">
+        <p className="stage-asks">
+          {t("This part has no formula to check. Try writing your answer, then compare with the solution.")}
+        </p>
+        <Actions session={session} />
+      </div>
+    );
+  }
   return (
     <div className="stage-panel">
-      {part && <p className="stage-asks">{part.asks}</p>}
+      {part && (
+        <p className="stage-asks">
+          <MathText text={part.asks} />
+        </p>
+      )}
       <form
         className="stage-try"
         onSubmit={(event) => {
@@ -1588,13 +1603,14 @@ function TryView({ session }: { session: QuestionSession }) {
         />
       </form>
       {session.answerNames.length > 0 && (
-        <p className="stage-step-note">
+        <p className="stage-try-help">
           {t("Use %@; * for ×, ^ for powers, sqrt(), abs().", session.answerNames.join(", "))}
         </p>
       )}
       {session.state.kind === "loading" && <Progress session={session} />}
       {result && (
         <p className={`stage-result stage-result-${result}`} role="status">
+          {result === "matches" && <Icon symbol="checkmark.circle.fill" size={15} />}
           {messages[result]}
         </p>
       )}

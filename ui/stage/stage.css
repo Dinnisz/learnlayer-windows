@@ -412,18 +412,27 @@
   line-height: 1.45;
 }
 
+/* What a part asks, above the answer field (QuestionPanel.tryIt): white at 75 %. */
 .stage-asks {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  color: rgb(255 255 255 / 75%);
 }
 
+/* The hint (QuestionPanel.hint): the blue bulb and the words at 17 pt. */
 .stage-hint {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
-  font-size: 19px;
+  font-size: 17px;
   line-height: 1.35;
+}
+
+/* The names an answer may use, and how to write it: 12 pt, white at 50 %. */
+.stage-try-help {
+  margin: 0;
+  font-size: 12px;
+  color: rgb(255 255 255 / 50%);
 }
 
 .stage-hint-icon {
@@ -746,10 +755,25 @@
   resize: vertical;
 }
 
+/* The answer field: monospaced 17 pt over a 1-pt white line at 40 %. */
+.stage-try input {
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 40%);
+  font: 17px var(--font-mono);
+}
+
 .stage-try input:focus,
 .stage-result {
   margin: 0;
   font-weight: 600;
+}
+
+.stage-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgb(255 255 255 / 75%);
+  font-weight: 400;
 }
 
 .stage-result-matches {
