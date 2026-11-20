@@ -48,6 +48,24 @@
   gap: 20px;
 }
 
+/* The stage's side column (QuestionOverlay's `sideColumn`): beside the question in a wide window, with its own
+   scroll, the drawing, the formulas at hand and the curve 22 apart. */
+.stage-side {
+  zoom: var(--stage-scale, 1);
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  animation: stage-fade 200ms ease-in-out;
+}
+
+.stage-side-graph {
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 35%));
+}
+
 /* The question lifted off the page: drawn black on clear, turned white. */
 .stage-question {
   width: 100%;

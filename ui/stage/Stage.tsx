@@ -251,8 +251,12 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   const [cue, setCue] = useState<{ cue: MascotTransient } | null>(null);
   // Larger on a tall screen, exactly as laid out on the laptop's (StageScale): the column is zoomed by it.
   const [stageScale, setStageScale] = useState(() => StageScale.factor(window.innerHeight));
+  const [stageWidth, setStageWidth] = useState(() => window.innerWidth);
   useEffect(() => {
-    const resize = () => setStageScale(StageScale.factor(window.innerHeight));
+    const resize = () => {
+      setStageScale(StageScale.factor(window.innerHeight));
+      setStageWidth(window.innerWidth);
+    };
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
@@ -407,6 +411,11 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   const mode = session?.mode ?? null;
   const showsLesson = mode === "solution" && session?.part != null && session.state.kind === "ready";
   const compact = mode === "solution" || mode === "followUp";
+  // The stage's side column (`Stage.hasSide`): beside the question when the window is at least 1000 pt wide,
+  // `min(440, 34 %)` of it, the question and the work in what is left (36 pt apart).
+  const widthPoints = stageWidth / stageScale;
+  const sideWidth = Math.min(440, 0.34 * widthPoints);
+  const extrasAtSide = session !== null && hasStageExtras(session) && widthPoints >= 1000;
 
   return (
     <PanelHeight.Provider value={panelHeight}>
@@ -421,7 +430,10 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
               aria-label={t("What do you want to do?")}
               onMouseDown={(event) => event.target === event.currentTarget && close()}
             >
-              <div className={`stage-column${compact ? " stage-compact" : ""}`}>
+              <div
+                className={`stage-column${compact ? " stage-compact" : ""}`}
+                style={extrasAtSide ? { width: `min(1272px, calc(100% - ${sideWidth + 36}px))` } : undefined}
+              >
                 {source.kind === "pdf" ? (
                   <QuestionCrop
                     document={source.document}
@@ -440,9 +452,18 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                     onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
                   />
                 ) : (
-                  <ModeView session={session} />
+                  <ModeView session={session} extrasAtSide={extrasAtSide} />
                 )}
               </div>
+              {extrasAtSide && session && (
+                <aside
+                  className="stage-side"
+                  aria-label={t("Formulas")}
+                  style={{ width: sideWidth, maxHeight: window.innerHeight / stageScale - 28 - 16 }}
+                >
+                  <StageExtras session={session} atSide />
+                </aside>
+              )}
               {/* Every stage has the tutor (QuestionOverlay): the sphere, when the mascot is on; the lesson's card. */}
               {(session && mascotOn) || showsLesson ? (
                 <LessonOverlay
@@ -1356,7 +1377,75 @@ function cropMarks(
   return { underlines, penUnderlines, circles, answer, highlights, strikes, pointers, tints };
 }
 
-function ModeView({ session }: { session: QuestionSession }) {
+/** The formulas the solution uses (`FormulaList`): «Formulas», then each one's name small and its formula under it. */
+function FormulaList({ formulas }: { formulas: readonly { name: string; latex: string }[] }) {
+  const t = useT();
+  if (formulas.length === 0) return null;
+  return (
+    <>
+      <h3 className="stage-formulas-title">{t("Formulas")}</h3>
+      {formulas.map((formula) => (
+        <div key={formula.name + formula.latex} className="stage-formula">
+          <span>{formula.name}</span>
+          <MathView latex={formula.latex} display />
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** The formulas at hand once a mode is chosen (`formulasAtHand`): none for a similar question. */
+function formulasAtHand(session: QuestionSession) {
+  const solution = session.solution;
+  const part = session.part;
+  if (!solution || !part || session.mode === null || session.mode === "variant") return [];
+  return formulasFor(solution, part);
+}
+
+/**
+ * What goes beside the question before the solution is open (QuestionOverlay's `hasSideContent` and `sideColumn`):
+ * the drawing, the formulas at hand and the curve. The solution lays these out in its own columns.
+ */
+function hasStageExtras(session: QuestionSession | null): boolean {
+  if (!session || session.mode === null || session.mode === "solution" || session.mode === "variant") return false;
+  return (
+    (session.showsGraph && Boolean(session.sideGraph) && session.hasGraph) ||
+    session.showsIllustration ||
+    formulasAtHand(session).length > 0
+  );
+}
+
+/** The stage's side column (`sideColumn`), or the same under the work when the window has no room for it. */
+function StageExtras({ session, atSide }: { session: QuestionSession; atSide: boolean }) {
+  const graph = session.sideGraph;
+  return (
+    <>
+      {session.showsIllustration && <IllustrationPanel session={session} />}
+      <div className="stage-formulas">
+        <FormulaList formulas={formulasAtHand(session)} />
+      </div>
+      {session.showsGraph && graph && session.hasGraph && (
+        <div className={atSide ? "stage-side-graph" : undefined}>
+          <CurveGraph graph={graph} session={session} height={atSide ? 280 : 260} />
+        </div>
+      )}
+    </>
+  );
+}
+
+function ModeView({ session, extrasAtSide = false }: { session: QuestionSession; extrasAtSide?: boolean }) {
+  const extras = hasStageExtras(session) && !extrasAtSide;
+  const view = <ModeContent session={session} />;
+  if (!extras) return view;
+  return (
+    <>
+      {view}
+      <StageExtras session={session} atSide={false} />
+    </>
+  );
+}
+
+function ModeContent({ session }: { session: QuestionSession }) {
   const t = useT();
   const state = session.state;
   if (session.needsTranscript) return <TranscriptRequest session={session} />;
@@ -1640,13 +1729,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
           {(formulas.length > 0 || side) && (
             <aside className="stage-formulas" aria-label={t("Formulas")}>
               {stacked && <SideFigures session={session} show="rest" />}
-              {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
-              {formulas.map((formula) => (
-                <div key={formula.name + formula.latex} className="stage-formula">
-                  <span>{formula.name}</span>
-                  <MathView latex={formula.latex} display />
-                </div>
-              ))}
+              <FormulaList formulas={formulas} />
               {side && !stacked && <SideFigures session={session} />}
             </aside>
           )}
