@@ -1,7 +1,7 @@
 // Port of LearnLayerTests/NegatedRelationsTests.swift and the reading checks of AlineaGridTests.swift
 // (aReadingThatLostARelationOrARootIsNotShown) @ 5701363. LaTeX PDFs set ≠, ∉, ⊄ … as a long solidus (U+0338) over
 // the sign, which the text layer keeps apart, often before the sign: read as the one symbol, so the relation check does
-// not count a second «=» (CDI3 1(a) «(t̸= 0)»). The solidus is built from its code, so no tool can drop it.
+// not count a second «=» (CDI3 1(a) «(t\u0338= 0)»). The solidus is built from its code, so no tool can drop it.
 
 import { describe, expect, it } from "vitest";
 import { negatedRelations, normalizeText } from "../problems/textNormalizer";
@@ -32,7 +32,7 @@ describe("negated relations", () => {
   });
 
   it("keep CDI3 1(a)'s relations once composed", () => {
-    // Raw, «t̸=» counted as a second «=»: every reading was set aside and the crop shown.
+    // Raw, «t\u0338=» counted as a second «=»: every reading was set aside and the crop shown.
     const composed = normalizeText(cdi3Line);
     expect(composed).toContain("(t≠ 0)");
     expect(PDFQuestionReading.lostRelation(composed, cdi3Reading)).toBeNull();
