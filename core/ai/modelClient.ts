@@ -177,6 +177,35 @@ export class ReportedUsage {
   completionTokens = 0;
   cachedTokens = 0;
   totalTokens = 0;
+  /** True when no count came back (a stream closed before its usage chunk) and the counts are the app's guess. */
+  estimated = false;
+
+  static readonly promptBaseTokens = 250;
+  static readonly tokensPerImage = 1_000;
+
+  /** A stream closed before its last chunk carries no usage, though the provider still bills it. The prompt is guessed
+   * from the pictures sent (a fast-model reading of one picture is about 1 250 prompt tokens) and the reply from its
+   * length, so the call is not logged as free (@ 5701363). */
+  static estimate(requestBody: string | null, replyCharacters: number): ReportedUsage {
+    const images = (requestBody ?? "").split('"type":"image_url"').length - 1;
+    const usage = new ReportedUsage();
+    usage.promptTokens = ReportedUsage.promptBaseTokens + Math.max(images, 0) * ReportedUsage.tokensPerImage;
+    usage.completionTokens = Math.max(Math.trunc(replyCharacters / 3), 1);
+    usage.totalTokens = usage.promptTokens + usage.completionTokens;
+    usage.estimated = true;
+    return usage;
+  }
+
+  /** The top-level `model` of a chat-completion body: the model the provider says answered, which a server may have
+   * swapped for the one asked for. Null when absent. */
+  static servedModel(responseBody: string): string | null {
+    try {
+      const model = (JSON.parse(responseBody) as { model?: unknown }).model;
+      return ServedModel.cleaned(typeof model === "string" ? model : null);
+    } catch {
+      return null;
+    }
+  }
 
   get billedTokens(): number {
     return this.totalTokens > 0 ? this.totalTokens : this.promptTokens + this.completionTokens;
@@ -220,6 +249,35 @@ export class ReportedUsage {
     return usage;
   }
 }
+
+/** The model a reply names, against the one asked for (`ServedModel` in UsageLog.swift @ 5701363). */
+export const ServedModel = {
+  cleaned(id: string | null | undefined): string | null {
+    const value = id?.trim() ?? "";
+    return value === "" ? null : value;
+  },
+
+  /** Lower case, without a variant (":batch") or a date ("-20261001", "-2026-10-01"). */
+  normalized(id: string): string {
+    let value = id.toLowerCase();
+    const colon = value.indexOf(":");
+    if (colon >= 0) value = value.slice(0, colon);
+    return value.replace(/-(\d{8}|\d{4}-\d{2}-\d{2})$/u, "");
+  },
+
+  /** Another model than the one asked for; a dated or variant id is the same model. */
+  differs(requested: string, served: string | null | undefined): boolean {
+    const named = ServedModel.cleaned(served);
+    return named !== null && ServedModel.normalized(requested) !== ServedModel.normalized(named);
+  },
+
+  /** The id to price a reply with no reported cost: the served model when it is another one and the price table
+   * knows it, else the requested one. */
+  pricing(requested: string, served: string | null | undefined): string {
+    const named = ServedModel.cleaned(served);
+    return named !== null && ServedModel.differs(requested, named) && ModelPrice.knows(named) ? named : requested;
+  },
+};
 
 // MARK: Messages (OpenRouterMessages.swift)
 
@@ -317,8 +375,8 @@ export interface ModelEnvironment {
   /** One forced refresh after a 401 from the API; null when the session is gone. */
   forceRefresh(): Promise<string | null>;
   fetch: StreamingFetch;
-  /** Every reply's usage, billed or not, for the cost ledger. */
-  record?(usage: ReportedUsage, model: string): void;
+  /** Every reply's usage, billed or not, for the cost ledger; `served`: the model the reply names, when it does. */
+  record?(usage: ReportedUsage, model: string, served?: string | null): void;
   /** Called once per request, with what is about to be sent (for the request log). */
   note?(schemaName: string, model: string, streamed: boolean): void;
 }
@@ -545,8 +603,10 @@ export class ModelClient {
       } catch {
         // No usage in an unreadable body.
       }
+      const served = ReportedUsage.servedModel(data);
+      const pricing = ServedModel.pricing(this.options.model, served);
       // A cut-off reply was still billed, so it counts before the throw.
-      this.environment.record?.(usage, this.options.model);
+      this.environment.record?.(usage, this.options.model, served);
       if (finishReasonOfResponse(data) === "length") {
         let partial = "";
         try {
@@ -557,7 +617,7 @@ export class ModelClient {
         throw new ModelError({ kind: "cutOff", tokens: maxTokens, partial });
       }
       try {
-        return { content: contentOfResponse(data), cost: usage.billed(this.options.model) };
+        return { content: contentOfResponse(data), cost: usage.billed(pricing) };
       } catch (error) {
         if (error instanceof EmptyReply) throw new ModelError({ kind: "emptyReply", raw: error.raw });
         throw error;
@@ -581,7 +641,9 @@ export class ModelClient {
     request: CompleteRequest,
   ): Promise<Completion> {
     const watch = new IdleWatch(timeout, request.signal);
-    const running = new ReportedUsage();
+    let running = new ReportedUsage();
+    let served: string | null = null;
+    let content = "";
     let started = false;
     try {
       const response = await this.perform(url, headers, body, fromGateway, watch);
@@ -590,7 +652,6 @@ export class ModelClient {
         throw new ModelError(classifiedFailure(response.status, data, fromGateway));
       }
       started = true;
-      let content = "";
       let finish: string | null = null;
       let done = false;
       let toolCallSettled = false;
@@ -614,6 +675,8 @@ export class ModelClient {
           const choice = chunk.choices?.[0];
           if (typeof choice?.finish_reason === "string") finish = choice.finish_reason;
           if (chunk.usage) running.merge(ReportedUsage.from(chunk.usage));
+          const named = ServedModel.cleaned(typeof chunk.model === "string" ? chunk.model : null);
+          if (named) served = named;
           const thought = choice?.delta?.reasoning;
           if (content === "" && typeof thought === "string" && thought !== "") request.onThinking?.();
           const piece = choice?.delta?.content;
@@ -658,16 +721,21 @@ export class ModelClient {
         throw new ModelError({ kind: "stream", reason: "ended before the reply was finished" });
       }
       if (content === "") throw new ModelError({ kind: "stream", reason: "empty" });
-      return { content, cost: running.billed(this.options.model) };
+      return { content, cost: running.billed(ServedModel.pricing(this.options.model, served)) };
     } finally {
       watch.stop();
-      // A stream that breaks or is rejected was still billed. Count it on the way out.
-      if (started) this.environment.record?.(running, this.options.model);
+      // A stream that breaks or is rejected was still billed. Count it on the way out; closed before the usage chunk
+      // (the question was whole, or the stream broke), it is billed all the same.
+      if (started) {
+        if (running.cost === null && running.billedTokens === 0) running = ReportedUsage.estimate(body, content.length);
+        this.environment.record?.(running, this.options.model, served);
+      }
     }
   }
 }
 
 interface SSEChunk {
+  model?: unknown;
   choices?: { delta?: { content?: unknown; reasoning?: unknown }; finish_reason?: unknown }[];
   usage?: unknown;
   error?: { message?: unknown };

@@ -189,6 +189,12 @@ const rates: readonly (readonly [string, ModelRate])[] = (
  * than zero. `:batch` variants are half the list price.
  */
 export const ModelPrice = {
+  /** The price table has this model (else it is priced as the strong model). */
+  knows(model: string): boolean {
+    const id = model.toLowerCase();
+    return rates.some(([key]) => id.includes(key));
+  },
+
   rate(model: string): ModelRate {
     const id = model.toLowerCase();
     const match = rates.find(([key]) => id.includes(key))?.[1] ?? sonnet55;
