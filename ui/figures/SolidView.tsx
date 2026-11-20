@@ -147,7 +147,8 @@ export function SolidView({
     let pitch = 0.35;
     // The camera looks down a little (1.6 up, 9 back) and backs off only as far as needed for all of the figure, its
     // axes included, to stay in frame at any turn (Figure3DFraming @ 5701363); it moves when the student tilts it.
-    const corners = Figure3DFraming.corners([
+    // The figure's own points (not the corners of a box around it, which stand well off a round solid).
+    const corners = Figure3DFraming.sample([
       ...built.pieces.flatMap((part) => [...(part.mesh?.positions ?? []), ...part.line]),
       ...built.axes.flatMap((axis) => [axis.start, axis.end]),
     ]);

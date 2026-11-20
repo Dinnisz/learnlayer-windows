@@ -48,3 +48,25 @@ describe("Figure3DFraming", () => {
     ).toContainEqual([1, 2, 3]);
   });
 });
+
+describe("Figure3DFraming.sample", () => {
+  it("keeps finite points, at most the limit, spread over all of them", () => {
+    const points: FramingPoint[] = Array.from({ length: 5000 }, (_, i) => [i, 0, 0]);
+    const sampled = Figure3DFraming.sample([...points, [Number.NaN, 0, 0]], 1000);
+    expect(sampled).toHaveLength(1000);
+    expect(sampled[0]).toEqual([0, 0, 0]);
+    expect(sampled[999]![0]).toBeGreaterThan(4990);
+    expect(Figure3DFraming.sample(points.slice(0, 10))).toHaveLength(10);
+  });
+
+  it("frames a round solid closer than the box around it", () => {
+    const ring: FramingPoint[] = Array.from({ length: 360 }, (_, i) => [
+      3 * Math.cos((i * Math.PI) / 180),
+      0,
+      3 * Math.sin((i * Math.PI) / 180),
+    ]);
+    const own = Figure3DFraming.distance(ring, 0.35, 1.25);
+    const boxed = Figure3DFraming.distance(Figure3DFraming.corners(ring), 0.35, 1.25);
+    expect(own).toBeLessThan(boxed);
+  });
+});

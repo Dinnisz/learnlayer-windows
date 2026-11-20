@@ -10,6 +10,14 @@ const baseDistance = 10;
 export const Figure3DFraming = {
   baseDistance,
 
+  /** At most `limit` of the finite points, spread evenly (the framing looks at every one at 24 turns). */
+  sample(points: readonly FramingPoint[], limit = 2000): FramingPoint[] {
+    const finite = points.filter((p) => p.every(Number.isFinite));
+    if (finite.length <= limit) return finite;
+    const step = finite.length / limit;
+    return Array.from({ length: limit }, (_, index) => finite[Math.floor(index * step)]!);
+  },
+
   /** The corners of an axis-aligned box around `points` (finite ones only); empty when there are none. */
   corners(points: readonly FramingPoint[]): FramingPoint[] {
     const low = [Infinity, Infinity, Infinity];

@@ -357,7 +357,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-20 — Câmara do 3D no Windows
 
 - **Dúvida:** o Mac põe a câmara a 10 unidades, de frente, e afasta-a só quanto preciso para a figura caber em qualquer volta (`Figure3DFraming`, vista com proporção 1,25). O Windows tem a câmara a (0, 1,6, 9), um pouco acima, e figuras escaladas para 4 unidades.
-- **Escolha:** a mesma conta (24 voltas de 15°, 8 % de folga, campo de 35°), com a distância de base do Windows (√(1,6² + 9²)), a inclinação da câmara somada à da figura e a proporção da própria vista; recalculada quando o aluno inclina a figura.
+- **Escolha:** a mesma conta (24 voltas de 15°, 8 % de folga, campo de 35°), sobre os pontos da própria figura (até 2000) em vez dos cantos da caixa de cada peça (num sólido redondo esses cantos ficam muito fora dele e a figura saía pequena; visto no browser), com a distância de base do Windows (√(1,6² + 9²)), a inclinação da câmara somada à da figura e a proporção da própria vista; recalculada quando o aluno inclina a figura.
 - **Porquê:** a vista do Windows tem a proporção que a coluna lhe dá, não a do palco do Mac; com a base do Windows nada muda numa figura que já cabia.
 
 ## 2026-11-20 — O que do porte de 5701363 fica de fora
