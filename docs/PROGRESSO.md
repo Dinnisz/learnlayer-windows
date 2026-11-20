@@ -137,11 +137,11 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 
 ## Próximo (2026-11-19, depois do teste ao vivo)
 Ramo `fix/windows-live-test` (PR #3). Feito hoje: créditos em vez de pedidos (patch do Mac), barras de scroll escondidas e arrasto com o rato (`ui/dragScroll.ts`), sublinhado com fade, focos dos passos no recorte certo, menu sempre visível sob uma pergunta alta. Referência: `COMO-FUNCIONA-MAC.md` e `MODELOS-E-PLANOS.md` (enviados pelo Dinis, em Transferências).
-Falta, por esta ordem (secção 7 de `COMO-FUNCIONA-MAC.md`):
-1. **Ctrl + Windows não começa a ouvir** no PC do Dinis (clicar na mascote funciona). Ler `%APPDATA%\LearnLayer\talk-debug.jsonl` depois de ele carregar nas teclas: se não houver linhas, o evento não sai do hook; se houver, ver `session`/`recording`.
-2. Pergunta compacta: ceder abaixo de 14 pt só o que o trabalho precisa (`panelHeight`), piso 11 pt.
-3. `FitToHeight` no palco com piso 1 (normal) e 0,83 (compacto), não 0,78.
-4. Colunas da resolução só com figura (contas de `ExplanationLayout` 5.6); sem figura, coluna lateral do palco (≥ 1000·s, `min(440·s, 34 %)`).
-5. Ordem da coluna direita e caixa de figura com separadores; resposta longa (> 36 caracteres) por cima.
-6. Sublinhados, lente e focos também na pergunta tipografada a partir do ecrã (`RenderedUnderlines`, `RenderedQuestion.focus`).
-7. Alturas mínimas do trabalho (160/80) e o espaço 16/8.
+Feito em 2026-11-20 (mesmo ramo): pergunta compacta cede só o que a resolução mede (`ui/stage/questionScale.ts`, piso 11 pt); `FitToHeight` do palco com piso 1 / 0,83 (`stageFitFloor`); colunas pelas contas do Mac (`core/problems/explanationLayout.ts`, testes portados); sem figura, fórmulas numa coluna lateral quando a janela tem ≥ 1000 pt; resposta curta no topo da coluna das palavras, longa (> 36) por cima; numa só coluna a figura vai por cima dos passos e o gráfico (260) depois; sublinhados e anel de foco na pergunta tipografada a partir do ecrã (`ui/stage/typesetUnderlines.ts`).
+
+Falta:
+1. **Ctrl + Windows não começa a ouvir** no PC do Dinis (clicar na mascote funciona). Em 2026-11-20 ainda não havia `%APPDATA%\LearnLayer\talk-debug.jsonl`: carregar nas teclas com uma pergunta aberta e ler o ficheiro; se não houver linhas, o evento não sai do hook; se houver, ver `session`/`recording`.
+2. Caixa de figura com separadores («3D»/«Figure» | «Graph»): o `COMO-FUNCIONA-MAC.md` descreve-a, mas a cópia de referência do Swift não a tem (ver `docs/DECISOES.md`); fica para quando a referência for atualizada.
+3. Lente (`QuoteLoupe`) e focos de blocos de texto na pergunta tipografada; resolução compacta (janela ≤ 420 pt) com figura ao lado dos passos (200) e gráfico de 150.
+4. Coluna lateral do palco antes de abrir a resolução (fórmulas/ilustração ao lado da pergunta nos modos pista e tentar).
+5. Alturas mínimas do trabalho (160/80) e o espaço 16/8: confirmar no palco.
