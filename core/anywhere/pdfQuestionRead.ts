@@ -10,8 +10,13 @@
 import { linesOf, Rects, selectionIn, type PageText, type Rect } from "../pdf/page";
 import { headingBounds, questionsOn, type ExamQuestion } from "../problems/questionDetector";
 import { normalizeText } from "../problems/textNormalizer";
+import type { PassageLine } from "../problems/passage";
+import { passageLinesOf } from "../pdf/passageLines";
 import { characterCount } from "./questionBand";
 import type { LocatorLine } from "./questionRegion";
+
+/** Lower case and without accents, as `.diacriticInsensitive` with `lowercased()` (spaces and marks kept). */
+const folded = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 const { minX, maxX, minY, maxY, midY } = Rects;
 
@@ -308,17 +313,103 @@ export const PDFQuestionReading = {
     return text === "" ? null : text;
   },
 
-  /** The page's text before the question; when that is short (the passage starts on the page before), the previous
-   * page's text in front of it. */
+  /**
+   * The source text a reading question is about (a poem, an excerpt, «Texto A»): what the page prints before the
+   * question, with the page before in front when this page introduces no text before it (the passage on the left
+   * page of a spread), from the last «Leia…»/«Texto B»/«Read…» line on (the first one for a question about both
+   * texts), with the exam's line numbers («5\tNum trem de praça…») and without page footers. At most `supportLimit`
+   * characters (`PDFQuestionRead.supportText(before:on:)` @ 5701363).
+   */
   supportText(question: ExamQuestion, page: PageText): string | null {
-    const own = PDFQuestionReading.textBefore(question.label, question.text, page.text) ?? "";
-    let support = own;
-    if (characterCount(own) < 400 && page.index > 0) {
+    const ownLines = PDFQuestionReading.linesBefore(question, passageLinesOf(page));
+    let lines = ownLines;
+    // The passage is on the page before (the left page of a spread) when this page introduces none before the
+    // question and has little text above it: only the group's earlier questions.
+    const ownLength = characterCount(ownLines.map((line) => line.text).join("\n"));
+    if (!ownLines.some((line) => PDFQuestionReading.isSourceStart(line.text)) && ownLength < 1_500 && page.index > 0) {
       const previous = page.page(page.index - 1);
-      if (previous) support = previous.text + "\n" + own;
+      if (previous) lines = [...passageLinesOf(previous), ...ownLines];
     }
-    const trimmed = normalizeText(support).trim();
-    return trimmed === "" ? null : trimmed;
+    return PDFQuestionReading.supportTextFrom(lines, question.groupText);
+  },
+
+  /**
+   * The most a support text holds: the Cesário Verde stanzas with their notes are ~1 500 characters, a long prose
+   * excerpt ~4 000. About 1 500 input tokens at most.
+   */
+  supportLimit: 6_000,
+
+  /** `lines` (what the page prints before a question) as the support text sent with `question`. */
+  supportTextFrom(lines: readonly PassageLine[], question: string): string | null {
+    const kept = lines.filter((line) => !PDFQuestionReading.isPageFooter(line.text) && line.text.trim() !== "");
+    const starts = kept.flatMap((line, index) => (PDFQuestionReading.isSourceStart(line.text) ? [index] : []));
+    const first = (PDFQuestionReading.refersToSeveralTexts(question) ? starts[0] : starts[starts.length - 1]) ?? 0;
+    let numbering = true;
+    let text = "";
+    for (const line of kept.slice(first)) {
+      const trimmed = line.text.trim();
+      // The exam numbers the passage's lines; its source and notes after it are not lines of it.
+      if (PDFQuestionReading.isSourceEnd(trimmed)) numbering = false;
+      const row = numbering && line.number !== null ? `${line.number}\t${trimmed}` : trimmed;
+      text += (text === "" ? "" : "\n") + row;
+    }
+    const normalized = normalizeText(text).trim();
+    if (normalized === "") return null;
+    // No «Leia…» line: the nearest text to the question. With one: the passage from its start.
+    const characters = Array.from(normalized);
+    if (characters.length <= PDFQuestionReading.supportLimit) return normalized;
+    return starts.length === 0
+      ? characters.slice(-PDFQuestionReading.supportLimit).join("")
+      : characters.slice(0, PDFQuestionReading.supportLimit).join("");
+  },
+
+  /** The page's lines before `question`: up to its first line (or its label at the start of a line). */
+  linesBefore(question: ExamQuestion, lines: readonly PassageLine[]): PassageLine[] {
+    const firstLine = (question.text.split(/\r\n|\n|\r/u)[0] ?? "").trim();
+    const escaped = question.label.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    const label = new RegExp("^" + escaped + "[.)]\\s", "u");
+    const head = Array.from(firstLine).slice(0, 20).join("");
+    const starts = lines.findIndex((line) => {
+      const text = line.text.trim();
+      if (characterCount(firstLine) >= 20 && text.startsWith(head)) return true;
+      return label.test(text);
+    });
+    return lines.slice(0, starts < 0 ? lines.length : starts);
+  },
+
+  /**
+   * «Leia o texto…», «Leia as cinco estrofes seguintes», «Texto B», «Read the text below», «Lê o excerto»: where a
+   * source text is introduced.
+   */
+  isSourceStart(line: string): boolean {
+    const lowered = folded(line.trim());
+    return (
+      /^(leia|le|leiam|read|lisez|lee|atente|observe|considere) (o|a|os|as|com|atentamente|the|this|these|carefully|le|la|les|el)\b/.test(
+        lowered,
+      ) ||
+      /^(texto|text|documento|document|excerto|extract|passage|poema|poem) ?([a-d1-4]|i{1,3}|iv)?\.?$/.test(lowered)
+    );
+  },
+
+  /** The source under a passage («Cesário Verde, Cânticos do Realismo, …, p. 123.») or its notes: no line numbers. */
+  isSourceEnd(line: string): boolean {
+    return (
+      /^(NOTAS?|Notas?|Notes?|Vocabul[aá]rio|Glossary)(?![\p{L}\p{N}_])/u.test(line) || /,\s*(p|pp)\.\s*\d/.test(line)
+    );
+  },
+
+  /** «Prova 639.V1/1.ª F. • Página 6/ 14», «Page 3 of 12», «– 4 –»: not part of the text. */
+  isPageFooter(line: string): boolean {
+    return /^Prova \d|P[aá]gina \d+\s*\/\s*\d+|^Page \d+ of \d+|^[–-]?\s*\d{1,2}\s*[–-]?$|^\d+\s*\/\s*\d+$/.test(
+      line.trim(),
+    );
+  },
+
+  /** «os textos A e B», «Texto A», «both texts»: the question is about more than the last passage. */
+  refersToSeveralTexts(question: string): boolean {
+    return /\btextos\b|\btexto a\b|\btext a\b|\bboth (texts|passages|poems)\b|\btwo (texts|passages|poems)\b|\bdois (textos|poemas)\b/.test(
+      folded(question),
+    );
   },
 
   /** What the page prints before the question: up to its first line, or else up to its label. */

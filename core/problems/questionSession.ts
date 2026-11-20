@@ -24,6 +24,7 @@ import type { FastTranscriptionReader } from "./fastTranscription";
 import type { ExamQuestion } from "./questionDetector";
 import { decodeBlocks, Transcriptions, type QuestionTranscription } from "./questionTranscription";
 import { keepingSpelling } from "./printedSpelling";
+import { PDFQuestionReading } from "../anywhere/pdfQuestionRead";
 import { SolutionLanguageCheck, tutorLanguageOf } from "./solutionLanguageCheck";
 import { QuestionText } from "./textChecks";
 import { RouteDecision, type RouteOutcome } from "./routeDecision";
@@ -204,14 +205,54 @@ export const QuestionSessionRules = {
     return pattern.test(folded);
   },
 
-  /** The passage to send with a question that refers to a text; null when it is empty or already in the question. */
+  /**
+   * The passage to send with a question that refers to a text; null when it is empty or already in the question. At
+   * most `PDFQuestionReading.supportLimit` characters, the nearest.
+   */
   supportPassage(support: string | null | undefined, question: string): string | null {
     const passage = (support ?? "").trim();
     if (passage === "" || !QuestionSessionRules.refersToText(question)) return null;
     const characters = Array.from(passage);
-    const tail = characters.slice(-12_000).join("");
+    const tail = characters.slice(-PDFQuestionReading.supportLimit).join("");
     if (question.includes(Array.from(tail).slice(0, 200).join(""))) return null;
     return tail;
+  },
+
+  /** A poem's numbers are verses («v. 14»), prose's lines («l. 12»): the answer cites them as the exam does. */
+  supportHeading(verse: boolean): string {
+    return (
+      "\n\nTexto de apoio (the source text printed before the question, with the exam's " +
+      (verse
+        ? 'verse numbers: it is a poem, so cite verses as "v. 14" or "vv. 11-12", never "linha"; '
+        : 'line numbers: cite lines as "l. 12" or "ll. 3-5"; ') +
+      "the question is about it, so answer from it and quote it):\n"
+    );
+  },
+
+  /**
+   * Whether a support text is a poem: named so («poema», «estrofes», «versos»), or its numbered lines are short
+   * verses (a prose excerpt's run the width of the page, ~80 characters and more).
+   */
+  isVerse(support: string, question: string): boolean {
+    const folded = foldDiacritics(question + "\n" + Array.from(support).slice(0, 400).join(""));
+    if (/\b(poema|poemas|estrofes?|versos?|soneto|quadra|poem|stanzas?|verses?|sonnet)\b/.test(folded)) return true;
+    const numbered = QuestionSessionRules.passageLinesOfSupport(support)
+      .filter((line) => line.number !== null)
+      .map((line) => Array.from(line.text).length)
+      .sort((a, b) => a - b);
+    if (numbered.length < 4) return false;
+    return numbered[Math.floor(numbered.length / 2)]! <= 55;
+  },
+
+  /** «5\tNum trem de praça…» back to a numbered line. */
+  passageLinesOfSupport(support: string): PassageLine[] {
+    return support.split("\n").map((line) => {
+      const tab = line.indexOf("\t");
+      const number = tab >= 0 ? line.slice(0, tab) : "";
+      return /^[+-]?\d+$/.test(number)
+        ? { number: Number(number), text: line.slice(tab + 1) }
+        : { number: null, text: line };
+    });
   },
 
   /** The part answering `label`: "3(iii)" also matches a part the model called "(iii)" or "iii". */
@@ -433,10 +474,15 @@ export class QuestionSession {
     this.isPicture = init.isPicture ?? false;
     this.supportText = init.supportText ?? null;
     this.timing = init.timing ?? null;
+    // A reading question's quotes are looked for in the poem or excerpt it is sent with, then in its own words.
+    const support = QuestionSessionRules.supportPassage(this.supportText, init.question.groupText);
     this.passageLines =
       init.passageLines && init.passageLines.length > 0
         ? init.passageLines
-        : init.question.groupText.split("\n").map((text) => ({ number: null, text }));
+        : [
+            ...(support ? QuestionSessionRules.passageLinesOfSupport(support) : []),
+            ...init.question.groupText.split("\n").map((text) => ({ number: null, text })),
+          ];
     this.services = services;
     this.subjectHint = services.subject ?? null;
     // `sendsMaterial` is kept by the Mac for the evaluation log only.
@@ -498,8 +544,11 @@ export class QuestionSession {
    */
   get requestText(): string {
     let text = this.question.groupText;
-    const support = QuestionSessionRules.supportPassage(this.supportText, this.question.groupText);
-    if (support) text += "\n\nTexto de apoio (printed before the question):\n" + support;
+    // A comparison already gets every printed line below.
+    const printsSource =
+      RouteDecision.comparesTwoTexts(this.question.groupText) && this.passageLines.some((line) => line.number !== null);
+    const support = this.supportSection;
+    if (!printsSource && support !== null) text += support;
     if (this.timing) text += `\n\nFor ${this.question.label}: ` + TimingDiagrams.description(this.timing);
     if (this.transcript) text += "\n\nTranscript of the recording, as given by the student:\n" + this.transcript;
     if (RouteDecision.comparesTwoTexts(this.question.groupText) && this.passageLines.length > 0) {
@@ -515,6 +564,20 @@ export class QuestionSession {
       solveLabels.length !== partLabels.length || solveLabels.some((label, index) => label !== partLabels[index]);
     if (this.solvesClickedPartOnly || differ) text += QuestionSessionRules.onlyPartNote(this.question.label);
     return text;
+  }
+
+  /** The source text a reading question is about, as it is sent: null when the question needs none. */
+  get supportSection(): string | null {
+    const passage = QuestionSessionRules.supportPassage(this.supportText, this.question.groupText);
+    if (passage === null) return null;
+    return (
+      QuestionSessionRules.supportHeading(QuestionSessionRules.isVerse(passage, this.question.groupText)) + passage
+    );
+  }
+
+  /** The exercise as a follow-up question gets it: with the poem or excerpt it reads. */
+  get exerciseWithSource(): string {
+    return this.question.groupText + (this.supportSection ?? "");
   }
 
   /** A listening item whose recording and transcript are not in the question. */

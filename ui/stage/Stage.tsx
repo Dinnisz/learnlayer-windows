@@ -2350,7 +2350,7 @@ function followUpContext(session: QuestionSession, asked: string): string {
   const part = session.part;
   return TextHelpContext.followUp({
     studentQuestion: asked,
-    exercise: session.question.groupText,
+    exercise: session.exerciseWithSource,
     partLabel: part?.label ?? "",
     partAsks: part?.asks ?? "",
     partAnswer: part?.answer.text ?? "",
@@ -3129,7 +3129,7 @@ function SelectionAskPill({ session }: { session: QuestionSession }) {
   const ask = () => {
     const part = session.part;
     const request = picked.ask.helpRequest({
-      exercise: session.question.groupText,
+      exercise: session.exerciseWithSource,
       partLabel: part?.label ?? "",
       partAsks: part?.asks ?? "",
       partAnswer: part?.answer.text ?? "",

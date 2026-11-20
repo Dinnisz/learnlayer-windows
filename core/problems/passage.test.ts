@@ -37,8 +37,26 @@ describe("Passage", () => {
       { number: null, text: "uma linha" },
       { number: null, text: "e as pilastras6 de ferro" },
     ]);
-    expect(chunk.text).toBe("uma linha e as pilastras de ferro");
-    expect(chunk.footnotes).toEqual([{ offset: "uma linha e as pilastras".length, number: 6 }]);
+    expect(chunk.text).toBe("uma linha\ne as pilastras de ferro");
+    expect(chunk.footnotes).toEqual([{ offset: "uma linha\ne as pilastras".length, number: 6 }]);
+  });
+
+  // Port of PassageTests.passageChunkKeepsOneVersePerLine @ 5701363: the «Texto de apoio» shows a poem as printed,
+  // one verse per line, its numbers at the start of theirs.
+  it("keeps one verse per line", () => {
+    const chunk = passageChunk([
+      { number: 10, text: "Reluz, viscoso, o rio; apressam-se as obreiras5;" },
+      { number: 11, text: "E num cardume negro, hercúleas, galhofeiras," },
+      { number: 12, text: "Correndo com firmeza, assomam as varinas." },
+    ]);
+    expect(chunk.text.split("\n")).toEqual([
+      "Reluz, viscoso, o rio; apressam-se as obreiras;",
+      "E num cardume negro, hercúleas, galhofeiras,",
+      "Correndo com firmeza, assomam as varinas.",
+    ]);
+    expect(chunk.markers).toEqual([{ offset: 0, number: 10 }]);
+    // A quote over two verses is still found.
+    expect(locate("galhofeiras, Correndo com firmeza", chunk.text)).not.toBeNull();
   });
 
   it("digits inside words and separate numbers stay", () => {
@@ -69,9 +87,12 @@ describe("Passage", () => {
     const answer = evidenceAnswer(part, source);
     expect(answer).not.toBeNull();
     expect(answer!.chunks).toHaveLength(1);
-    expect(answer!.chunks[0]!.text).toBe("Era uma vez um mar desbocadamente alto naquela tarde, e a praia calava-se.");
+    // One line of the exam per line (the Mac's `PassageChunk` @ 5701363), the word split at a line end joined again.
+    expect(answer!.chunks[0]!.text).toBe(
+      "Era uma vez um mar\ndesbocadamente alto naquela tarde,\ne a praia calava-se.",
+    );
     expect(answer!.located.map((item) => item.index)).toEqual([0]);
-    expect(charactersIn(answer!.chunks[0]!.text, answer!.located[0]!.range)).toBe("mar desbocadamente alto");
+    expect(charactersIn(answer!.chunks[0]!.text, answer!.located[0]!.range)).toBe("mar\ndesbocadamente alto");
     expect(answer!.paragraphs).toEqual([{ text: "O mar é exagerado.", uses: [0] }]);
     expect(evidenceAnswer({ ...part, evidence: [part.evidence![1]!] }, source)).toBeNull();
   });
