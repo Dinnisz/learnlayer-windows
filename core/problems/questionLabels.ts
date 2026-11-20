@@ -14,9 +14,11 @@ export const QuestionLabels = {
 
   /**
    * "(1)   1.   2)   1o)   1.º)" followed by text, or alone on its line before a sentence.
-   * An ordinal mark after the number ("o", "º", "°") is how many Portuguese papers number items.
+   * An ordinal mark after the number ("o", "º", "°") is how many Portuguese papers number items. A label with its
+   * marks glued on («6)(3.0)Seja», the text layer of a TeX paper) is one too.
    */
-  topPattern: /^[ \t]*(\(?(\d{1,2})(?:[.)]|\.?[ºo°]\)))(?:[ \t]+(?=[\p{L}([])|[ \t]*\n(?=[ \t]*\p{Lu}))/gmu,
+  topPattern:
+    /^[ \t]*(\(?(\d{1,2})(?:[.)]|\.?[ºo°]\)))(?:[ \t]+(?=[\p{L}([])|[ \t]*\n(?=[ \t]*\p{Lu})|(?<=\))(?=\(\d{1,2}(?:[.,]\d{1,2})?\)))/gmu,
 
   /**
    * An ordinal label ("2o)") that sits after other text on its line, as the second column's
@@ -35,6 +37,8 @@ export const QuestionLabels = {
   /** A name with arguments ("g(x)", "f'(x)") or anything math-like. */
   isShortFormula(text: string): boolean {
     if (QuestionLabels.isMathLike(text)) return true;
+    // "|x|": an absolute value is a formula, however few letters it has.
+    if (text.split("|").length - 1 >= 2) return true;
     const characters = Array.from(text);
     return characters.some(
       (character, index) =>

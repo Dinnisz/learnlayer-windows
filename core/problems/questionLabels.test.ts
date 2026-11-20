@@ -23,6 +23,19 @@ describe("QuestionLabels", () => {
     expect(labelsMatching(QuestionLabels.topPattern, text)).toEqual(["1o)", "12º)", "3.º)", "4o)", "5)"]);
   });
 
+  it("a label with its score glued on is found", () => {
+    // MAP2 23/24 (a TeX paper): the score glued to the label, words glued to each other.
+    const text = [
+      "1)(4.0)EmR4,considereU=L(f(1;0;0; 1);(1; 1;0; 1)g)",
+      "2)(4.0)DetermineafactorizaÁ„oCRdamatriz2",
+      "5) (2.0)SejaA2M3 3(R)talquepA( )=(2 )(3 )2.",
+      "6)(3.0)SejaA2Mn n(R)talque A R, tr(A2)=tr(A3)",
+      "7)(x) não é um rótulo",
+      "3)2 nem isto",
+    ].join("\n");
+    expect(labelsMatching(QuestionLabels.topPattern, text)).toEqual(["1)", "2)", "5)", "6)"]);
+  });
+
   it("a second-column ordinal after text on the same line is found", () => {
     const text = "1o) texto da primeira coluna   2o) texto da segunda coluna";
     expect(labelsMatching(QuestionLabels.midLineOrdinalExpression, text)).toEqual(["2o)"]);

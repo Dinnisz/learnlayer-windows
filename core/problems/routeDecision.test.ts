@@ -212,6 +212,20 @@ describe("TextLayerMath", () => {
     "Mostre que C= ]0,1[∪{2} não é um intervalo.",
     "Mostre que o número √2 é irracional.",
     "Considere B= {1, 2, 3} n e indique o máximo.",
+    // TeX fonts with no Unicode map (MAP2 23/24, CDI ficha cap. 3): symbols read as other characters.
+    "5) (2.0) Seja A 2 M3fl3 (R) tal que pA () = (2 ) (3 )2. Escreva A1 como combinaÁ„o linear das",
+    "6) (3.0) Seja A 2 Mnfln (R) tal que A  R, tr (A2) = tr (A3) e tr (A3) = tr (A4). Mostre que",
+    "(d) x3/2ex",
+    "6. Calcule f 0(x), sendo a função f definida pela expressão:",
+    "1. Esboce o gráfico de uma função contínua f : R ! R tal que f (0) = f (1) = 0",
+    "(d) psenh(1/x2)",
+    "2. f (x) = x, x 6= 0",
+    // The same MAP2 page as Preview's Accessibility (PDFKit) gives it: words glued, no space around «2».
+    "5) (2.0)SejaA2M3 3(R)talquepA( )=(2 )(3 )2. EscrevaA 1 comocombinaÁ„olineardas matrizesA2;AeI,ecalculeopolinÛmiocaracterÌsticodeA 1",
+    "6)(3.0)SejaA2Mn n(R)talque A R, tr(A2)=tr(A3)",
+    "6)(3.0)SejaA2Mn n(R)talque A R, tr(A2)=tr(A3) e tr(A3)=tr(A4). Mostreque\ntrA=carA:\n4",
+    // CDI3 2024/25 Q2(b) as Preview gives it: the primes of y'' and y' read as zeros.
+    "(b) (7,0 val.) y00 + 2y0 + 10y= tet + 1.",
   ])("spots a garbled text layer: %s", (text) => {
     expect(TextLayerMath.looksGarbled(text)).toBe(true);
   });
@@ -224,6 +238,14 @@ describe("TextLayerMath", () => {
     "Considere a função f(x) = x + 1 e o conjunto A = {1, 2, 3}.",
     "Calcule o valor de g(2) e de g(3), onde g(t) = 3t − 1.",
     "Seja x ∈ R tal que x > 0 e y = 2x + 1.",
+    "SÃO PAULO E LISBOA: a população cresceu 2 % ao ano.",
+    "Sabe-se que tg α = 3/4 e que α ∈ ]π, 3π/2[. Determine o valor exato de cos α.",
+    "Escreva uma função par(n) que devolva True se o número for par.",
+    "Considere a função f, de domínio ℝ, definida por f(x) = x² − 6x + 5.",
+    "Seja A ∈ M3×3(R) uma matriz invertível.",
+    // Zeros after a capital or in a number are not primes.
+    "O circuito começa no estado S00 e passa a S01 com o relógio.",
+    "A massa é de 100 kg e o custo de 2000 euros.",
   ])("leaves prose with simple maths alone: %s", (text) => {
     expect(TextLayerMath.looksGarbled(text)).toBe(false);
   });
