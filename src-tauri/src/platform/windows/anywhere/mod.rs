@@ -226,7 +226,7 @@ fn read_click(app: &AppHandle, x: i32, y: i32) {
         // The picture first: it is quick, and drawn by the window itself, so the stage never gets in it.
         let picture = target.as_ref().and_then(capture::picture);
         if let (Some(window), Some(picture)) = (target.as_ref(), picture.as_ref()) {
-            payload.lines = ocr::lines(picture);
+            payload.lines = ocr::lines_with_gutter_labels(picture);
             payload.window = Some(WindowPayload {
                 x: f64::from(window.frame.left),
                 y: f64::from(window.frame.top),

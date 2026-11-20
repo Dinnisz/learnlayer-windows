@@ -67,6 +67,130 @@ pub fn lines(picture: &Picture) -> Vec<Line> {
     read(picture).unwrap_or_default()
 }
 
+/// `lines`, with the question numbers set apart in a margin column read again (`QuestionRegion.withGutterLabels` @
+/// 5701363): numbers far left of the text ("1." beside "Um corpo de massa…") are often dropped by the page-wide
+/// reading, which kept one of them. The strip of that margin is read on its own, enlarged, and each number found there
+/// is added as a line of its own. Without them a question runs on into the next.
+pub fn lines_with_gutter_labels(picture: &Picture) -> Vec<Line> {
+    let lines = lines(picture);
+    let Some((left, right)) = gutter_strip(&lines) else {
+        return lines;
+    };
+    let Some(strip) = enlarged_strip(picture, left, right, GUTTER_ZOOM) else {
+        return lines;
+    };
+    let found = read(&strip).unwrap_or_default();
+    with_gutter_labels(lines, &found, left, GUTTER_ZOOM)
+}
+
+/// How much larger the margin strip is read.
+const GUTTER_ZOOM: i32 = 3;
+
+/// A question's number standing alone: "1.", "12)", "(3)".
+fn is_lone_number(text: &str) -> bool {
+    let text = text.trim();
+    let body = text.strip_prefix('(').unwrap_or(text);
+    let Some(last) = body.chars().last() else { return false };
+    if last != '.' && last != ')' {
+        return false;
+    }
+    let digits = &body[..body.len() - 1];
+    (1..=2).contains(&digits.len()) && digits.chars().all(|c| c.is_ascii_digit())
+}
+
+/// The margin to read again, in the picture's pixels (left, right): from just left of the lone numbers to just left
+/// of the text column on the first one's row. None when there is no lone number or no text beside it.
+fn gutter_strip(lines: &[Line]) -> Option<(f64, f64)> {
+    let lone: Vec<&Line> = lines.iter().filter(|line| is_lone_number(&line.text)).collect();
+    let first = lone.first()?;
+    let first_right = first.rect.x + first.rect.width;
+    let first_mid = first.rect.y + first.rect.height / 2.0;
+    let text_start = lines
+        .iter()
+        .filter(|line| {
+            line.rect.x > first_right + 4.0
+                && (line.rect.y + line.rect.height / 2.0 - first_mid).abs() < first.rect.height
+        })
+        .map(|line| line.rect.x)
+        .fold(f64::INFINITY, f64::min);
+    if !text_start.is_finite() {
+        return None;
+    }
+    let left = (lone.iter().map(|line| line.rect.x).fold(f64::INFINITY, f64::min) - 8.0).max(0.0);
+    let right = text_start - 2.0;
+    (right - left >= 8.0).then_some((left, right))
+}
+
+/// The lines read on the enlarged strip that are question numbers, brought back to the picture's pixels and added
+/// where no line is yet.
+fn with_gutter_labels(mut lines: Vec<Line>, found: &[Line], left: f64, zoom: i32) -> Vec<Line> {
+    let zoom = f64::from(zoom);
+    for line in found {
+        let text = line.text.trim();
+        if !is_lone_number(text) {
+            continue;
+        }
+        let rect = PixelRect {
+            x: left + line.rect.x / zoom,
+            y: line.rect.y / zoom,
+            width: line.rect.width / zoom,
+            height: line.rect.height / zoom,
+        };
+        let inner = PixelRect {
+            x: rect.x + 1.0,
+            y: rect.y + 1.0,
+            width: (rect.width - 2.0).max(0.0),
+            height: (rect.height - 2.0).max(0.0),
+        };
+        if lines.iter().any(|other| intersects(&other.rect, &inner)) {
+            continue;
+        }
+        lines.push(Line {
+            text: text.to_string(),
+            rect,
+        });
+    }
+    lines
+}
+
+fn intersects(a: &PixelRect, b: &PixelRect) -> bool {
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+}
+
+/// The picture's columns `left..right`, the whole height, `zoom` times larger (each pixel the blend of its four
+/// nearest, so the digits stay smooth for the OCR); None for an empty strip.
+fn enlarged_strip(picture: &Picture, left: f64, right: f64, zoom: i32) -> Option<Picture> {
+    let x0 = (left.floor() as i32).clamp(0, picture.width);
+    let x1 = (right.ceil() as i32).clamp(0, picture.width);
+    let source_width = x1 - x0;
+    if source_width <= 0 || picture.height <= 0 || zoom <= 0 {
+        return None;
+    }
+    let width = source_width * zoom;
+    let height = picture.height * zoom;
+    let at = |x: i32, y: i32, channel: usize| -> f64 {
+        let x = x.clamp(0, source_width - 1) + x0;
+        let y = y.clamp(0, picture.height - 1);
+        f64::from(picture.bgra[((y * picture.width + x) * 4) as usize + channel])
+    };
+    let mut bgra = Vec::with_capacity((width * height * 4) as usize);
+    let scale = f64::from(zoom);
+    for row in 0..height {
+        let sy = (f64::from(row) + 0.5) / scale - 0.5;
+        let (y, fy) = (sy.floor() as i32, sy - sy.floor());
+        for column in 0..width {
+            let sx = (f64::from(column) + 0.5) / scale - 0.5;
+            let (x, fx) = (sx.floor() as i32, sx - sx.floor());
+            for channel in 0..4 {
+                let top = at(x, y, channel) * (1.0 - fx) + at(x + 1, y, channel) * fx;
+                let bottom = at(x, y + 1, channel) * (1.0 - fx) + at(x + 1, y + 1, channel) * fx;
+                bgra.push((top * (1.0 - fy) + bottom * fy).round().clamp(0.0, 255.0) as u8);
+            }
+        }
+    }
+    Some(Picture { width, height, bgra })
+}
+
 fn read(picture: &Picture) -> windows::core::Result<Vec<Line>> {
     let Some(engine) = engine() else { return Ok(Vec::new()) };
     let limit = OcrEngine::MaxImageDimension()
@@ -113,6 +237,82 @@ fn read(picture: &Picture) -> windows::core::Result<Vec<Line>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn line(text: &str, x: f64, y: f64, width: f64) -> Line {
+        Line {
+            text: text.to_string(),
+            rect: PixelRect {
+                x,
+                y,
+                width,
+                height: 20.0,
+            },
+        }
+    }
+
+    #[test]
+    fn question_numbers_alone_are_told_from_other_lines() {
+        for text in ["1.", "12)", "(3)", " 4. "] {
+            assert!(is_lone_number(text), "{text}");
+        }
+        for text in ["123.", "1", "a)", "1.5", "Um corpo", "(.", ""] {
+            assert!(!is_lone_number(text), "{text}");
+        }
+    }
+
+    #[test]
+    fn the_margin_strip_runs_from_the_numbers_to_the_text() {
+        let lines = vec![
+            line("1.", 40.0, 100.0, 14.0),
+            line("Um corpo de massa m desliza num plano inclinado.", 90.0, 98.0, 600.0),
+            line("Determine a aceleração do corpo.", 90.0, 300.0, 400.0),
+        ];
+        assert_eq!(gutter_strip(&lines), Some((32.0, 88.0)));
+        // No lone number, or no text on its row: nothing to read again.
+        assert_eq!(gutter_strip(&lines[1..]), None);
+        assert_eq!(gutter_strip(&[line("1.", 40.0, 100.0, 14.0)]), None);
+    }
+
+    #[test]
+    fn numbers_found_in_the_margin_are_added_where_no_line_is() {
+        let lines = vec![
+            line("1.", 40.0, 100.0, 14.0),
+            line("Um corpo de massa m desliza num plano inclinado.", 90.0, 98.0, 600.0),
+            line("Determine a aceleração do corpo.", 90.0, 300.0, 400.0),
+        ];
+        // Read on the strip from x = 32, three times larger: "1." again, and the "2." the page-wide reading dropped.
+        let found = vec![
+            line("1.", 24.0, 300.0, 42.0),
+            line("2.", 24.0, 900.0, 42.0),
+            line("x", 24.0, 1200.0, 20.0),
+        ];
+        let merged = with_gutter_labels(lines, &found, 32.0, 3);
+        assert_eq!(merged.len(), 4);
+        let added = &merged[3];
+        assert_eq!(added.text, "2.");
+        assert_eq!(
+            added.rect,
+            PixelRect {
+                x: 40.0,
+                y: 300.0,
+                width: 14.0,
+                height: 20.0 / 3.0
+            }
+        );
+    }
+
+    #[test]
+    fn the_strip_is_enlarged_whole() {
+        let picture = Picture {
+            width: 4,
+            height: 2,
+            bgra: (0..4 * 2 * 4).map(|value| value as u8).collect(),
+        };
+        let strip = enlarged_strip(&picture, 1.0, 3.0, 3).unwrap();
+        assert_eq!((strip.width, strip.height), (6, 6));
+        assert_eq!(strip.bgra.len(), 6 * 6 * 4);
+        assert!(enlarged_strip(&picture, 3.0, 3.0, 3).is_none());
+    }
 
     #[test]
     fn a_picture_larger_than_the_engine_takes_is_read_smaller_and_brought_back() {

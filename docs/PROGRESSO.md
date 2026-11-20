@@ -147,7 +147,7 @@ Feito depois (2026-11-20, à tarde): auditoria 3D (`Figure3DAuditTests`: respost
 
 Falta do porte de 5701363 (por ordem de valor):
 - Leitura antecipada: a ordem nova (páginas seguintes antes das anteriores) e a memória dos PDFs clicados (`PrereadMemory`) estão portadas; falta ligá-la à interface (o Windows ainda não lê nada à frente). Os tempos da resolução (modelo a pensar, 180 s sem streaming) já estavam.
-- Números de pergunta numa margem à esquerda, perdidos pelo OCR da página (`QuestionRegion.withGutterLabels`: o Mac volta a ler a faixa da margem ampliada); no Windows é uma segunda leitura do OCR do Windows, no Rust.
+- Ver ao vivo os números de pergunta numa margem (`ocr::lines_with_gutter_labels`, porte de `QuestionRegion.withGutterLabels`: a faixa da margem lida outra vez, três vezes maior): testado só com testes do Rust.
 - Fora do Windows: Sparkle, DMG, Pix2Text e a leitura local do Mac (Vision), painel de administração e códigos de promoção (backend).
 
 Falta:
