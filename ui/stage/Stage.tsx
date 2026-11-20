@@ -15,7 +15,9 @@ import {
 } from "react";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
 import { compactStageHeight, FitToHeight, stageFitFloor } from "./FitToHeight";
-import { questionScale } from "./questionScale";
+import { questionScale, StageGeometry } from "./questionScale";
+import { ExplanationLayout } from "@core/problems/explanationLayout";
+import { LatexText } from "@core/math/latexText";
 import { springDuration, springEasing, Springs } from "../styles/springs";
 import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
@@ -1497,11 +1499,82 @@ function TryView({ session }: { session: QuestionSession }) {
   );
 }
 
+/** An element's width in its own pixels, kept as it changes (0 until it is laid out). */
+function useWidth<T extends HTMLElement>(): [(element: T | null) => void, number] {
+  const [width, setWidth] = useState(0);
+  const observer = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((element: T | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!element) return;
+    const measure = () => setWidth(Math.round(element.clientWidth));
+    observer.current = new ResizeObserver(measure);
+    observer.current.observe(element);
+    measure();
+  }, []);
+  return [ref, width];
+}
+
+/**
+ * The solution's columns (QuestionOverlay with ExplanationLayout): words and figures side by side only when there is
+ * a figure, a graph or a drawing, by the Mac's sums; without one, the formulas go in the stage's side column when the
+ * window has room for it (≥ 1000 pt, `min(440, 34 %)`, the work at most 720 beside it), else after the steps.
+ */
+function solutionColumns(
+  width: number,
+  hasFigure: boolean,
+  hasFormulas: boolean,
+): { style: React.CSSProperties | undefined; figureColumn: boolean; compactWindow: boolean } {
+  const compactWindow = stageHeight() <= compactStageHeight;
+  const style = columnsStyle(width, hasFigure, hasFormulas);
+  const figureColumn = style !== undefined && hasFigure;
+  return { style, figureColumn, compactWindow };
+}
+
+/**
+ * The answer on top, the whole width (`answerIsAbove`): in one column it heads it anyway; beside a figure (or in a
+ * compact window) only a typeset answer longer than 36 characters goes above; otherwise it heads the column of words.
+ */
+function answerIsAbove(part: Part, columns: ReturnType<typeof solutionColumns>): boolean {
+  if (!columns.style) return true;
+  if (!columns.figureColumn && !columns.compactWindow) return false;
+  const latex = part.answerLatex;
+  if (!latex || LatexText.isProse(latex)) return false;
+  return [...LatexText.unicode(latex)].length > 36;
+}
+
+function columnsStyle(width: number, hasFigure: boolean, hasFormulas: boolean): React.CSSProperties | undefined {
+  if (width <= 0) return undefined;
+  const compactWindow = stageHeight() <= compactStageHeight;
+  const margin = StageGeometry.edge(compactWindow);
+  const windowWidth = width + 2 * margin;
+  const columns = ExplanationLayout.make({
+    windowWidth,
+    margin,
+    stackedWidth: width,
+    hasFigure,
+    compact: compactWindow,
+  });
+  if (columns.arrangement === "sideBySide" && columns.figureWidth !== null) {
+    return {
+      gridTemplateColumns: `${columns.textWidth}px ${columns.figureWidth}px`,
+      columnGap: columns.gutter,
+    };
+  }
+  if (!hasFigure && hasFormulas && windowWidth >= 1000) {
+    const side = Math.min(440, 0.34 * windowWidth);
+    const work = Math.min(720, width - side - 36);
+    return { gridTemplateColumns: `${work}px ${side}px`, columnGap: 36, justifyContent: "space-between" };
+  }
+  return undefined;
+}
+
 function SolutionView({ session }: { session: QuestionSession }) {
   const t = useT();
   const part = session.part;
   const solution = session.solution;
   const panelHeight = useContext(PanelHeight);
+  const [bodyRef, bodyWidth] = useWidth<HTMLDivElement>();
 
   // The steps come in one after another the first time the solution is shown.
   useEffect(() => {
@@ -1530,6 +1603,9 @@ function SolutionView({ session }: { session: QuestionSession }) {
       session.expectsFigure ||
       (session.showsGraph && session.hasGraph) ||
       session.showsIllustration);
+  const columns = solutionColumns(bodyWidth, side, formulas.length > 0);
+  const above = evidence !== null || answerIsAbove(part, columns);
+  const answer = <AnswerBox part={part} language={session.notationLanguage} />;
   return (
     <FitToHeight floor={stageFitFloor(stageHeight())} onNatural={panelHeight.measured}>
       <div className="stage-panel stage-solution">
@@ -1539,14 +1615,15 @@ function SolutionView({ session }: { session: QuestionSession }) {
             <MathText text={solution.figure} />
           </details>
         )}
-        <AnswerBox part={part} language={session.notationLanguage} />
+        {above && answer}
         <ExplainEntry session={session} />
         {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
           <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
         )}
         {session.isConfirming && <p className="stage-progress">{t("Checking the result…")}</p>}
-        <div className="stage-solution-body">
+        <div className="stage-solution-body" ref={bodyRef} style={columns.style}>
           <div className="stage-steps">
+            {!above && answer}
             {evidence ? (
               <EvidenceView evidence={evidence} />
             ) : (

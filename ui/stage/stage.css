@@ -391,16 +391,17 @@
   text-align: left;
 }
 
+/* The columns are ExplanationLayout's (set inline by the solution): one column until it has measured itself, or
+   when the window is narrow or there is no figure; words then figures when side by side. */
 .stage-solution-body {
-  display: flex;
-  gap: 32px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
 }
 
 .stage-steps {
-  flex: 1 1 0;
-  min-width: 300px;
-  max-width: 720px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -509,8 +510,6 @@
 }
 
 .stage-formulas {
-  flex: 1 0 min(520px, 42%);
-  max-width: 640px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -799,20 +798,6 @@
 
   .stage-strike::after {
     background: CanvasText;
-  }
-}
-
-@media (max-width: 760px) {
-  .stage-solution-body {
-    flex-direction: column;
-  }
-
-  .stage-steps,
-  .stage-formulas {
-    flex: none;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
   }
 }
 
