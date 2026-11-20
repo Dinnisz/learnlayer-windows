@@ -359,3 +359,9 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** o Mac põe a câmara a 10 unidades, de frente, e afasta-a só quanto preciso para a figura caber em qualquer volta (`Figure3DFraming`, vista com proporção 1,25). O Windows tem a câmara a (0, 1,6, 9), um pouco acima, e figuras escaladas para 4 unidades.
 - **Escolha:** a mesma conta (24 voltas de 15°, 8 % de folga, campo de 35°), com a distância de base do Windows (√(1,6² + 9²)), a inclinação da câmara somada à da figura e a proporção da própria vista; recalculada quando o aluno inclina a figura.
 - **Porquê:** a vista do Windows tem a proporção que a coluna lhe dá, não a do palco do Mac; com a base do Windows nada muda numa figura que já cabia.
+
+## 2026-11-20 — O que do porte de 5701363 fica de fora
+
+- **Dúvida:** parte das mudanças do Mac em 5701363 depende de peças que o Windows não tem.
+- **Escolha:** ficam de fora, com a razão: `hasLostScripts`, `hasRootIndex` e `textIsFlattened` (o Windows mostra sempre o recorte do PDF no caminho do Alt-clique num PDF, e o modelo lê as imagens; não há pergunta tipografada a partir do PDF para estas verificações protegerem); `FormulaReader`, `FormulaConfidence`, `FormulaCleanup`, `LocalQuestionReader` e o avanço da leitura local (Pix2Text e Vision do Mac); `VectorFigure` (figuras redesenhadas a partir dos traços do PDF); a leitura antecipada ao trazer um PDF para a frente (o Windows não recebe aviso da janela da frente; depois do primeiro clique o PDF fica em memória, `lastPDF`); o `UsageLog` (o servidor guarda o gasto); `StageScale` nas fontes (o palco do Windows faz zoom à coluna inteira); `ChoiceKeys` (ver acima).
+- **Porquê:** portá-las sem as peças de que dependem seria código sem efeito; quando o Windows tiver um caminho de transcrição do PDF, as verificações de relações já portadas (`lostRelation`, `isMinorRelationShortfall`) são o ponto de partida.
