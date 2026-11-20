@@ -359,10 +359,29 @@ function root(
   return (a + b) / 2;
 }
 
-function intervals(text: string): [number, number][] {
+/** "[0, 4]", "]-2; 5[", and "0 ≤ x ≤ 4" ("0 <= x <= 4", "0 \le x \le 4") as a question writes them. */
+export function intervals(text: string): [number, number][] {
   const normalised = text.replace(/−/g, "-").replace(/–/g, "-");
+  const pattern = /[[\](]\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*[[\])]/g;
+  return [...pairs(normalised, pattern), ...chainedIntervals(normalised)];
+}
+
+/**
+ * "a ≤ x ≤ b" (or with <, <=, ⩽, \le, \leq, \lt): the interval between the bounds
+ * (`FunctionGraph.chainedIntervals` @ 5701363).
+ */
+export function chainedIntervals(text: string): [number, number][] {
+  const below = String.raw`(?:<=|≤|⩽|<|\\leqslant|\\leq|\\le|\\lt)`;
+  const number = String.raw`(-?\d+(?:[.,]\d+)?)`;
+  return pairs(
+    text,
+    new RegExp(number + String.raw`\s*` + below + String.raw`\s*[A-Za-z]\s*` + below + String.raw`\s*` + number, "g"),
+  );
+}
+
+function pairs(text: string, pattern: RegExp): [number, number][] {
   const result: [number, number][] = [];
-  for (const match of normalised.matchAll(/[[\](]\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*[[\])]/g)) {
+  for (const match of text.matchAll(pattern)) {
     const low = parseNumber(match[1]!);
     const high = parseNumber(match[2]!);
     if (Number.isFinite(low) && Number.isFinite(high)) result.push([low, high]);

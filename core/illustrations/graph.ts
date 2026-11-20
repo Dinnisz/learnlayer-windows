@@ -4,7 +4,7 @@
 import { asciiSubscripts, evaluate, tryParseExpression, variables, type Expression } from "../math/expression";
 import type { Part } from "../problems/problemSolution";
 import type { SignTable } from "../problems/signTable";
-import { FunctionGraph } from "./functionGraph";
+import { chainedIntervals, FunctionGraph } from "./functionGraph";
 
 /** A point on the curve, shown from `step` onward. */
 export interface GraphMark {
@@ -528,6 +528,22 @@ function domain(text: string, table: SignTable | null): [number, number] {
 
 /** "[0, 4]" or "]-2; 5[" as the question writes the domain. */
 function interval(text: string): [number, number] | null {
+  const bracketed = bracketInterval(text);
+  if (bracketed) return bracketed;
+  // "0 ≤ x ≤ 4": the shortest such interval in the question (`FunctionPlot.interval(in:)` @ 5701363).
+  const normalised = text.replace(/−/g, "-").replace(/–/g, "-");
+  const chained = chainedIntervals(normalised)
+    .filter(([low, high]) => high > low)
+    .reduce<[number, number] | null>(
+      (best, item) => (!best || item[1] - item[0] < best[1] - best[0] ? item : best),
+      null,
+    );
+  if (!chained) return null;
+  const pad = Math.max(0.5, (chained[1] - chained[0]) * 0.05);
+  return [chained[0] - pad, chained[1] + pad];
+}
+
+function bracketInterval(text: string): [number, number] | null {
   const match = /[[\]]\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*[[\]]/.exec(text);
   if (!match) return null;
   const low = Number(match[1]!.replace(",", "."));
