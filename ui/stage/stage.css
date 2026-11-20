@@ -45,7 +45,14 @@
   width: min(1272px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  /* Stage.gap: 16 from the question to the work (8 in a compact window, at most 420 high). */
+  gap: 16px;
+}
+
+@media (max-height: 420px) {
+  .stage-column {
+    gap: 8px;
+  }
 }
 
 /* The stage's side column (QuestionOverlay's `sideColumn`): beside the question in a wide window, with its own
