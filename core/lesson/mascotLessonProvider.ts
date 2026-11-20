@@ -283,17 +283,19 @@ export class MascotLessonProvider {
     const fallback = LessonRequests.fallback(request);
     let tooWeak = false;
     try {
-      const completion = await this.services.client({ model: LessonRequests.modelID(request) }).complete({
-        system: MascotLessonPrompt.system(request.language),
-        user: LessonRequests.userText(request),
-        images: LessonRequests.images(request),
-        schemaName: "lesson",
-        schema: MascotLessonPrompt.schema,
-        maxTokens: MascotLessonPrompt.maxTokens,
-        timeout: 60,
-        ...(signal ? { signal } : {}),
-        onContent: (content) => reader.read(content).forEach((beat) => feed.append(beat)),
-      });
+      const completion = await this.services
+        .client({ model: LessonRequests.modelID(request), continuesExplanation: true })
+        .complete({
+          system: MascotLessonPrompt.system(request.language),
+          user: LessonRequests.userText(request),
+          images: LessonRequests.images(request),
+          schemaName: "lesson",
+          schema: MascotLessonPrompt.schema,
+          maxTokens: MascotLessonPrompt.maxTokens,
+          timeout: 60,
+          ...(signal ? { signal } : {}),
+          onContent: (content) => reader.read(content).forEach((beat) => feed.append(beat)),
+        });
       const whole = MascotLessons.decode(completion.content);
       const last = reader.read(completion.content, true);
       // Nothing is being said yet: a reply short of a lesson, or one that skips a step, is Sonnet's to give.
@@ -331,15 +333,17 @@ export class MascotLessonProvider {
     let lastError: unknown = new LessonFailure("unreadable");
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       try {
-        const completion = await this.services.client({ model: LessonRequests.modelID(request) }).complete({
-          system: MascotLessonPrompt.system(request.language),
-          user: LessonRequests.userText(request),
-          images: LessonRequests.images(request),
-          schemaName: "lesson",
-          schema: MascotLessonPrompt.schema,
-          maxTokens: MascotLessonPrompt.maxTokens,
-          timeout: 60,
-        });
+        const completion = await this.services
+          .client({ model: LessonRequests.modelID(request), continuesExplanation: true })
+          .complete({
+            system: MascotLessonPrompt.system(request.language),
+            user: LessonRequests.userText(request),
+            images: LessonRequests.images(request),
+            schemaName: "lesson",
+            schema: MascotLessonPrompt.schema,
+            maxTokens: MascotLessonPrompt.maxTokens,
+            timeout: 60,
+          });
         const lesson = LessonRequests.sanitize(request, MascotLessons.decode(completion.content));
         // One beat is not a lesson: ask once more, and play what came back only if the second try is no better.
         if (lesson.beats.length < MascotLessons.minimumBeats && attempt + 1 < attempts) {

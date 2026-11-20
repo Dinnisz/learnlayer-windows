@@ -407,6 +407,10 @@ export interface ModelOptions {
   sortsByLatency?: boolean;
   /** Optional `X-Request-Id`. */
   requestId?: string | null;
+  /** A follow-up call inside an explanation already under way (the stronger model confirming, the mascot's lesson):
+   * the server lets it run a little past the plan's limit, so an explanation is not cut off halfway
+   * (`X-LearnLayer-Continuation`, `OpenRouterClient.continuesExplanation` @ 5701363). */
+  continuesExplanation?: boolean;
 }
 
 export interface CompleteRequest {
@@ -452,6 +456,7 @@ export class ModelClient {
       usesLocalKey: false,
       sortsByLatency: true,
       requestId: null,
+      continuesExplanation: false,
       ...options,
     };
   }
@@ -530,7 +535,7 @@ export class ModelClient {
   }
 
   private async send(request: CompleteRequest): Promise<Completion> {
-    const { model, usesLocalKey, routeArea, routeName, routeHasFigure, requestId } = this.options;
+    const { model, usesLocalKey, routeArea, routeName, routeHasFigure, requestId, continuesExplanation } = this.options;
     const transport = await this.environment.transport("chat", usesLocalKey);
     if (transport.bearer === "") throw new ModelError({ kind: "signedOut" });
     this.environment.note?.(request.schemaName, model, request.onContent !== undefined);
@@ -544,6 +549,7 @@ export class ModelClient {
       if (routeName) headers["X-LearnLayer-Route"] = routeName;
       if (routeHasFigure !== null) headers["X-LearnLayer-Figure"] = routeHasFigure ? "1" : "0";
       headers["X-LearnLayer-Purpose"] = "chat";
+      if (continuesExplanation) headers["X-LearnLayer-Continuation"] = "1";
     }
     if (requestId) headers["X-Request-Id"] = requestId;
     const fromGateway = transport.kind === "backend";

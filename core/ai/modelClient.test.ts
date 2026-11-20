@@ -227,6 +227,30 @@ describe("the request", () => {
     );
   });
 
+  // OpenRouterClient.continuesExplanation @ 5701363: the server lets such a call run 10 % past the plan's limit.
+  it("says when a call continues an explanation already under way, only through the API", async () => {
+    const api = scriptedAPI([
+      { status: 200, body: completion("{}") },
+      { status: 200, body: completion("{}") },
+    ]);
+    await new ModelClient(api.environment, {
+      model: "deepseek/deepseek-v4.1-flash",
+      continuesExplanation: true,
+    }).complete(request);
+    await new ModelClient(api.environment, { model: "deepseek/deepseek-v4.1-flash" }).complete(request);
+    expect(api.requests[0]!.headers["X-LearnLayer-Continuation"]).toBe("1");
+    expect(api.requests[1]!.headers["X-LearnLayer-Continuation"]).toBeUndefined();
+    const local = scriptedAPI([{ status: 200, body: completion("{}") }], {
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      bearer: "sk-or-local",
+      kind: "local",
+    });
+    await new ModelClient(local.environment, { model: "google/gemini-3.8-flash", continuesExplanation: true }).complete(
+      request,
+    );
+    expect(local.requests[0]!.headers["X-LearnLayer-Continuation"]).toBeUndefined();
+  });
+
   it("no session and no key is signed out, before anything is sent", async () => {
     const api = scriptedAPI([], { url: "x", bearer: "", kind: "none" });
     const failure = await new ModelClient(api.environment, { model: "m" })

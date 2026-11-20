@@ -288,7 +288,8 @@ export class SolutionProvider {
     const running = this.confirmations.get(id);
     if (running) return running;
     const pass = (async () => {
-      const solution = await this.request(request, model, null, null, null);
+      // A follow-up inside the explanation already shown (the server lets it run a little past the limit).
+      const solution = await this.request(request, model, null, null, null, true);
       await this.services.solutions.store(solution, saved);
       await this.services.escalated.store(true, saved);
       return solution;
@@ -319,6 +320,7 @@ export class SolutionProvider {
     images: readonly Uint8Array[],
     route: SolverRoute | null,
     area: Area | null,
+    continuesExplanation = false,
   ) {
     return this.services.client({
       model,
@@ -326,6 +328,7 @@ export class SolutionProvider {
       routeArea: area,
       routeName: route,
       routeHasFigure: route !== null ? images.length > 0 : null,
+      ...(continuesExplanation ? { continuesExplanation } : {}),
     });
   }
 
@@ -361,6 +364,7 @@ export class SolutionProvider {
     reasoningBudget: number | null,
     route: SolverRoute | null,
     area: Area | null,
+    continuesExplanation = false,
   ): Promise<ProblemSolution> {
     const mock = this.services.mockSolution;
     if (mock) {
@@ -369,7 +373,7 @@ export class SolutionProvider {
     }
     const transcribing = (await this.services.transcribing?.(request.images)) ?? false;
     const reply = await plainSolution(
-      this.client(model, reasoningBudget, request.images, route, area),
+      this.client(model, reasoningBudget, request.images, route, area, continuesExplanation),
       this.options(request, transcribing),
     );
     return restrictedTo(reply.solution, request.labels);
