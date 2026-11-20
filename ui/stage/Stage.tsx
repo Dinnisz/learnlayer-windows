@@ -1938,9 +1938,22 @@ function StepCard({
   const lit = lesson?.step === index;
   const pitfall = lesson?.pitfall?.step === index ? lesson.pitfall : null;
   const [pitfallOpen, setPitfallOpen] = useState(false);
+  // SolutionOverview.row: the step the lesson teaches is open too; the one just come in, or the one the mascot is on,
+  // has its number lit; while a lesson is on another step, this one is dimmed (all but its «Watch out» tag).
+  const open = selected || lit;
+  const numberLit = open || session.revealingStep === index || session.mascotFocusStep === index;
+  const faded = lesson?.step != null && !lit;
+  const quotes = open ? session.verifiedQuotes(index).map((found) => found.quote) : [];
+  const classes = [
+    "stage-step",
+    open ? "selected" : "",
+    numberLit ? "number-lit" : "",
+    lit ? "lesson-lit" : "",
+    faded ? "faded" : "",
+  ].filter((name) => name !== "");
   return (
     <article
-      className={`stage-step${selected ? " selected" : ""}${session.revealingStep === index ? " arriving" : ""}${lit ? " lesson-lit" : ""}`}
+      className={classes.join(" ")}
       onMouseEnter={() => session.hover(index, true)}
       onMouseLeave={() => session.hover(index, false)}
       onClick={interactive ? () => session.select(index) : undefined}
@@ -1963,7 +1976,7 @@ function StepCard({
                 language={session.notationLanguage}
               />
             )}
-            {card.branches && card.branches.length > 0 && (
+            {open && card.branches && card.branches.length > 0 && (
               <div className="stage-branches">
                 {card.branches.map((branch, position) => (
                   <div key={position}>
@@ -1986,6 +1999,14 @@ function StepCard({
         ) : (
           <p className="stage-step-note">
             <NoteText text={part.steps[index] ?? ""} />
+          </p>
+        )}
+        {quotes.length > 0 && (
+          // The data it uses, in the exam's type and the blue, as they stand in the statement (`StepQuotes`).
+          <p className="stage-step-quotes">
+            {quotes.map((quote) => (
+              <span key={quote}>{quote}</span>
+            ))}
           </p>
         )}
         {pitfall && (

@@ -425,24 +425,54 @@
   align-items: start;
 }
 
+/* SolutionOverview (Mac): 4 between the steps, 14 under the answer card. */
 .stage-steps {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 4px;
+}
+
+.stage-steps > .stage-answer {
+  margin-bottom: 10px;
 }
 
 .stage-step {
   display: flex;
-  gap: 14px;
-  padding: 4px 8px 4px 0;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 9px;
   animation: stage-arrive var(--spring-cascade-duration) var(--spring-cascade);
+  transition:
+    background 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
 }
 
-.stage-step:hover,
+/* The open step on white 7 %; the one the lesson teaches in the blue with a blue edge. */
 .stage-step.selected {
-  background: rgb(255 255 255 / 5%);
+  background: rgb(255 255 255 / 7%);
+}
+
+.stage-step.lesson-lit {
+  background: rgb(10 132 255 / 22%);
+  box-shadow: inset 0 0 0 1.5px rgb(10 132 255 / 90%);
+}
+
+/* While a lesson is on another step, this one is dimmed, all but its «Watch out» tag. */
+.stage-step.faded > .stage-step-number,
+.stage-step.faded > .stage-step-body > :not(.stage-pitfall) {
+  opacity: 0.45;
+}
+
+/* The data an open step uses, in the exam's type and the blue, three spaces apart (StepQuotes). */
+.stage-step-quotes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 1.5em;
+  margin: 4px 0 0;
+  font-family: "Times New Roman", serif;
+  font-size: 13px;
+  color: var(--stage-accent);
 }
 
 @keyframes stage-arrive {
@@ -456,18 +486,18 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   margin-top: 1px;
   border-radius: 50%;
-  background: rgb(10 132 255 / 30%);
-  font-size: 14px;
+  background: rgb(10 132 255 / 35%);
+  font-size: 12px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.stage-step.selected .stage-step-number,
-.stage-step.arriving .stage-step-number {
-  background: var(--stage-accent);
+.stage-step.number-lit .stage-step-number {
+  background: rgb(10 132 255 / 90%);
 }
 
 .stage-step-body {
@@ -475,9 +505,15 @@
   flex: 1;
 }
 
+.stage-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .stage-step-body h4 {
-  margin: 2px 0 2px;
-  font-size: 15px;
+  margin: 1px 0 0;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -1068,11 +1104,6 @@
   display: flex;
   gap: 8px;
   margin-top: 8px;
-}
-
-.stage-step.lesson-lit {
-  outline: 2px solid var(--accent, #0a84ff);
-  outline-offset: 2px;
 }
 
 /* The «Watch out» tag (PitfallTag): the theme's one warm colour, for a mistake to avoid, not a wrong answer. */
