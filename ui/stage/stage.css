@@ -833,12 +833,17 @@
   align-items: flex-start;
 }
 
+/* TranscriptionRenderer (Mac): the exam's look, STIX Two Text where it is installed (else the serif Windows has),
+   the body at the stage's reading size (17, 14 once the solution is open), 4 of leading, 6 of margin and 12 between
+   blocks; maths in a line 1.12 × the text, a formula on its own 1.2 × and centred. */
 .stage-typeset {
   position: relative;
   max-width: 720px;
+  padding: 6px;
   color: var(--stage-text, #fff);
-  font-size: 19px;
-  line-height: 1.5;
+  font-family: "STIX Two Text", Cambria, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: calc(1.2em + 4px);
 }
 
 .stage-compact .stage-typeset {
@@ -846,7 +851,15 @@
 }
 
 .stage-typeset p {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
+}
+
+.stage-typeset .katex {
+  font-size: 1.12em;
+}
+
+.stage-typeset .stage-typeset-formula .katex {
+  font-size: 1.2em;
 }
 
 /* A figure of the typeset question, with the open step's spot ringed on it. */
@@ -856,11 +869,12 @@
 
 .stage-typeset-formula {
   display: block;
-  margin: 6px 0 10px;
+  margin: 0 0 12px;
+  text-align: center;
 }
 
 .stage-figure {
-  margin: 8px 0 12px;
+  margin: 0 0 12px;
 }
 
 .stage-figure > canvas {
@@ -869,9 +883,11 @@
 }
 
 .stage-figure figcaption {
-  margin-top: 4px;
+  margin-top: 3px;
+  font-family: var(--font-text);
   font-size: 13px;
-  opacity: 0.75;
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .stage-screen-crop {
