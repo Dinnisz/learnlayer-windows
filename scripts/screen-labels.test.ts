@@ -65,6 +65,7 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     let elsewhereRight = 0;
     const elsewhereMissed: string[] = [];
     const figureless: string[] = [];
+    const scrolledOut: string[] = [];
     for (const name of readdirSync(folder).filter((file) => file.endsWith(".lines.json"))) {
       const page = name.replace(/\.lines\.json$/u, "");
       // "EX-FQA715-p4", or a browser window around it ("EX-FQA715-p4-s300", `scripts/browser-window.mjs`).
@@ -94,8 +95,31 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
       for (const question of questions) {
         // On the words just past its label.
         const label = onPicture(question.labelBounds);
-        // A question whose label is scrolled out of sight is not clicked on it.
-        if (label.y < seenTop || label.y + label.height > height) continue;
+        // A question whose label is scrolled out of sight above: clicked on its first line in sight, it is still
+        // taken, without a label, from the window's top down to the next question.
+        if (label.y < seenTop) {
+          const box = onPicture(question.bounds);
+          const shown = lines
+            .filter((line) => contains(box, centre(line.rect)) && line.rect.y >= seenTop)
+            .sort((a, b) => a.rect.y - b.rect.y)[0];
+          if (shown) {
+            const there = QuestionLocator.locate({
+              image,
+              window: { x: 0, y: 0, width, height },
+              point: centre(shown.rect),
+              lines,
+            });
+            const others = questions.filter(
+              (other) =>
+                other !== question && there?.crops.some((crop) => contains(crop, centre(onPicture(other.labelBounds)))),
+            );
+            scrolledOut.push(
+              `  ${page}: ${question.label} → ${there ? `${there.label ?? "no label"}, y ${Math.round(there.frame.y)}–${Math.round(there.frame.y + there.frame.height)}${others.length ? `, takes in ${others.map((other) => other.label).join(", ")}` : ""}` : "nothing"}`,
+            );
+          }
+          continue;
+        }
+        if (label.y + label.height > height) continue;
         const point = { x: label.x + label.width + 30 * scale, y: label.y + label.height / 2 };
         const region = QuestionLocator.locate({ image, window: { x: 0, y: 0, width, height }, point, lines });
         clicks += 1;
@@ -173,6 +197,8 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     );
     console.log(`${leaks.length} crops taking in another question\n${leaks.join("\n")}`);
     console.log(`${figureless.length} crops with a figure's caption and no figure\n${figureless.join("\n")}`);
+    if (scrolledOut.length > 0)
+      console.log(`${scrolledOut.length} questions with their label scrolled out\n${scrolledOut.join("\n")}`);
     if (drafts.length > 0) console.log(drafts.join("\n"));
   },
   600000,
