@@ -112,11 +112,13 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
             `── ${page} ${question.label}\n${draftText(region.text, region.lines) ?? "(no draft)"}\n·· PDF\n${question.text.trim()}`,
           );
         // What it shows: the question's own area on the page, and no other question's label.
-        // Each line read inside the question's area is in the crop (its middle, give or take a few pixels).
+        // Each line read inside the question's area is in the crop (its middle, give or take a few pixels); the exam's
+        // "– FIM –" is not the question's.
         const bounds = onPicture(question.bounds);
         const left = lines.filter(
           (line) =>
             contains(bounds, centre(line.rect)) &&
+            !QuestionBand.isFooter(line.text) &&
             !region.crops.some((crop) => contains(grown(crop, 6), centre(line.rect))),
         );
         if (left.length > 0)
