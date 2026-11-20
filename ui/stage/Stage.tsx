@@ -1606,6 +1606,9 @@ function SolutionView({ session }: { session: QuestionSession }) {
   const columns = solutionColumns(bodyWidth, side, formulas.length > 0);
   const above = evidence !== null || answerIsAbove(part, columns);
   const answer = <AnswerBox part={part} language={session.notationLanguage} />;
+  // One column with a figure (a narrow window): the figure above the steps, small; the graph and the drawing after
+  // the work, then the formulas.
+  const stacked = side && bodyWidth > 0 && !columns.figureColumn;
   return (
     <FitToHeight floor={stageFitFloor(stageHeight())} onNatural={panelHeight.measured}>
       <div className="stage-panel stage-solution">
@@ -1621,6 +1624,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
           <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
         )}
         {session.isConfirming && <p className="stage-progress">{t("Checking the result…")}</p>}
+        {stacked && <SideFigures session={session} show="figure" />}
         <div className="stage-solution-body" ref={bodyRef} style={columns.style}>
           <div className="stage-steps">
             {!above && answer}
@@ -1634,6 +1638,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
           </div>
           {(formulas.length > 0 || side) && (
             <aside className="stage-formulas" aria-label={t("Formulas")}>
+              {stacked && <SideFigures session={session} show="rest" graphHeight={260} />}
               {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
               {formulas.map((formula) => (
                 <div key={formula.name + formula.latex} className="stage-formula">
@@ -1641,7 +1646,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
                   <MathView latex={formula.latex} display />
                 </div>
               ))}
-              {side && <SideFigures session={session} />}
+              {side && !stacked && <SideFigures session={session} />}
             </aside>
           )}
         </div>
@@ -1661,7 +1666,16 @@ function spaceStepHighlight(session: QuestionSession): string | null {
 }
 
 /** The right column's figures: the one beside the steps (or the drawing on its way), and the solution's curve. */
-function SideFigures({ session }: { session: QuestionSession }) {
+function SideFigures({
+  session,
+  show = "all",
+  graphHeight = 220,
+}: {
+  session: QuestionSession;
+  /** In one column the figure goes above the steps and the rest after them. */
+  show?: "all" | "figure" | "rest";
+  graphHeight?: number;
+}) {
   const lessonFigure3D = useLessonState()?.figure3D ?? null;
   // The point the beat being said rings on the graph (`LessonRun.graphRing`).
   const lessonGraphRing = useLessonState()?.shows.find((show) => LessonShows.isOnGraph(show))?.point ?? null;
@@ -1672,8 +1686,8 @@ function SideFigures({ session }: { session: QuestionSession }) {
   const guided = session.mascotFocusStep;
   const pointer = guided !== null && (questionPlan(session)?.pointer ?? false);
   return (
-    <div className="stage-figures">
-      {figure?.kind === "table" ? (
+    <div className={`stage-figures${show === "figure" ? " stage-figures-above" : ""}`}>
+      {show === "rest" ? null : figure?.kind === "table" ? (
         <div className="stage-figure-fit">
           <SignTableView table={figure.table} />
         </div>
@@ -1695,10 +1709,10 @@ function SideFigures({ session }: { session: QuestionSession }) {
         // The drawing on its way, or why it isn't there (the drawing's own item shows it otherwise).
         <IllustrationPanel session={session} />
       ) : null}
-      {session.showsGraph && graph && session.hasGraph && (
-        <CurveGraph graph={graph} session={session} height={220} ring={lessonGraphRing} />
+      {show !== "figure" && session.showsGraph && graph && session.hasGraph && (
+        <CurveGraph graph={graph} session={session} height={graphHeight} ring={lessonGraphRing} />
       )}
-      {session.showsIllustration && <IllustrationPanel session={session} />}
+      {show !== "figure" && session.showsIllustration && <IllustrationPanel session={session} />}
     </div>
   );
 }

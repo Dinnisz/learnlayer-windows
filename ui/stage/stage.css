@@ -1180,6 +1180,17 @@
   overflow-x: auto;
 }
 
+/* One column (a narrow window): the figure above the steps, small enough for the steps to fit under it (a sign table
+   in 360 wide, a drawing or a space figure 300 wide). */
+.stage-figures-above {
+  margin: 0 0 6px;
+  max-width: 360px;
+}
+
+.stage-figures-above > :not(.stage-figure-fit) {
+  max-width: 300px;
+}
+
 .stage-spinner {
   width: 12px;
   height: 12px;
