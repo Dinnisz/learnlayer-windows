@@ -23,6 +23,8 @@ import { ignoresMissingFigure, partLabelled, type Part, type ProblemSolution } f
 import type { FastTranscriptionReader } from "./fastTranscription";
 import type { ExamQuestion } from "./questionDetector";
 import { decodeBlocks, Transcriptions, type QuestionTranscription } from "./questionTranscription";
+import { keepingSpelling } from "./printedSpelling";
+import { SolutionLanguageCheck, tutorLanguageOf } from "./solutionLanguageCheck";
 import { QuestionText } from "./textChecks";
 import { RouteDecision, type RouteOutcome } from "./routeDecision";
 import { realigned, signTableProblems } from "./signTable";
@@ -405,6 +407,8 @@ export class QuestionSession {
   private solvesClickedPartOnly = false;
   private hasStartedSolve = false;
   private defersConfirmation = false;
+  /** The shown answer mixes languages (`SolutionLanguageCheck`). */
+  private languageMismatch = false;
   private hasStartedStreaming = false;
   private lastParse = -Infinity;
   private controller: AbortController | null = null;
@@ -600,8 +604,13 @@ export class QuestionSession {
     if (listener && this.pendingTranscription !== undefined) this.settleTranscription(this.pendingTranscription);
   }
 
-  private settleTranscription(found: QuestionTranscription | null): void {
+  private settleTranscription(raw: QuestionTranscription | null): void {
     if (this.transcriptionSettled) return;
+    // The page's own spelling: a reading that writes «polinômio» for the printed «polinómio» is put right. A solve's
+    // own transcription (or one streamed) is not checked by the fast reading: its lookalike label («1)» for part l)
+    // is put right here too.
+    const part = this.fastTranscriptionPart;
+    const found = raw && Transcriptions.withLookalikeLabel(keepingSpelling(raw, this.question.groupText), part);
     const listener = this.transcriptionListener;
     if (!listener) {
       if (this.pendingTranscription === undefined) this.pendingTranscription = found;
@@ -637,12 +646,15 @@ export class QuestionSession {
     this.fastController = controller;
     const part = this.fastTranscriptionPart;
     // The app's check is read when a reading comes: it may be set after the question opened.
-    const found = await fast.read(this.images, (reading) => {
+    // Every reading is checked and shown with the part's label set right («1)» read for «l)»).
+    const relabel = (reading: QuestionTranscription) => Transcriptions.withLookalikeLabel(reading, part);
+    const found = await fast.read(this.images, (raw) => {
+      const reading = relabel(raw);
       const reason = Transcriptions.rejection(reading, part, null);
       return reason ?? this.rejectsFastTranscription(reading);
     });
     if (controller.signal.aborted) return;
-    if (found && this.offerFastTranscription(found)) return;
+    if (found && this.offerFastTranscription(relabel(found))) return;
     this.onFastTranscriptionMissed?.();
   }
 
@@ -673,7 +685,8 @@ export class QuestionSession {
   /** A hint needs no verified answer; every other choice does. */
   private confirmIfAnswerWanted(): void {
     if (this.isConfirmed) return;
-    if (this.defersConfirmation && (this.mode === null || this.mode === "hint")) return;
+    // An answer in two languages is on screen from the start (even a hint shows it): replaced at once.
+    if (!this.languageMismatch && this.defersConfirmation && (this.mode === null || this.mode === "hint")) return;
     void this.confirm();
   }
 
@@ -891,6 +904,14 @@ export class QuestionSession {
     ) {
       this.isConfirmed = false;
     }
+    // Written partly in another language than the tutor's (titles in Portuguese under English notes): the stronger
+    // model writes it again, in one language. Only with the tutor's language known (Settings, `services.language`).
+    const tutor = this.services.language?.();
+    this.languageMismatch =
+      tutor !== undefined &&
+      !this.solvedByStrongerModel &&
+      SolutionLanguageCheck.mismatch(solution, tutorLanguageOf(tutor));
+    if (this.languageMismatch) this.isConfirmed = false;
     // A maths or physics answer from a cheaper model whose only checks restate its own formula was never tested.
     if (
       AnswerAudit.needsStrongerModel(
