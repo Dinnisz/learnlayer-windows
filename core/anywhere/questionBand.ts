@@ -55,9 +55,9 @@ const sectionPattern =
 
 /** A page's running footer: its number, "Página 3/16", "3 / 16", "– FIM –". Windows' OCR reads the slash of
  * "Página 4/ 13" as ",'" or as a 1 ("Página 71 15"): any of those between the two numbers will do. It also splits
- * an exam's footer in two, and "Prova 635/1.ª F." (the exam's code) is a footer on its own. */
+ * an exam's footer in two, and "Prova 635/1.ª F." (the exam's code), or "Prova" alone, is a footer on its own. */
 const footerPattern =
-  /^\s*(?:prova\s+\d{3}\b.*|[-–—]?\s*\d{1,3}\s*[-–—]?|\d{1,3}\s*\/\s*\d{1,3}|p[áa]g(?:ina)?\.?\s*\d+.*|.*\bp[áa]gina\s+\d+\s*(?:[/,'’|]+|de|of)?\s*\d+.*|page\s+\d+.*|[-–—]?\s*fim\s*[-–—]?)\s*$/iu;
+  /^\s*(?:prova(?:\s+\d{3}\b.*)?|[-–—]?\s*\d{1,3}\s*[-–—]?|\d{1,3}\s*\/\s*\d{1,3}|p[áa]g(?:ina)?\.?\s*\d+.*|.*\bp[áa]gina\s+\d+\s*(?:[/,'’|]+|de|of)?\s*\d+.*|page\s+\d+.*|[-–—]?\s*fim\s*[-–—]?)\s*$/iu;
 
 const optionPattern = /^\s*\(?[A-Ea-e][.)](?:\s*\S|$)/u;
 

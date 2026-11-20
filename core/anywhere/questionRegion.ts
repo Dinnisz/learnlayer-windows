@@ -374,6 +374,10 @@ export const QuestionLocator = {
     let bottom: number;
     if (band?.end !== null && band?.end !== undefined) {
       bottom = band.end - lineHeight * 0.3;
+    } else if (band && band.footer !== null) {
+      // The last question of a page, with the page's footer read: it runs to the footer, whatever gaps its figures
+      // leave (its own crop shrinks to its last ink below). A Windows reading; see DECISOES.
+      bottom = band.footer - lineHeight * 0.3;
     } else {
       const from = Math.max(p.y, knownLocal ? maxY(knownLocal) : p.y);
       // The last question of a page runs to its last ink: a wide gap (a figure's rows) does not end it.

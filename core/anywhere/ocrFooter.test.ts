@@ -12,6 +12,7 @@ describe("an exam's footer read by the OCR", () => {
       "• Página 71 15",
       "Prova 635/1 .a",
       "Prova 719.v1,'1.a",
+      "Prova",
       "E • Página 5/ 15",
     ])
       expect(QuestionBand.isFooter(text), text).toBe(true);
