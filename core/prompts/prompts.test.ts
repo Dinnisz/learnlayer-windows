@@ -16,7 +16,7 @@ import { foundationJSON, interpolations } from "./swiftText";
 
 describe("ProblemPrompt", () => {
   it("keeps the Mac's version, so Mac and Windows share saved answers", () => {
-    expect(ProblemPrompt.version).toBe("33");
+    expect(ProblemPrompt.version).toBe("36");
     expect(FigureTranscription.version).toBe("2");
     expect(FastTranscription.promptVersion).toBe("fq5");
   });
@@ -42,7 +42,11 @@ describe("ProblemPrompt", () => {
     const system = ProblemPrompt.system("English");
     expect(system).toContain("Write every text in English, keeping the exam's own notation");
     expect(system).toContain(OptionFigures.transcriptionRule);
-    expect(system.startsWith("You are LearnLayer, a careful physics and maths tutor.")).toBe(true);
+    expect(
+      system.startsWith(
+        "You are LearnLayer, a careful exam tutor (maths, sciences, languages, literature, philosophy, history).",
+      ),
+    ).toBe(true);
   });
 
   it("the request names only the asked labels and tells the model to ignore the rest", () => {

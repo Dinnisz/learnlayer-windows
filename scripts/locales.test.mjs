@@ -8,9 +8,9 @@ const en = read("../core/i18n/locales/en.json");
 const pt = read("../core/i18n/locales/pt-PT.json");
 
 describe("generated locale tables", () => {
-  it("hold the 609 keys of the Mac String Catalog in both languages", () => {
-    expect(Object.keys(en)).toHaveLength(609);
-    expect(Object.keys(pt)).toHaveLength(609);
+  it("hold the 612 keys of the Mac String Catalog in both languages", () => {
+    expect(Object.keys(en)).toHaveLength(612);
+    expect(Object.keys(pt)).toHaveLength(612);
     expect(Object.keys(pt).sort()).toEqual(Object.keys(en).sort());
   });
 

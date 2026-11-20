@@ -54,7 +54,9 @@ describe("the solve", () => {
       response_format: { type: "json_object" },
     });
     const system = (sent[0]!.messages as { content: { text: string }[] }[])[0]!.content[0]!.text;
-    expect(system).toContain("You are LearnLayer, a careful physics and maths tutor.");
+    expect(system).toContain(
+      "You are LearnLayer, a careful exam tutor (maths, sciences, languages, literature, philosophy, history).",
+    );
     expect(system).toContain("\n\nMatch this JSON schema:\n{");
   });
 

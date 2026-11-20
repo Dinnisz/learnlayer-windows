@@ -56,50 +56,60 @@
   ],
   "code#1": [
     {
-      "text": "You’ve reached today’s limit. It resets at midnight UTC."
+      "text": "You’ve used today’s credits. They reset at midnight UTC."
     }
   ],
   "code#2": [
     {
-      "text": "quota_monthly"
+      "text": "quota_weekly"
     }
   ],
   "code#3": [
     {
-      "text": "quota_cost"
+      "text": "You’ve used this week’s credits. They reset on Monday at 00:00 UTC."
     }
   ],
   "code#4": [
     {
-      "text": "You’ve used this month’s allowance. Upgrade to keep going."
+      "text": "quota_monthly"
     }
   ],
   "code#5": [
     {
-      "text": "spend_kill"
+      "text": "quota_cost"
     }
   ],
   "code#6": [
     {
-      "text": "LearnLayer is paused right now. Try again later."
+      "text": "You’ve used this month’s credits. Upgrade to keep going."
     }
   ],
   "code#7": [
     {
-      "text": "rate_limited"
+      "text": "spend_kill"
     }
   ],
   "code#8": [
     {
-      "text": "Too many attempts. Wait a minute and try again."
+      "text": "LearnLayer is paused right now. Try again later."
     }
   ],
   "code#9": [
     {
-      "text": "LearnLayer couldn’t complete that request."
+      "text": "rate_limited"
     }
   ],
   "code#10": [
+    {
+      "text": "Too many attempts. Wait a minute and try again."
+    }
+  ],
+  "code#11": [
+    {
+      "text": "LearnLayer couldn’t complete that request."
+    }
+  ],
+  "code#12": [
     {
       "text": "Sign in to LearnLayer in Settings to get explanations."
     }
@@ -166,38 +176,58 @@
       "text": "signed out"
     }
   ],
-  "code#11": [
+  "code#13": [
     {
       "text": "quota_daily"
     }
   ],
-  "code#12": [
-    {
-      "text": "quota_monthly"
-    }
-  ],
-  "code#13": [
-    {
-      "text": "quota_cost"
-    }
-  ],
   "code#14": [
     {
-      "text": "spend_kill"
+      "text": "quota_weekly"
     }
   ],
   "code#15": [
     {
+      "text": "quota_monthly"
+    }
+  ],
+  "code#16": [
+    {
+      "text": "quota_cost"
+    }
+  ],
+  "code#17": [
+    {
+      "text": "spend_kill"
+    }
+  ],
+  "code#18": [
+    {
       "text": "rate_limited"
     }
   ],
-  "code#16": [],
-  "code#17": [
+  "code#19": [],
+  "code#20": [
     {
       "text": "unauthorized"
     }
   ],
   "message#8": [],
+  "line#0": [
+    {
+      "expr": "line, privacy: .public"
+    }
+  ],
+  "usageLogger#0": [
+    {
+      "text": "LearnLayer"
+    }
+  ],
+  "usageLogger#1": [
+    {
+      "text": "usage"
+    }
+  ],
   "environment#0": [
     {
       "text": "XCTestConfigurationFilePath"
@@ -638,10 +668,20 @@
   ],
   "routeHasFigure#3": [
     {
-      "text": "chat"
+      "text": "1"
     }
   ],
   "routeHasFigure#4": [
+    {
+      "text": "X-LearnLayer-Continuation"
+    }
+  ],
+  "routeHasFigure#5": [
+    {
+      "text": "chat"
+    }
+  ],
+  "routeHasFigure#6": [
     {
       "text": "X-LearnLayer-Purpose"
     }
@@ -651,12 +691,12 @@
       "text": "stream"
     }
   ],
-  "usage#0": [
+  "billed#0": [
     {
       "text": "length"
     }
   ],
-  "usage#1": [],
+  "billed#1": [],
   "token#0": [
     {
       "text": "Bearer "

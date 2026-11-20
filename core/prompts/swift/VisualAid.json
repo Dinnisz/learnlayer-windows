@@ -398,6 +398,26 @@
   ],
   "parsed#1": [],
   "expression#0": [],
+  "normalised#0": [
+    {
+      "text": "−"
+    }
+  ],
+  "normalised#1": [
+    {
+      "text": "-"
+    }
+  ],
+  "normalised#2": [
+    {
+      "text": "–"
+    }
+  ],
+  "normalised#3": [
+    {
+      "text": "-"
+    }
+  ],
   "regex#0": [
     {
       "text": "[\\[\\]]\\s*(-?\\d+(?:[.,]\\d+)?)\\s*[,;]\\s*(-?\\d+(?:[.,]\\d+)?)\\s*[\\[\\]]"
