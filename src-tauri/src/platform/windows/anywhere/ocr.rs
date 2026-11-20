@@ -64,7 +64,7 @@ fn within(picture: &Picture, limit: i32) -> (i32, i32, Vec<u8>, f64) {
 
 /// The lines the OCR reads on `picture`; empty when there is no OCR for any language here.
 pub fn lines(picture: &Picture) -> Vec<Line> {
-    read(&without_fills(picture)).unwrap_or_default()
+    with_label_dots(read(&without_fills(picture)).unwrap_or_default())
 }
 
 /// `lines`, with the question numbers set apart in a margin column read again (`QuestionRegion.withGutterLabels` @
@@ -72,8 +72,13 @@ pub fn lines(picture: &Picture) -> Vec<Line> {
 /// reading, which kept one of them. The strip of that margin is read on its own, enlarged, and each number found there
 /// is added as a line of its own. Without them a question runs on into the next.
 pub fn lines_with_gutter_labels(picture: &Picture) -> Vec<Line> {
-    let picture = &without_fills(picture);
-    let lines = read(picture).unwrap_or_default();
+    let fills = label_fills(
+        &picture.bgra,
+        picture.width.max(0) as usize,
+        picture.height.max(0) as usize,
+    );
+    let picture = &whitened(picture, &fills);
+    let lines = with_label_dots(with_fill_labels(read(picture).unwrap_or_default(), picture, &fills));
     let Some((left, right)) = gutter_strip(&lines) else {
         return lines;
     };
@@ -88,6 +93,147 @@ pub fn lines_with_gutter_labels(picture: &Picture) -> Vec<Line> {
     with_gutter_labels(lines, &found, left, zoom)
 }
 
+/// The labels in fills the page-wide reading left out: a short one ("✱ 2.") is dropped even on white. A fill where a
+/// line of text starts just past it, with no line read over it, is read again with the first words of that line (the
+/// engine reads nothing in a number standing alone in a picture), twice larger; the item's number it starts with
+/// ("2.", "✱ 1.1.", "5.(AE2018)") is added as a line of its own, over the fill.
+fn with_fill_labels(mut lines: Vec<Line>, picture: &Picture, fills: &[Fill]) -> Vec<Line> {
+    const ROOM: f64 = 4.0;
+    for fill in unread_label_fills(&lines, fills) {
+        // Its outline and its body are two fills: the number one of them gave is not read twice.
+        if is_covered(&lines, &fill) {
+            continue;
+        }
+        let height = (fill.bottom - fill.top) as f64;
+        let (left, top) = ((fill.left as f64 - ROOM).max(0.0), (fill.top as f64 - ROOM).max(0.0));
+        let (right, bottom) = (fill.right as f64 + 5.0 * height, fill.bottom as f64 + ROOM);
+        let Some(part) = enlarged_part(picture, left, right, top, bottom, 2) else {
+            continue;
+        };
+        let found = read(&part).unwrap_or_default();
+        let text = found.iter().map(|line| line.text.trim()).collect::<Vec<_>>().join(" ");
+        if let Some(label) = leading_item_label(&text) {
+            lines.push(Line {
+                text: label,
+                rect: PixelRect {
+                    x: fill.left as f64,
+                    y: fill.top as f64,
+                    width: (fill.right - fill.left) as f64,
+                    height: (fill.bottom - fill.top) as f64,
+                },
+            });
+        }
+    }
+    lines
+}
+
+/// The fills that may hold an item's number no line was read over: a line starts just past the fill, on its row.
+fn unread_label_fills(lines: &[Line], fills: &[Fill]) -> Vec<Fill> {
+    fills
+        .iter()
+        .filter(|fill| {
+            let right = fill.right as f64;
+            let (top, bottom) = (fill.top as f64, fill.bottom as f64);
+            let height = bottom - top;
+            let middle = (top + bottom) / 2.0;
+            let covered = is_covered(lines, fill);
+            let text_beside = lines.iter().any(|line| {
+                line.rect.x >= right - 2.0
+                    && line.rect.x <= right + 3.0 * height
+                    && (line.rect.y + line.rect.height / 2.0 - middle).abs() < height
+            });
+            !covered && text_beside
+        })
+        .copied()
+        .collect()
+}
+
+/// A line is read over the fill (inside its edge: the pill's own outline is a fill of its own, over this one).
+fn is_covered(lines: &[Line], fill: &Fill) -> bool {
+    let inner = PixelRect {
+        x: fill.left as f64 + 1.0,
+        y: fill.top as f64 + 1.0,
+        width: (fill.right as f64 - fill.left as f64 - 2.0).max(0.0),
+        height: (fill.bottom as f64 - fill.top as f64 - 2.0).max(0.0),
+    };
+    lines.iter().any(|line| intersects(&line.rect, &inner))
+}
+
+/// An item's number split from its closing dot: the engine reads "✱ 2.3." as "✱ 2.3" and ". Num recipiente…", two
+/// lines on one row. The dot goes back to the number ("2.3" alone is a decimal, not an item), and the line after it
+/// starts at its first word.
+fn with_label_dots(mut lines: Vec<Line>) -> Vec<Line> {
+    for line in &mut lines {
+        line.text = with_one_for_l(&line.text);
+    }
+    for index in 0..lines.len() {
+        let text = lines[index].text.trim();
+        let number = text.trim_start_matches(['*', '✱', '★', '•', ' ']);
+        let (whole, part) = number.split_once('.').unwrap_or((number, ""));
+        let digits = |value: &str| (1..=2).contains(&value.len()) && value.chars().all(|c| c.is_ascii_digit());
+        if !digits(whole) || part.is_empty() || !part.split('.').all(digits) {
+            continue;
+        }
+        let rect = lines[index].rect.clone();
+        let next = lines.iter().position(|other| {
+            other.text.starts_with('.')
+                && other.rect.x >= rect.x + rect.width - 2.0
+                && other.rect.x <= rect.x + rect.width + rect.height * 1.5
+                && (other.rect.y + other.rect.height / 2.0 - (rect.y + rect.height / 2.0)).abs() < rect.height * 0.5
+        });
+        let Some(next) = next else { continue };
+        lines[index].text = format!("{}.", lines[index].text.trim_end());
+        lines[next].text = lines[next].text[1..].trim_start().to_string();
+    }
+    lines.retain(|line| !line.text.trim().is_empty());
+    lines
+}
+
+/// "✱ l. Compare…" is "✱ 1. Compare…": in the font of an exam's numbers the engine reads a 1 as a small L, and a
+/// small L with a dot never starts an item.
+fn with_one_for_l(text: &str) -> String {
+    let rest = text.trim_start_matches(['*', '✱', '★', '•', ' ']);
+    let mark = &text[..text.len() - rest.len()];
+    match rest.strip_prefix("l. ") {
+        Some(after) => format!("{mark}1. {after}"),
+        None => text.to_string(),
+    }
+}
+
+/// The item's number a line starts with ("✱ 2. A proposição…" → "✱ 2."), with the mark before it.
+fn leading_item_label(text: &str) -> Option<String> {
+    let mut end = 0;
+    for (start, word) in text.split_whitespace().map(|word| (text.find(word).unwrap_or(0), word)) {
+        end = start + word.len();
+        if !word.chars().all(|c| matches!(c, '*' | '✱' | '★' | '•')) {
+            break;
+        }
+    }
+    let label = text[..end].trim();
+    is_item_label(label).then(|| label.to_string())
+}
+
+/// An item's number, alone: "2.", "12)", "(3)", "1.1.", "5.(AE2018)", after a mark ("✱", "*", "★").
+fn is_item_label(text: &str) -> bool {
+    let text = text.trim_start_matches(['*', '✱', '★', '•', ' ']).trim();
+    if is_lone_number(text) {
+        return true;
+    }
+    let Some(body) = text.strip_suffix('.').or_else(|| text.strip_suffix(')')) else {
+        return false;
+    };
+    let (number, rest) = body.split_once('.').unwrap_or((body, ""));
+    let short_number = |digits: &str| (1..=2).contains(&digits.len()) && digits.chars().all(|c| c.is_ascii_digit());
+    if !short_number(number) {
+        return false;
+    }
+    // "5.(AE2018)" has lost its closing parenthesis to `strip_suffix` above.
+    if let Some(year) = rest.strip_prefix("(AE") {
+        return year.len() == 4 && year.chars().all(|c| c.is_ascii_digit());
+    }
+    !rest.is_empty() && rest.split('.').all(short_number)
+}
+
 /// How much larger the margin strip is read: three times, or as much as the engine takes whole (a strip it would
 /// read smaller again gains nothing from being enlarged).
 fn gutter_zoom(height: i32, limit: i32) -> i32 {
@@ -100,6 +246,7 @@ fn gutter_zoom(height: i32, limit: i32) -> i32 {
 /// A light flat fill: a box of one colour, in pixels, `[left, right)` × `[top, bottom)`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct Fill {
+    /// The colour of the last run it took in: a fill shaded top to bottom is followed row by row.
     colour: [u8; 3],
     left: usize,
     right: usize,
@@ -113,12 +260,22 @@ struct Fill {
 /// fill no larger than a label, and a few pixels past its rounded ends, every light pixel becomes white. Text
 /// elsewhere, and a page or a panel with a tinted background, is left as it was.
 pub fn without_fills(picture: &Picture) -> Picture {
+    let fills = label_fills(
+        &picture.bgra,
+        picture.width.max(0) as usize,
+        picture.height.max(0) as usize,
+    );
+    whitened(picture, &fills)
+}
+
+/// `picture` with `fills` made white inside (see `without_fills`).
+fn whitened(picture: &Picture, fills: &[Fill]) -> Picture {
     const LIGHT_INK: u32 = 180;
     const PAST_ENDS: usize = 3;
     let mut bgra = picture.bgra.clone();
     let width = picture.width.max(0) as usize;
     let height = picture.height.max(0) as usize;
-    for fill in label_fills(&picture.bgra, width, height) {
+    for fill in fills {
         let left = fill.left.saturating_sub(PAST_ENDS);
         let right = (fill.right + PAST_ENDS).min(width);
         let top = fill.top.saturating_sub(1);
@@ -151,6 +308,9 @@ fn label_fills(bgra: &[u8], width: usize, height: usize) -> Vec<Fill> {
     const SAME: i32 = 6;
     const MAX_HEIGHT: usize = 80;
     const MAX_WIDTH: usize = 400;
+    const ACROSS_TEXT: usize = 24;
+    // As light as this is the page itself (white, or off-white where a picture was scaled).
+    const PAGE: u32 = 245;
     let close =
         |a: [u8; 3], b: [u8; 3]| (0..3).all(|channel| (i32::from(a[channel]) - i32::from(b[channel])).abs() <= SAME);
     let mut fills: Vec<Fill> = Vec::new();
@@ -169,13 +329,19 @@ fn label_fills(bgra: &[u8], width: usize, height: usize) -> Vec<Fill> {
             while end < width && close(pixel(end), first) {
                 end += 1;
             }
-            if end - start >= FILL_RUN && first != [255, 255, 255] && luma(first) >= LIGHT {
-                // The fill this run continues: the same colour, on the row above, overlapping it.
+            if end - start >= FILL_RUN && (LIGHT..PAGE).contains(&luma(first)) {
+                // The fill this run continues: the colour it had on the last row it reached (a shaded pill drifts
+                // from one grey to another), overlapping it. Rows across dense text ("5.(AE2018)") have no run of
+                // the fill at all: up to `ACROSS_TEXT` of them are crossed.
                 let joined = fills.iter_mut().rev().find(|fill| {
-                    close(fill.colour, first) && fill.bottom >= row && fill.left < end && start < fill.right
+                    close(fill.colour, first)
+                        && fill.bottom + ACROSS_TEXT >= row
+                        && fill.left < end
+                        && start < fill.right
                 });
                 match joined {
                     Some(fill) => {
+                        fill.colour = first;
                         fill.left = fill.left.min(start);
                         fill.right = fill.right.max(end);
                         fill.bottom = row + 1;
@@ -274,17 +440,24 @@ fn intersects(a: &PixelRect, b: &PixelRect) -> bool {
 /// The picture's columns `left..right`, the whole height, `zoom` times larger (each pixel the blend of its four
 /// nearest, so the digits stay smooth for the OCR); None for an empty strip.
 fn enlarged_strip(picture: &Picture, left: f64, right: f64, zoom: i32) -> Option<Picture> {
+    enlarged_part(picture, left, right, 0.0, f64::from(picture.height), zoom)
+}
+
+/// The part of `picture` from `left` to `right` and `top` to `bottom`, `zoom` times larger, smoothly.
+fn enlarged_part(picture: &Picture, left: f64, right: f64, top: f64, bottom: f64, zoom: i32) -> Option<Picture> {
     let x0 = (left.floor() as i32).clamp(0, picture.width);
     let x1 = (right.ceil() as i32).clamp(0, picture.width);
-    let source_width = x1 - x0;
-    if source_width <= 0 || picture.height <= 0 || zoom <= 0 {
+    let y0 = (top.floor() as i32).clamp(0, picture.height);
+    let y1 = (bottom.ceil() as i32).clamp(0, picture.height);
+    let (source_width, source_height) = (x1 - x0, y1 - y0);
+    if source_width <= 0 || source_height <= 0 || zoom <= 0 {
         return None;
     }
     let width = source_width * zoom;
-    let height = picture.height * zoom;
+    let height = source_height * zoom;
     let at = |x: i32, y: i32, channel: usize| -> f64 {
         let x = x.clamp(0, source_width - 1) + x0;
-        let y = y.clamp(0, picture.height - 1);
+        let y = y.clamp(0, source_height - 1) + y0;
         f64::from(picture.bgra[((y * picture.width + x) * 4) as usize + channel])
     };
     let mut bgra = Vec::with_capacity((width * height * 4) as usize);
@@ -438,7 +611,7 @@ mod tests {
 
     /// A measurement, not a check: reads a page saved as raw BGRA (`<base>.bgra` and `<base>.txt` with "width
     /// height") and prints the lines as the app reads them, "+" where the engine alone, on the untouched picture,
-    /// reads that line otherwise or not at all. `LEARNLAYER_OCR_PAGE=<base> cargo test
+    /// reads that line otherwise or not at all. With `LEARNLAYER_OCR_JSON=1` it also saves them as `<base>.lines.json`. `LEARNLAYER_OCR_PAGE=<base> cargo test
     /// ocr_on_a_saved_page -- --ignored --nocapture`; `scripts/render-page.mjs` saves a PDF page that way.
     #[test]
     #[ignore]
@@ -453,9 +626,47 @@ mod tests {
         let started = std::time::Instant::now();
         let _ = without_fills(&picture);
         println!("fills: {:?}", started.elapsed());
+        // `LEARNLAYER_OCR_FILLS=1`: each label fill, and what reading it again with its line's first words finds.
+        if std::env::var("LEARNLAYER_OCR_FILLS").is_ok() {
+            let fills = label_fills(&picture.bgra, width as usize, height as usize);
+            let clean = whitened(&picture, &fills);
+            let first = read(&clean).unwrap_or_default();
+            let unread = unread_label_fills(&first, &fills);
+            for fill in &fills {
+                println!("fill {fill:?}{}", if unread.contains(fill) { " (unread)" } else { "" });
+            }
+            for fill in &unread {
+                let height = (fill.bottom - fill.top) as f64;
+                let part = enlarged_part(
+                    &clean,
+                    fill.left as f64 - 4.0,
+                    fill.right as f64 + 5.0 * height,
+                    fill.top as f64 - 4.0,
+                    fill.bottom as f64 + 4.0,
+                    2,
+                );
+                let found = part.map(|part| read(&part).unwrap_or_default()).unwrap_or_default();
+                println!(
+                    "again {:?}: {:?}",
+                    (fill.left, fill.top),
+                    found.iter().map(|line| line.text.as_str()).collect::<Vec<_>>()
+                );
+            }
+        }
         let engine = read(&picture).unwrap_or_default();
         println!("margin strip: {:?}", gutter_strip(&engine));
-        for line in &lines_with_gutter_labels(&picture) {
+        let started = std::time::Instant::now();
+        let _ = read(&picture);
+        let engine_time = started.elapsed();
+        let started = std::time::Instant::now();
+        let read = lines_with_gutter_labels(&picture);
+        println!("engine alone {engine_time:?}, as the app reads {:?}", started.elapsed());
+        // `LEARNLAYER_OCR_JSON=1`: the lines as the app reads them, for `scripts/screen-labels.test.ts`.
+        if std::env::var("LEARNLAYER_OCR_JSON").is_ok() {
+            let json = serde_json::to_string(&read).expect("json");
+            std::fs::write(format!("{base}.lines.json"), json).expect("lines");
+        }
+        for line in &read {
             let added = !engine.iter().any(|seen| seen.text == line.text);
             println!(
                 "{} {:>6.0} {:>6.0} {:>6.0}  {}",
@@ -519,6 +730,98 @@ mod tests {
         assert_eq!(colour(&clean, 31, 20), INK);
         // Outside the pill nothing changes.
         assert_eq!(colour(&clean, 90, 20), [150, 150, 150]);
+    }
+
+    #[test]
+    fn an_items_number_read_in_its_fill_is_told_from_other_words() {
+        for label in ["2.", "✱ 2.", "* 1.1.", "12)", "(3)", "5.(AE2018)", "1.2.3.", "★ 4.1)"] {
+            assert!(is_item_label(label), "{label}");
+        }
+        for other in ["2", "Figura 1", "1.1", "2.5 m", "123.", "5.(AE18)", "x.", "", "✱"] {
+            assert!(!is_item_label(other), "{other}");
+        }
+    }
+
+    #[test]
+    fn an_items_number_gets_back_the_dot_read_on_the_next_word() {
+        let lines = vec![
+            line("* 2.3", 81.0, 616.0, 46.0),
+            line(". Num recipiente fechado indeformável", 128.0, 617.0, 679.0),
+            line("1.5", 81.0, 700.0, 30.0),
+            line("m de altura", 200.0, 700.0, 100.0),
+            line("2", 81.0, 800.0, 10.0),
+            line(". Outro", 95.0, 800.0, 100.0),
+            line(".", 128.0, 900.0, 4.0),
+            line("* 4.2", 81.0, 900.0, 46.0),
+        ];
+        let texts: Vec<String> = with_label_dots(lines).into_iter().map(|line| line.text).collect();
+        assert_eq!(
+            texts,
+            vec![
+                "* 2.3.",
+                "Num recipiente fechado indeformável",
+                "1.5",
+                "m de altura",
+                "2",
+                ". Outro",
+                "* 4.2."
+            ]
+        );
+    }
+
+    #[test]
+    fn a_small_l_starting_an_item_is_a_one() {
+        assert_eq!(with_one_for_l("* l. Compare as duas"), "* 1. Compare as duas");
+        assert_eq!(with_one_for_l("l. Explique"), "1. Explique");
+        assert_eq!(with_one_for_l("I. Grupo"), "I. Grupo");
+        assert_eq!(with_one_for_l("lá fora. Os"), "lá fora. Os");
+        assert_eq!(with_one_for_l("l.1. Outro"), "l.1. Outro");
+    }
+
+    #[test]
+    fn the_number_a_line_starts_with_is_taken_with_its_mark() {
+        assert_eq!(leading_item_label("* 2. A proposiçãc").as_deref(), Some("* 2."));
+        assert_eq!(leading_item_label("6. Identifique a").as_deref(), Some("6."));
+        assert_eq!(
+            leading_item_label("✱ 5.(AE2018) Qual das").as_deref(),
+            Some("✱ 5.(AE2018)")
+        );
+        assert_eq!(leading_item_label("•1..2— Tendo em r.c:"), None);
+        assert_eq!(leading_item_label("Tendo em"), None);
+        assert_eq!(leading_item_label(""), None);
+    }
+
+    #[test]
+    fn a_fill_is_read_again_only_where_a_line_starts_past_it_and_none_was_read_over_it() {
+        let fill = |left, right, top, bottom| Fill {
+            colour: PILL,
+            left,
+            right,
+            top,
+            bottom,
+        };
+        let lines = vec![
+            line("A proposição expressa pela frase", 106.0, 420.0, 600.0),
+            line("* 1.1. O átomo de carbono", 80.0, 168.0, 600.0),
+        ];
+        let fills = [
+            fill(58, 100, 420, 437),
+            fill(76, 137, 166, 186),
+            fill(300, 360, 700, 718),
+        ];
+        // Only the first: the second was read with its line, the third has no line starting past it.
+        assert_eq!(unread_label_fills(&lines, &fills), vec![fills[0]]);
+    }
+
+    #[test]
+    fn a_part_of_a_picture_is_enlarged_whole() {
+        let picture = painted(10, 8, |column, row| (column == 4 && row == 5).then_some([0, 0, 0]));
+        let part = enlarged_part(&picture, 2.0, 6.0, 3.0, 7.0, 3).expect("part");
+        assert_eq!((part.width, part.height), (12, 12));
+        assert_eq!(part.bgra.len(), 12 * 12 * 4);
+        // The dark pixel (4, 5) lands at (2, 2) of the part, three times larger: its centre is dark.
+        assert!(colour(&part, 7, 7)[0] < 128);
+        assert!(enlarged_part(&picture, 2.0, 6.0, 7.0, 7.0, 3).is_none());
     }
 
     #[test]
