@@ -7,7 +7,7 @@
 // figures from the page's paths (`VectorPage`); on Windows that comes with the figures (phase 6), and until then the
 // stage crops the figure from the PDF's own rendering, as the reader does — never from the screen.
 
-import { linesOf, Rects, selectionIn, type PageText, type Rect } from "../pdf/page";
+import { linesOf, Rects, selectionBounds, selectionIn, type PageText, type Rect } from "../pdf/page";
 import { headingBounds, questionsOn, type ExamQuestion } from "../problems/questionDetector";
 import { normalizeText } from "../problems/textNormalizer";
 import type { PassageLine } from "../problems/passage";
@@ -17,6 +17,35 @@ import type { LocatorLine } from "./questionRegion";
 
 /** Lower case and without accents, as `.diacriticInsensitive` with `lowercased()` (spaces and marks kept). */
 const folded = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** Where two rectangles overlap; null when they don't (`CGRect.intersection` is null then). */
+function intersection(a: Rect, b: Rect): Rect | null {
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  const right = Math.min(a.x + a.width, b.x + b.width);
+  const top = Math.min(a.y + a.height, b.y + b.height);
+  return right < x || top < y ? null : { x, y, width: right - x, height: top - y };
+}
+
+/** The text of the characters whose boxes touch `rect` (PDFKit's `selection(for:)` of a small rectangle). */
+function charactersTouching(page: PageText, rect: Rect): string {
+  let text = "";
+  page.boxes.forEach((box, index) => {
+    if (
+      box &&
+      box.x < rect.x + rect.width &&
+      rect.x < box.x + box.width &&
+      box.y < rect.y + rect.height &&
+      rect.y < box.y + box.height
+    )
+      text += page.text[index]!;
+  });
+  return text;
+}
+
+/** Per page: its part labels and its lines' boxes, read once (`pageLines`, `partLabelBoxes`). */
+const partLabelCache = new WeakMap<PageText, Rect[]>();
+const lineCache = new WeakMap<PageText, Rect[]>();
 
 const { minX, maxX, minY, maxY, midY } = Rects;
 
@@ -206,54 +235,306 @@ export const PDFQuestionReading = {
     return question ? PDFQuestionReading.make(question, page, placement) : null;
   },
 
-  /** The question the page point is in: the nearest label above it whose area (down to the next label of its column)
-   * holds the point. */
+  /**
+   * The question the page point is in: the nearest label above it whose area (down to the next label of its column)
+   * holds the point. In a grid of parts (CDI sheet 1(a)–(q), two columns), the part whose own row holds the point and
+   * whose words are under it or nearest it on that row: the gap between the columns goes to the nearer column, a
+   * point past the end of a line to that line's part, never the part above, under or across
+   * (`PDFQuestionRead.question(at:on:)` @ 5701363).
+   */
   question(click: { x: number; y: number }, page: PageText): ExamQuestion | null {
     const all = questionsOn(page);
+    const typical = PDFQuestionReading.typicalLabelHeight(all);
     const headings = headingBounds(page);
-    return (
-      all
-        .filter((question) => maxY(question.labelBounds) >= click.y - 2)
-        .sort((a, b) => maxY(a.labelBounds) - click.y - (maxY(b.labelBounds) - click.y))
-        .find((question) =>
-          Rects.contains(Rects.inset(PDFQuestionReading.questionArea(question, all, headings), -20, 0), click),
-        ) ?? null
+    const partLabels = PDFQuestionReading.partLabelBoxes(page).map((box) => PDFQuestionReading.lineBox(box, typical));
+    const areas = all.map((question) => ({
+      question,
+      area: PDFQuestionReading.questionArea(question, all, headings, page),
+      grid:
+        question.label !== question.group &&
+        !PDFQuestionReading.isGroupStem(question, all) &&
+        PDFQuestionReading.isInGrid(PDFQuestionReading.lineBox(question.labelBounds, typical), typical, partLabels),
+    }));
+    const nearby = areas.filter((item) => Rects.contains(Rects.inset(item.area, -60, -4), click));
+    if (nearby.some((item) => item.grid)) {
+      const parts = nearby.filter(
+        (item) => item.grid && click.y >= minY(item.area) - 4 && click.y <= maxY(item.area) + 4,
+      );
+      const lines = PDFQuestionReading.pageLines(page);
+      // A part whose box holds the point first; among those (or, with none, among the rows beside it), the one whose
+      // words are nearest. Its box, for a click, ends halfway between its words and the next part beside it.
+      const scored = parts.map((item) => {
+        const label = PDFQuestionReading.lineBox(item.question.labelBounds, typical);
+        const joined = lines
+          .filter((line) => Rects.contains(item.area, { x: Rects.midX(line), y: midY(line) }))
+          .reduce<Rect>((all, line) => Rects.union(all, line)!, label);
+        const words = intersection(joined, item.area);
+        const box = { ...item.area };
+        const beside = partLabels.filter(
+          (other) => minX(other) > maxX(label) + 40 && Math.abs(midY(other) - midY(label)) < typical * 2.5,
+        );
+        const next = beside.length > 0 ? Math.min(...beside.map(minX)) : null;
+        if (words && next !== null && maxX(words) < next)
+          box.width = Math.min(box.width, Math.max(maxX(words) + 4, (maxX(words) + next) / 2) - minX(box));
+        return {
+          question: item.question,
+          inside: Rects.contains(box, click),
+          distance: words ? PDFQuestionReading.distance(click, words) : Infinity,
+        };
+      });
+      const best = scored.reduce<(typeof scored)[number] | null>((found, item) => {
+        if (!found) return item;
+        if (item.inside !== found.inside) return item.inside ? item : found;
+        return item.distance < found.distance ? item : found;
+      }, null);
+      if (best) return best.question;
+    }
+    // The smallest area holding the point (a part rather than the statement over it); else the nearest one beside it.
+    const holding = areas.filter((item) => Rects.contains(item.area, click));
+    if (holding.length > 0)
+      return holding.reduce((a, b) => (b.area.width * b.area.height < a.area.width * a.area.height ? b : a)).question;
+    const beside = areas.filter(
+      (item) => Rects.contains(Rects.inset(item.area, -20, 0), click) && maxY(item.question.labelBounds) >= click.y - 2,
     );
+    if (beside.length === 0) return null;
+    return beside.reduce((a, b) =>
+      PDFQuestionReading.distance(click, b.area) < PDFQuestionReading.distance(click, a.area) ? b : a,
+    ).question;
+  },
+
+  /** How far `point` is from `rect` (0 inside it). */
+  distance(point: { x: number; y: number }, rect: Rect): number {
+    const dx = Math.max(minX(rect) - point.x, 0, point.x - maxX(rect));
+    const dy = Math.max(minY(rect) - point.y, 0, point.y - maxY(rect));
+    return Math.hypot(dx, dy);
   },
 
   /**
    * Where a question is on the page: from just under its label to just above the next label of its column (or where
    * its own text ends), across the column. A group heading printed below the label in its column ends the area too.
+   * With the page: a group's statement clicked with its parts under it is the whole group; the last question ends
+   * where the paper does; a part of a grid is its own row (`PDFQuestionRead.questionArea` @ 5701363).
    */
-  questionArea(question: ExamQuestion, all: readonly ExamQuestion[], headings: readonly Rect[] = []): Rect {
-    const label = question.labelBounds;
-    const top = maxY(label) + 3;
+  questionArea(
+    question: ExamQuestion,
+    all: readonly ExamQuestion[],
+    headings: readonly Rect[] = [],
+    page: PageText | null = null,
+  ): Rect {
+    const typical = PDFQuestionReading.typicalLabelHeight(all);
+    const lineBox = (box: Rect) => PDFQuestionReading.lineBox(box, typical);
+    const label = lineBox(question.labelBounds);
+    let top = maxY(label) + 3;
+    // A group's statement clicked with its parts under it: the whole group, down to the next question.
+    const wholeGroup = PDFQuestionReading.isGroupStem(question, all);
     const column = all.filter(
-      (other) => Math.abs(minX(other.labelBounds) - minX(label)) < 60 && midY(other.labelBounds) < midY(label) - 2,
+      (other) =>
+        Math.abs(minX(other.labelBounds) - minX(label)) < 60 &&
+        midY(lineBox(other.labelBounds)) < midY(label) - 2 &&
+        !(wholeGroup && other.group === question.group),
     );
-    let bottom = column.length
-      ? Math.max(...column.map((other) => maxY(other.labelBounds) + 2))
-      : minY(question.bounds);
+    const groupTops = all.filter((other) => other.group === question.group).map((other) => minY(other.bounds));
+    const ownEnd = wholeGroup && groupTops.length > 0 ? Math.min(...groupTops) : minY(question.bounds);
+    let bottom = column.length > 0 ? Math.max(...column.map((other) => maxY(lineBox(other.labelBounds)) + 2)) : ownEnd;
+    // The last question ends where the paper does ("FIM", "COTAÇÕES"), not at the marking table under it.
+    const end = page ? PDFQuestionReading.endMarkTop(page, top) : null;
+    if (end !== null && end > bottom) bottom = end + 2;
     const sameColumn = all.filter((other) => Math.abs(minX(other.labelBounds) - minX(label)) < 60);
-    const right = Math.max(
+    let right = Math.max(
       maxX(question.bounds),
       sameColumn.length ? Math.max(...sameColumn.map((o) => maxX(o.bounds))) : 0,
     );
-    const left = minX(label) - 6;
     for (const heading of headings) {
-      if (maxY(heading) < minY(label) && maxY(heading) > bottom && maxX(heading) > left && minX(heading) < right) {
+      if (
+        maxY(heading) < minY(label) &&
+        maxY(heading) > bottom &&
+        maxX(heading) > minX(label) - 6 &&
+        minX(heading) < right
+      ) {
         bottom = maxY(heading) + 1;
       }
     }
     const floor = Math.min(bottom, top - 10);
-    return { x: left, y: floor, width: Math.max(right - left, 20), height: Math.max(top - floor, 10) };
+    if (wholeGroup) {
+      const groupRights = all.filter((other) => other.group === question.group).map((other) => maxX(other.bounds));
+      right = Math.max(right, ...groupRights);
+    } else {
+      // Parts set in a grid ("(a) … (d) … (g)"): the part ends where the next one on its rows begins.
+      const besideIt = all.filter((other) => {
+        const box = lineBox(other.labelBounds);
+        return minX(box) > maxX(label) + 20 && midY(box) < top && midY(box) > floor;
+      });
+      if (besideIt.length > 0)
+        right = Math.min(right, Math.min(...besideIt.map((other) => minX(other.labelBounds))) - 4);
+    }
+    const left = minX(label) - 6;
+    // Never above the bottom of the question's own line: the next label of the column can have its box stretched up
+    // into this line by a tall bracket beside it («(g) ln(arccos(1/√x))» under «(f) (e^{2x} + …)^8»).
+    let bottomEdge = Math.min(floor, minY(label) - 1);
+    const band =
+      !wholeGroup && question.label !== question.group && page
+        ? PDFQuestionReading.gridRowBand(label, typical, left, right, all, page)
+        : null;
+    if (band) {
+      // A part in a grid of formulas (CDI sheet 1(a)–(q)): its own row, from the lines nearer its label than its
+      // neighbours' (a fraction's numerator and denominator too).
+      top = band.top;
+      bottomEdge = band.bottom;
+    } else if (!wholeGroup && question.label !== question.group && page) {
+      // Part labels the detector did not keep (a TeX grid «a) … i)» in two columns, a «g)» it lost) still end the
+      // part: the next one under it in its column, and the first one beside it on its rows.
+      const others = PDFQuestionReading.partLabelBoxes(page).filter(
+        (box) => Math.abs(midY(box) - midY(label)) > 2 || Math.abs(minX(box) - minX(label)) > 2,
+      );
+      const under = others
+        .filter((box) => Math.abs(minX(box) - minX(label)) < 15 && midY(box) < minY(label) && midY(box) > bottomEdge)
+        .map((box) => maxY(lineBox(box)) + 1);
+      // A label stretched by a tall sign on its line («g) ∛x−1») reaches up into this one: never above this label's
+      // own bottom, so the part's own line is never cut.
+      if (under.length > 0)
+        bottomEdge = Math.max(bottomEdge, Math.min(Math.max(...under), minY(question.labelBounds) - 1));
+      const next = others
+        .filter((box) => minX(box) > maxX(label) + 40 && minX(box) < right && midY(box) < top && midY(box) > bottomEdge)
+        .map(minX);
+      if (next.length > 0) right = Math.min(right, Math.min(...next) - 4);
+    }
+    return { x: left, y: bottomEdge, width: Math.max(right - left, 20), height: Math.max(top - bottomEdge, 10) };
+  },
+
+  /** A group's statement ("5.") whose parts ("5.1.", "5.2.") are printed under it on this page. */
+  isGroupStem(question: ExamQuestion, all: readonly ExamQuestion[]): boolean {
+    return (
+      question.label === question.group &&
+      all.some((other) => other.group === question.group && other.label !== question.label)
+    );
+  },
+
+  /**
+   * The usual height of a label on the page: a label stretched by a tall bracket next to it ("(f)  (e^{2x} …)^8") is
+   * brought back to it.
+   */
+  typicalLabelHeight(all: readonly ExamQuestion[]): number {
+    const heights = all
+      .map((question) => question.labelBounds.height)
+      .filter((height) => height > 1)
+      .sort((a, b) => a - b);
+    return heights.length === 0 ? 12 : heights[Math.floor(heights.length / 2)]!;
+  },
+
+  /** `box` as tall as one line of text, around its middle, when a tall glyph stretched it. */
+  lineBox(box: Rect, typical: number): Rect {
+    if (box.height <= typical * 1.6) return box;
+    return { x: box.x, y: midY(box) - typical / 2, width: box.width, height: typical };
+  },
+
+  /** The top of the line that ends the paper ("FIM", "COTAÇÕES", "END OF TEST") under `top` on `page`. */
+  endMarkTop(page: PageText, top: number): number | null {
+    let found: number | null = null;
+    for (const match of page.text.matchAll(
+      /^[ \t]*(FIM|Fim|FIM DA PROVA|COTAÇÕES|Cotações|END OF TEST|END OF EXAM|THE END)[ \t]*$/gmu,
+    )) {
+      const start = match.index + match[0].indexOf(match[1]!);
+      const box = selectionBounds(page, start, match[1]!.length);
+      if (box && maxY(box) < top) found = Math.max(found ?? -Infinity, maxY(box));
+    }
+    return found;
+  },
+
+  /**
+   * Every part label of the page's text («f)», «(b)», «iv)») that starts something: blank page before it on its
+   * line, so not a bracket closing a formula («(1 + x)»). Page points.
+   */
+  partLabelBoxes(page: PageText): Rect[] {
+    const cached = partLabelCache.get(page);
+    if (cached) return cached;
+    const boxes: Rect[] = [];
+    for (const match of page.text.matchAll(/(?<![^\s])\(?(?:[a-z]|[ivx]{2,4})\)/gu)) {
+      const box = selectionBounds(page, match.index, match[0].length);
+      if (!box || box.width <= 0 || box.height <= 0) continue;
+      const before = { x: minX(box) - 14, y: midY(box) - 1, width: 13, height: 2 };
+      if (charactersTouching(page, before).trim() === "") boxes.push(box);
+    }
+    partLabelCache.set(page, boxes);
+    return boxes;
+  },
+
+  /** A part of a grid has another part label beside it, on its row, in another column. */
+  isInGrid(label: Rect, typical: number, labels: readonly Rect[]): boolean {
+    return labels.some(
+      (other) => Math.abs(midY(other) - midY(label)) < typical * 2.5 && Math.abs(minX(other) - minX(label)) > 60,
+    );
+  },
+
+  /**
+   * The top and bottom of a grid part's row (page points): the column's lines (between `left` and `right`) that are
+   * nearer this label than the labels above and under it in its column, a fraction's lines included. Where those
+   * lines' boxes and the next row's overlap, the Mac cuts at the line of pixels with the least ink between them; the
+   * core has no picture of the page, so the cut is halfway, the Mac's own fallback. Null when not in a grid.
+   */
+  gridRowBand(
+    label: Rect,
+    typical: number,
+    left: number,
+    right: number,
+    all: readonly ExamQuestion[],
+    page: PageText,
+  ): { top: number; bottom: number } | null {
+    const lineBox = (box: Rect) => PDFQuestionReading.lineBox(box, typical);
+    const parts = PDFQuestionReading.partLabelBoxes(page).map(lineBox);
+    if (!PDFQuestionReading.isInGrid(label, typical, parts)) return null;
+    // The labels of its column: parts under one another, and the question's number set out to their left.
+    const column = [...parts, ...all.map((question) => lineBox(question.labelBounds))].filter(
+      (box) => minX(box) > minX(label) - 40 && minX(box) < minX(label) + 15 && Math.abs(midY(box) - midY(label)) > 2,
+    );
+    const aboveMids = column.filter((box) => midY(box) > midY(label)).map(midY);
+    const belowMids = column.filter((box) => midY(box) < midY(label)).map(midY);
+    const above = aboveMids.length > 0 ? Math.min(...aboveMids) : null;
+    const below = belowMids.length > 0 ? Math.max(...belowMids) : null;
+    const upper = above !== null ? (midY(label) + above) / 2 : midY(label) + typical * 2.5;
+    const lower = below !== null ? (midY(label) + below) / 2 : midY(label) - typical * 2.5;
+    const lines = PDFQuestionReading.pageLines(page).filter(
+      (line) => Rects.midX(line) > left && Rects.midX(line) < right,
+    );
+    const own = lines
+      .filter((line) => midY(line) <= upper && midY(line) >= lower)
+      .reduce<Rect>((all, line) => Rects.union(all, line)!, label);
+    // The lines of the rows above and under, down to (up to) their labels' middle.
+    const upperRow = above !== null ? lines.filter((line) => midY(line) > upper && midY(line) <= above + typical) : [];
+    const lowerRow = below !== null ? lines.filter((line) => midY(line) < lower && midY(line) >= below - typical) : [];
+    let top = maxY(own) + 3;
+    let bottom = minY(own) - 3;
+    if (upperRow.length > 0) {
+      const next = Math.min(...upperRow.map(minY));
+      top = next >= maxY(own) ? maxY(own) + Math.min(3, (next - maxY(own)) / 2) : (next + maxY(own)) / 2;
+    }
+    if (lowerRow.length > 0) {
+      const next = Math.max(...lowerRow.map(maxY));
+      bottom = next <= minY(own) ? minY(own) - Math.min(3, (minY(own) - next) / 2) : (next + minY(own)) / 2;
+    }
+    // A label's box stretched by a tall sign on its line («f) √(1−x)») is taller than its row: one line will do.
+    if (top - bottom < Math.min(label.height, typical)) return null;
+    return { top, bottom };
+  },
+
+  /** The page's lines of text (their boxes). */
+  pageLines(page: PageText): Rect[] {
+    const cached = lineCache.get(page);
+    if (cached) return cached;
+    const lines = linesOf(page, 0, page.text.length)
+      .map((line) => line.bounds)
+      .filter((box) => box.width > 0 && box.height > 0);
+    lineCache.set(page, lines);
+    return lines;
   },
 
   make(question: ExamQuestion, page: PageText, placement: Placement): PDFQuestionRead | null {
-    const area = PDFQuestionReading.questionArea(question, questionsOn(page), headingBounds(page));
+    const all = questionsOn(page);
+    const area = PDFQuestionReading.questionArea(question, all, headingBounds(page), page);
     if (area.width <= 20 || area.height <= 8) return null;
-    const stem = PDFQuestionReading.stemArea(question, area);
-    const own = PDFQuestionReading.statement(area, question.text, page, []);
+    const stem = PDFQuestionReading.stemArea(question, area, all);
+    const own = PDFQuestionReading.isGroupStem(question, all)
+      ? PDFQuestionReading.groupStatement(question, area, page)
+      : PDFQuestionReading.statement(area, question.text, page, []);
     const stemText = stem
       ? PDFQuestionReading.statement(stem, "", page, [])
       : (PDFQuestionReading.carriedStem(question, page) ?? "");
@@ -292,13 +573,22 @@ export const PDFQuestionReading = {
 
   /** Where a part's shared statement is printed above it on the same page, across the part's width; null for a
    * question that is not a part. */
-  stemArea(question: ExamQuestion, area: Rect): Rect | null {
+  stemArea(question: ExamQuestion, area: Rect, all: readonly ExamQuestion[] = []): Rect | null {
     const bounds = question.statementBounds;
     if (question.label === question.group || question.statementPageIndex !== null || !bounds) return null;
     if (minY(bounds) <= minY(area)) return null;
     const left = Math.min(minX(bounds), minX(area));
     const right = Math.max(maxX(bounds), maxX(area));
-    const bottom = Math.max(minY(bounds), maxY(area));
+    // The statement ends above the group's first part, even when the text layer stores the parts' labels inside it
+    // ("5.1. 5.2. Mostre …").
+    const typical = PDFQuestionReading.typicalLabelHeight(all);
+    const firstParts = all
+      .filter(
+        (other) =>
+          other.group === question.group && other.label !== question.group && other.pageIndex === question.pageIndex,
+      )
+      .map((other) => maxY(PDFQuestionReading.lineBox(other.labelBounds, typical)) + 2);
+    const bottom = Math.max(minY(bounds), maxY(area), ...firstParts);
     if (maxY(bounds) - bottom <= 4) return null;
     return { x: left, y: bottom, width: right - left, height: maxY(bounds) - bottom };
   },
@@ -443,15 +733,48 @@ export const PDFQuestionReading = {
         if (trimmed !== "" && out[out.length - 1] !== trimmed) out.push(trimmed);
       }
     }
-    // A page number at the foot of the page is not the question's.
+    // A page number at the foot of the page is not the question's ("4", "Página 1", "Page 2 of 3").
     const last = out[out.length - 1];
     if (last !== undefined && characterCount(last) <= 3 && /^\d+$/u.test(last)) out.pop();
+    const footer = out[out.length - 1];
+    if (footer !== undefined && /^(?:Página|Pagina|Page|Pág\.)\s*\d+(?:\s*(?:\/|de|of)\s*\d+)?$/iu.test(footer))
+      out.pop();
     const text = normalizeText(out.join("\n").replaceAll("ℎ", "h"))
       // A subscript the page sets apart ("V 5") is the symbol's own ("V5").
       .replace(/\b([VIRCLPQU]) (\d)\b/gu, "$1$2")
       .trim();
-    // A page whose text can't be read by area: the question's own text, labels and all, is better than none.
-    return characterCount(text) >= Math.max(8, characterCount(fallback) / 4) ? text : fallback;
+    // A page whose text can't be read by area: the question's own text, labels and all, is better than none. The
+    // detector's own text can run long over a grid's other column (CDI 1(h): 200 characters of i)–q)), so a short
+    // part read by area whole is never measured against all of it.
+    return characterCount(text) >= Math.max(8, Math.min(characterCount(fallback) / 4, 24)) ? text : fallback;
+  },
+
+  /**
+   * A group's statement and each of its parts, read one area at a time and in the order they are printed: the text
+   * layer may store the parts' labels before their words ("1.1. 1.2. Determine … Indique …")
+   * (`PDFQuestionRead.groupStatement` @ 5701363).
+   */
+  groupStatement(question: ExamQuestion, area: Rect, page: PageText): string {
+    const all = questionsOn(page);
+    const parts = all.filter((other) => other.group === question.group && other.label !== question.label);
+    const typical = PDFQuestionReading.typicalLabelHeight(all);
+    const tops = parts.map((part) => maxY(PDFQuestionReading.lineBox(part.labelBounds, typical)) + 2);
+    const firstPartTop = tops.length > 0 ? Math.max(...tops) : minY(area);
+    const stem = { x: area.x, y: firstPartTop, width: area.width, height: Math.max(maxY(area) - firstPartTop, 1) };
+    const pieces = [PDFQuestionReading.statement(stem, question.text, page, [])];
+    // Top to bottom, left to right on one row (a grid of parts).
+    const ordered = [...parts].sort((a, b) =>
+      Math.abs(midY(a.labelBounds) - midY(b.labelBounds)) > typical / 2
+        ? midY(b.labelBounds) - midY(a.labelBounds)
+        : minX(a.labelBounds) - minX(b.labelBounds),
+    );
+    for (const part of ordered) {
+      const partArea = intersection(PDFQuestionReading.questionArea(part, all, [], page), area);
+      if (!partArea) continue;
+      const text = PDFQuestionReading.statement(partArea, part.text, page, []);
+      if (text !== "") pieces.push(text);
+    }
+    return pieces.join("\n");
   },
 
   /** What is left of `rect` when `hole` is taken out: the strips above, below and beside it. */

@@ -1,12 +1,15 @@
 // Port of the detector cases of LearnLayerTests/AlineaGridTests.swift @ 5701363: a sheet of exercises whose parts
 // a)–q) are set in two columns under one statement (CDI sheet 1, «Resolva as seguintes equações e inequações:»):
-// every part is found with the statement. The Mac draws the page with CoreText in Times 11 on a 520 × 500 page;
-// here the same lines are laid at the same baselines. The click and area cases (PDFQuestionRead.question(at:),
-// questionArea, gridRowBand) are ported with the PDF reading.
+// every part is found, read alone with the statement, and an Alt-click anywhere on a part's row picks that part. The
+// Mac draws the page with CoreText in Times 11 on a 520 × 500 page; here the same lines are laid at the same
+// baselines. The reading checks (lost relations, root indices, plain TeX, the italic label) are ported with the
+// readings that use them.
 
 import { describe, expect, it } from "vitest";
 import { drawnTestPage } from "../testing/testPages";
 import { inLetterSequence, inRomanSequence, questionsOn } from "./questionDetector";
+import { PDFQuestionReading } from "../anywhere/pdfQuestionRead";
+import { Rects } from "../pdf/page";
 
 const left = [
   "a) 4 < x2 ≤ 9",
@@ -77,5 +80,69 @@ describe("a grid of parts in two columns", () => {
     // v) after u) and x) after w) are letters.
     expect(inRomanSequence(["u", "v"])).toEqual([true, true]);
     expect(inRomanSequence(["w", "x"])).toEqual([true, true]);
+  });
+});
+
+describe("an Alt-click on a grid of parts", () => {
+  const page = sheet();
+  const all = questionsOn(page);
+  const find = (label: string) => {
+    const found = all.find((question) => question.label === label);
+    if (!found) throw new Error(`missing ${label}`);
+    return found;
+  };
+  const lineOf = (label: ReturnType<typeof find>["labelBounds"]) => {
+    const middle = { x: Rects.midX(label), y: Rects.midY(label) };
+    const line = PDFQuestionReading.pageLines(page).find((box) => Rects.contains(box, middle));
+    if (!line) throw new Error("no line");
+    return line;
+  };
+
+  it("picks the part of the row it lands on, anywhere on that row", () => {
+    for (const letter of letters) {
+      const part = find(`1(${letter})`);
+      const label = part.labelBounds;
+      const line = lineOf(label);
+      for (const x of [Rects.minX(label) + 1, (Rects.maxX(label) + Rects.maxX(line)) / 2, Rects.maxX(line) + 6]) {
+        const point = { x, y: Rects.midY(label) };
+        expect(PDFQuestionReading.question(point, page)?.label, `1(${letter}) at ${x}`).toBe(part.label);
+      }
+    }
+  });
+
+  it("gives the gap between the columns to the nearer part", () => {
+    const a = find("1(a)");
+    const i = find("1(i)");
+    const aLine = lineOf(a.labelBounds);
+    const gap = Rects.minX(i.labelBounds) - Rects.maxX(aLine);
+    const y = Rects.midY(a.labelBounds);
+    expect(PDFQuestionReading.question({ x: Rects.maxX(aLine) + gap / 4, y }, page)?.label).toBe("1(a)");
+    expect(PDFQuestionReading.question({ x: Rects.minX(i.labelBounds) - gap / 4, y }, page)?.label).toBe("1(i)");
+    // The statement's line is the whole question.
+    const stem = find("1");
+    const point = { x: Rects.maxX(stem.labelBounds) + 40, y: Rects.midY(stem.labelBounds) };
+    expect(PDFQuestionReading.question(point, page)?.label).toBe("1");
+  });
+
+  it("reads a grid part's area as its own row", () => {
+    "abcdefg".split("").forEach((letter, index) => {
+      const part = find(`1(${letter})`);
+      const next = find(`1(${"bcdefgh"[index]})`);
+      const area = PDFQuestionReading.questionArea(part, all, [], page);
+      // Its own label, and nothing of the next row's.
+      expect(Rects.contains(area, { x: Rects.midX(part.labelBounds), y: Rects.midY(part.labelBounds) })).toBe(true);
+      expect(Rects.minY(area)).toBeGreaterThanOrEqual(Rects.midY(next.labelBounds));
+      // Not across into the other column.
+      expect(Rects.maxX(area)).toBeLessThan(270);
+    });
+  });
+
+  it("reads a grid part alone with its statement", () => {
+    const placement = { page, pageUnitsPerPoint: 1, tx: 0, ty: 0, residual: 0, anchors: 9 };
+    const made = PDFQuestionReading.make(find("1(g)"), page, placement)!;
+    expect(made.exam.text).toContain("Resolva");
+    expect(made.exam.text).toContain("g)");
+    expect(made.exam.text).not.toContain("h)");
+    expect(made.exam.text).not.toContain("p)");
   });
 });
