@@ -347,3 +347,15 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** `PDFQuestionRead.gridRowBand` corta entre duas linhas de uma grelha de fórmulas pela linha de píxeis com menos tinta (`inkCut`), desenhando a página. O `core/` não tem imagem da página. As verificações `lostRelation` e `isMinorRelationShortfall` aplicam-se no Mac à transcrição de uma pergunta do PDF, que o Windows ainda não tem (o leitor mostra o recorte do PDF).
 - **Escolha:** o corte fica a meio, que é o recurso do próprio Mac quando não consegue desenhar. As verificações estão portadas com os testes do Mac e ficam prontas para o caminho do PDF com transcrição.
 - **Porquê:** os testes do Mac para as grelhas passam com o meio; desenhar a página no `core/` puxaria o pdf.js para o núcleo.
+
+## 2026-11-20 — Teclas do menu por cima de outra app (`ChoiceKeys`)
+
+- **Dúvida:** o Mac passou a escolher a opção do menu com as teclas 1–9 mesmo com o foco noutra app (`ChoiceKeys`, com um monitor global de teclas), porque o painel do palco do Mac não toma o teclado.
+- **Escolha:** não se porta. No Windows o palco toma o teclado quando abre (`overlay.rs`, `set_interactive` chama `set_focus`) e devolve-o ao fechar; as teclas 1–4 e o Enter chegam à página do palco, e o Esc é intercetado pelo hook seja qual for o foco.
+- **Porquê:** intercetar algarismos globalmente roubaria teclas à app de baixo sem necessidade; se o Windows recusar o foco (bloqueio do primeiro plano), o rato no palco continua a funcionar e o Esc fecha.
+
+## 2026-11-20 — Câmara do 3D no Windows
+
+- **Dúvida:** o Mac põe a câmara a 10 unidades, de frente, e afasta-a só quanto preciso para a figura caber em qualquer volta (`Figure3DFraming`, vista com proporção 1,25). O Windows tem a câmara a (0, 1,6, 9), um pouco acima, e figuras escaladas para 4 unidades.
+- **Escolha:** a mesma conta (24 voltas de 15°, 8 % de folga, campo de 35°), com a distância de base do Windows (√(1,6² + 9²)), a inclinação da câmara somada à da figura e a proporção da própria vista; recalculada quando o aluno inclina a figura.
+- **Porquê:** a vista do Windows tem a proporção que a coluna lhe dá, não a do palco do Mac; com a base do Windows nada muda numa figura que já cabia.
