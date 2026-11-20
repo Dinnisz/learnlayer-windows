@@ -73,6 +73,11 @@
   filter: drop-shadow(0 2px 8px rgb(0 0 0 / 35%));
 }
 
+/* Only a listener for a click on the question: it lays nothing out. */
+.stage-question-toggle {
+  display: contents;
+}
+
 /* The question lifted off the page: drawn black on clear, turned white. */
 .stage-question {
   width: 100%;

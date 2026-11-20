@@ -403,6 +403,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
     return () => window.removeEventListener("keydown", onKey, true);
   }, [session, choose, close, stopLesson, stopVoice]);
 
+  const [questionExpanded, setQuestionExpanded] = useState(false);
   // The work's own height (the Mac's `panelHeight`), for the compact question to make room for it.
   const [workHeight, setWorkHeight] = useState(0);
   const measuredWork = useCallback((height: number) => setWorkHeight(Math.round(height)), []);
@@ -410,7 +411,15 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
 
   const mode = session?.mode ?? null;
   const showsLesson = mode === "solution" && session?.part != null && session.state.kind === "ready";
-  const compact = mode === "solution" || mode === "followUp";
+  // Reading while the student works on it; compact once the solution is open, unless a click on the question opened
+  // it to its reading size again (QuestionOverlay's `phase` and `questionExpanded`).
+  const compact = mode === "solution" && !questionExpanded;
+  const toggleQuestion = () => {
+    if (mode !== "solution") return;
+    // A click that ends a selection of the question's words keeps it as it is.
+    if (!(window.getSelection()?.isCollapsed ?? true)) return;
+    setQuestionExpanded((expanded) => !expanded);
+  };
   // The stage's side column (`Stage.hasSide`): beside the question when the window is at least 1000 pt wide,
   // `min(440, 34 %)` of it, the question and the work in what is left (36 pt apart).
   const widthPoints = stageWidth / stageScale;
@@ -434,17 +443,20 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                 className={`stage-column${compact ? " stage-compact" : ""}`}
                 style={extrasAtSide ? { width: `min(1272px, calc(100% - ${sideWidth + 36}px))` } : undefined}
               >
-                {source.kind === "pdf" ? (
-                  <QuestionCrop
-                    document={source.document}
-                    opened={source.opened}
-                    page={prepared?.page ?? null}
-                    session={session}
-                    compact={compact}
-                  />
-                ) : (
-                  <ScreenQuestionView source={source} session={session} compact={compact} />
-                )}
+                {/* A click on the compact question opens it to its reading size, and back (`toggleQuestion`). */}
+                <div className="stage-question-toggle" onClick={toggleQuestion}>
+                  {source.kind === "pdf" ? (
+                    <QuestionCrop
+                      document={source.document}
+                      opened={source.opened}
+                      page={prepared?.page ?? null}
+                      session={session}
+                      compact={compact}
+                    />
+                  ) : (
+                    <ScreenQuestionView source={source} session={session} compact={compact} />
+                  )}
+                </div>
                 {session === null || mode === null ? (
                   <Menu
                     explains={session?.explains ?? false}
