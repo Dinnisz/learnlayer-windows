@@ -36,6 +36,7 @@ import { PassageStage, type PassageSource } from "../../stage/PassageStage";
 import { normalizeText } from "@core/problems/textNormalizer";
 import { CaptureArea, questionFromArea, type FrozenScreen } from "./CaptureArea";
 import { demoClick } from "./demo";
+import { sampleQuestion } from "../../onboarding/OnboardingCard";
 
 interface Notice {
   key: string;
@@ -383,6 +384,43 @@ export function OverlayWindow() {
               text: "«Ó mar salgado, quanto do teu sal / São lágrimas de Portugal!» Explica o sentido destes versos.",
               frame: { x: 120, y: 160, width: 520, height: 48 },
             },
+            window: null,
+            lines: [],
+            pdfPath: null,
+          },
+          { picture: async () => null, pdf: async () => new ArrayBuffer(0) },
+        ),
+      );
+      return;
+    }
+    // `?demo=sample`: an Alt-click on the onboarding's sample question, read as text from a browser page: the
+    // question typeset, and with mocks its sample solution (the data each step uses, underlined in the question).
+    if (demoKind === "sample") {
+      void Promise.resolve().then(() =>
+        open(
+          {
+            id: 1,
+            point: { x: 260, y: 170 },
+            monitor: { x: 0, y: 0, width: 1280, height: 800 },
+            scale: 1,
+            appName: "msedge.exe",
+            refused: null,
+            found: {
+              longText: null,
+              block: {
+                index: 0,
+                nodes: [
+                  {
+                    text: sampleQuestion,
+                    frame: { x: 120, y: 160, width: 560, height: 22 },
+                    kind: "text",
+                    hasImage: false,
+                  },
+                ],
+              },
+              focus: "",
+            },
+            selection: null,
             window: null,
             lines: [],
             pdfPath: null,
