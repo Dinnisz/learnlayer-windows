@@ -887,7 +887,8 @@
   line-height: calc(1.2em + 4px);
 }
 
-.stage-compact .stage-typeset {
+/* The computer's own reading while the model's comes: at the compact size once the solution is open. */
+.stage-compact .stage-draft {
   font-size: 14px;
 }
 

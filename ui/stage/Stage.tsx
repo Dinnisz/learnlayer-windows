@@ -2527,7 +2527,13 @@ function ScreenQuestionView({
   return (
     <div className="stage-question stage-screen-question" aria-live="polite" ref={holder}>
       {shown.kind === "typeset" ? (
-        <TypesetQuestion transcription={shown.transcription} source={source} session={session} />
+        <TypesetQuestion
+          transcription={shown.transcription}
+          source={source}
+          session={session}
+          compact={compact}
+          columnWidth={width}
+        />
       ) : shown.kind === "crop" && picture ? (
         <InkPicture
           className="stage-screen-crop"
@@ -2729,19 +2735,58 @@ function TypesetQuestion({
   transcription,
   source,
   session,
+  compact,
+  columnWidth,
 }: {
   transcription: QuestionTranscription;
   source: PictureQuestion;
   session: QuestionSession | null;
+  compact: boolean;
+  /** The column's width in its own pixels; 0 before it is laid out. */
+  columnWidth: number;
 }) {
   const picture = source.picture;
   const container = useRef<HTMLDivElement>(null);
+  // Typeset at 17 pt, then sized as the lifted crop is (RenderedQuestion is an image the stage scales): never taller
+  // than its share of the stage, 14 pt once the solution is open, ceding to the work down to 11.
+  const [natural, setNatural] = useState({ width: 0, height: 0 });
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    // In its own pixels, which its zoom does not change: no loop.
+    const measure = () =>
+      setNatural((now) =>
+        now.width === element.offsetWidth && now.height === element.offsetHeight
+          ? now
+          : { width: element.offsetWidth, height: element.offsetHeight },
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const panel = useContext(PanelHeight).height;
+  const available = stageHeight();
+  const scale =
+    natural.height > 0 && columnWidth > 0
+      ? questionScale({
+          body: 17,
+          compact,
+          fits: columnWidth / Math.max(1, natural.width),
+          height: natural.height,
+          available,
+          panel,
+          compactWindow: available <= compactStageHeight,
+        })
+      : compact
+        ? 14 / 17
+        : 1;
   // The i-th figure block without a box of its own takes the i-th figure found on the picture.
   const figureOrder = transcription.blocks.map(
     (_, index) => transcription.blocks.slice(0, index).filter((block) => block.type === "figure").length,
   );
   return (
-    <div className="stage-typeset" ref={container}>
+    <div className="stage-typeset" ref={container} style={{ zoom: scale }}>
       {transcription.blocks.map((block, index) => {
         if (block.type === "figure") {
           const box = Transcriptions.rect(block) ?? source.figureBoxes[figureOrder[index]!] ?? null;
