@@ -14,7 +14,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
-import { FitToHeight } from "./FitToHeight";
+import { compactStageHeight, FitToHeight, stageFitFloor } from "./FitToHeight";
+import { questionScale } from "./questionScale";
 import { springDuration, springEasing, Springs } from "../styles/springs";
 import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
@@ -395,63 +396,70 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
     return () => window.removeEventListener("keydown", onKey, true);
   }, [session, choose, close, stopLesson, stopVoice]);
 
+  // The work's own height (the Mac's `panelHeight`), for the compact question to make room for it.
+  const [workHeight, setWorkHeight] = useState(0);
+  const measuredWork = useCallback((height: number) => setWorkHeight(Math.round(height)), []);
+  const panelHeight = useMemo(() => ({ height: workHeight, measured: measuredWork }), [workHeight, measuredWork]);
+
   const mode = session?.mode ?? null;
   const showsLesson = mode === "solution" && session?.part != null && session.state.kind === "ready";
   const compact = mode === "solution" || mode === "followUp";
 
   return (
-    <LessonContext.Provider value={{ state: lesson.state, player: lesson.player, toggle: lesson.toggle }}>
-      <VoiceContext.Provider value={voice.state}>
-        <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
-          <div
-            className="stage"
-            style={{ "--stage-scale": stageScale } as React.CSSProperties}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("What do you want to do?")}
-            onMouseDown={(event) => event.target === event.currentTarget && close()}
-          >
-            <div className={`stage-column${compact ? " stage-compact" : ""}`}>
-              {source.kind === "pdf" ? (
-                <QuestionCrop
-                  document={source.document}
-                  opened={source.opened}
-                  page={prepared?.page ?? null}
-                  session={session}
-                  compact={compact}
+    <PanelHeight.Provider value={panelHeight}>
+      <LessonContext.Provider value={{ state: lesson.state, player: lesson.player, toggle: lesson.toggle }}>
+        <VoiceContext.Provider value={voice.state}>
+          <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
+            <div
+              className="stage"
+              style={{ "--stage-scale": stageScale } as React.CSSProperties}
+              role="dialog"
+              aria-modal="true"
+              aria-label={t("What do you want to do?")}
+              onMouseDown={(event) => event.target === event.currentTarget && close()}
+            >
+              <div className={`stage-column${compact ? " stage-compact" : ""}`}>
+                {source.kind === "pdf" ? (
+                  <QuestionCrop
+                    document={source.document}
+                    opened={source.opened}
+                    page={prepared?.page ?? null}
+                    session={session}
+                    compact={compact}
+                  />
+                ) : (
+                  <ScreenQuestionView source={source} session={session} compact={compact} />
+                )}
+                {session === null || mode === null ? (
+                  <Menu
+                    explains={session?.explains ?? false}
+                    onChoose={choose}
+                    onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
+                  />
+                ) : (
+                  <ModeView session={session} />
+                )}
+              </div>
+              {/* Every stage has the tutor (QuestionOverlay): the sphere, when the mascot is on; the lesson's card. */}
+              {(session && mascotOn) || showsLesson ? (
+                <LessonOverlay
+                  player={lesson.player}
+                  state={lesson.state}
+                  onTap={tapMascot}
+                  voice={voice.state}
+                  presence={mascotPresence}
+                  transient={cue?.cue ?? null}
+                  showsMascot={mascotOn && session !== null}
+                  restsBeside={session?.mode === "solution" && (session.isGuiding || (lesson.state?.playing ?? false))}
                 />
-              ) : (
-                <ScreenQuestionView source={source} session={session} compact={compact} />
-              )}
-              {session === null || mode === null ? (
-                <Menu
-                  explains={session?.explains ?? false}
-                  onChoose={choose}
-                  onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
-                />
-              ) : (
-                <ModeView session={session} />
-              )}
+              ) : null}
+              <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
+              {session && <SelectionAskPill session={session} />}
             </div>
-            {/* Every stage has the tutor (QuestionOverlay): the sphere, when the mascot is on; the lesson's card. */}
-            {(session && mascotOn) || showsLesson ? (
-              <LessonOverlay
-                player={lesson.player}
-                state={lesson.state}
-                onTap={tapMascot}
-                voice={voice.state}
-                presence={mascotPresence}
-                transient={cue?.cue ?? null}
-                showsMascot={mascotOn && session !== null}
-                restsBeside={session?.mode === "solution" && (session.isGuiding || (lesson.state?.playing ?? false))}
-              />
-            ) : null}
-            <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
-            {session && <SelectionAskPill session={session} />}
-          </div>
-        </TalkContext.Provider>
-      </VoiceContext.Provider>
-    </LessonContext.Provider>
+          </TalkContext.Provider>
+        </VoiceContext.Provider>
+      </LessonContext.Provider>
+    </PanelHeight.Provider>
   );
 }
 
@@ -625,28 +633,20 @@ function useQuestionFlight(
   }, [flight, holder, targets, laidOut, sized]);
 }
 
-/** `Stage.init`'s scale for the lifted question: its body text at `readingSize` or `compactSize` points. */
-function questionScale({
-  body,
-  compact,
-  fits,
-  height,
-}: {
-  body: number;
-  compact: boolean;
-  fits: number;
-  height: number;
-}) {
-  // In the column's own pixels, which StageScale enlarges.
+/** The stage's height in the column's own pixels, which StageScale enlarges. */
+function stageHeight(): number {
   const windowHeight = window.innerHeight || 800;
-  const available = windowHeight / StageScale.factor(windowHeight);
-  const size = compact ? 14 : 17;
-  const share = compact ? 0.3 : 0.45;
-  // Sized by its letters, never wider than the column nor taller than its share of the height (QuestionStage): a long
-  // question (a table and a cloze) shrinks so the menu under it stays on the screen. The Mac's floor at the smallest
-  // readable size only applies with the work's own height to make room for, which the stage doesn't measure here.
-  return Math.min(size / Math.max(1, body), fits, (available * share) / Math.max(1, height));
+  return windowHeight / StageScale.factor(windowHeight);
 }
+
+/**
+ * The work's own height on this stage (the Mac's `panelHeight`), told by the solution as it measures itself, so the
+ * compact question gives up only the room it needs.
+ */
+const PanelHeight = createContext<{ height: number; measured: (height: number) => void }>({
+  height: 0,
+  measured: () => {},
+});
 
 /** The question lifted off the page: drawn by pdf.js, white on the dark stage, with the open step's data underlined. */
 function QuestionCrop({
@@ -691,7 +691,20 @@ function QuestionCrop({
   const body = useMemo(() => (page ? bodyFontSize(page, question.bounds) : 11), [page, question]);
   const widest = Math.max(...regions.map((region) => region.width));
   const tall = regions.reduce((sum, region) => sum + region.height, 0);
-  const scale = width === 0 ? 1 : questionScale({ body, compact, fits: width / widest, height: tall });
+  const panel = useContext(PanelHeight).height;
+  const available = stageHeight();
+  const scale =
+    width === 0
+      ? 1
+      : questionScale({
+          body,
+          compact,
+          fits: width / widest,
+          height: tall,
+          available,
+          panel,
+          compactWindow: available <= compactStageHeight,
+        });
 
   const sources = useMemo(
     () => sourceRects(opened.frame, question.bounds, regions),
@@ -1488,6 +1501,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
   const t = useT();
   const part = session.part;
   const solution = session.solution;
+  const panelHeight = useContext(PanelHeight);
 
   // The steps come in one after another the first time the solution is shown.
   useEffect(() => {
@@ -1517,7 +1531,7 @@ function SolutionView({ session }: { session: QuestionSession }) {
       (session.showsGraph && session.hasGraph) ||
       session.showsIllustration);
   return (
-    <FitToHeight>
+    <FitToHeight floor={stageFitFloor(stageHeight())} onNatural={panelHeight.measured}>
       <div className="stage-panel stage-solution">
         {solution.figure && (
           <details className="stage-figure-reading">
