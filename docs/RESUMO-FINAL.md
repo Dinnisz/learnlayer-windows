@@ -6,6 +6,23 @@ As fases 0 a 8 estão feitas no código.
 
 O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado e a app instalada já abre neste PC (janela principal com a introdução e pílula no topo). Para distribuir aos alunos falta a assinatura (ponto 4).
 
+## Atualização de 2026-11-20
+
+- **Referência do Mac atualizada para o `main` em 5701363**, com o trabalho local do Mac que não está no GitHub juntado (ver `PARA-O-DINIS.md`, ponto 0). Tudo o que se aplica ao Windows está portado, com os testes do Mac. Os pontos principais:
+  - prompts novos (resolução v36);
+  - caixa de figura «Figura | Gráfico»;
+  - texto de apoio das perguntas de leitura;
+  - grelhas de alíneas e relações negadas;
+  - auditoria 3D: volumes verificados, sólidos fixos, figuras no espaço e uma câmara que mostra a figura inteira;
+  - números dos eixos fora da curva;
+  - clique na outra página de duas lado a lado, e números de pergunta na margem lidos outra vez pelo OCR;
+  - preço pelo modelo que serviu e cabeçalho `X-LearnLayer-Continuation`;
+  - créditos Plus 120 e Pro 280 por dia;
+  - resolução compacta para janelas curtas.
+- O que fica de fora e porquê: `DECISOES.md`, «O que do porte de 5701363 fica de fora».
+- **Testes:** 2027 de TypeScript e 28 de Rust passam; lint, typecheck, `cargo fmt` e `clippy` limpos. O CI no GitHub está parado pela faturação da conta; corri tudo nesta máquina.
+- **Por verificar ao vivo:** Ctrl+Win (precisa de carregar nas teclas; ver `PROGRESSO.md`, Falta 1), a pergunta tipografada com uma transcrição real, e os números na margem com um Alt-clique.
+
 ## Atualização de 2026-11-17
 
 - **A app real corre neste PC.** O Smart App Control foi desligado. O CI no GitHub (repositório público `Dinnisz/learnlayer-windows`) está verde: lint, 808 testes de TypeScript, `cargo fmt`, `clippy` e 22 testes de Rust. O instalador está em `dist/`.
