@@ -106,7 +106,8 @@
 /* Drawn in the stage's ink (PageInk): white on nothing, the page's colours in the palette's hues. */
 .stage-crop canvas {
   display: block;
-  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
+  /* The question's ink shadow (QuestionOverlay): black 45 %, radius 8, 2 down. */
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 45%));
 }
 
 /* An open step's datum: a straight line under it, as thick as the Mac's (StatementUnderlines' capsule). */
@@ -935,7 +936,8 @@
 .stage-screen-crop {
   display: block;
   max-width: 100%;
-  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
+  /* The question's ink shadow (QuestionOverlay): black 45 %, radius 8, 2 down. */
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 45%));
 }
 
 .stage-draft {
