@@ -35,7 +35,7 @@ import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./prob
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
 import { CircuitCheck, circuitOf, CircuitSpecs } from "../illustrations/circuit";
 import type { PremadeFigure } from "../illustrations/premadeFigure";
-import { checkableSolid, SolidCheck, solidOf } from "../illustrations/solid";
+import { SolidCheck, solidOf } from "../illustrations/solid";
 import { ComplexFigures, decodeComplexFigure } from "../illustrations/complexFigure";
 import {
   figureTopicOf,
@@ -1636,9 +1636,8 @@ ${part.label}`,
         // A circuit is checked against the answer: the resistance between its terminals must be the one the solution
         // gives (or the same in kΩ), else it is not shown.
         const premade = drawn.premade as PremadeFigure | null | undefined;
-        // A solid whose volume is not the answer's is not shown.
-        const solid = checkableSolid(premade);
-        if (solid && SolidCheck.agrees(solid, part.answer.text) === false) {
+        // A solid whose volume is not the answer's is not shown (a fixed one too, when the answer is its volume).
+        if (SolidCheck.agreesFigure(premade, part.answer.text) === false) {
           this.illustrationState = "failed";
           return;
         }
