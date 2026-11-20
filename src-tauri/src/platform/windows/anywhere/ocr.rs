@@ -76,15 +76,25 @@ pub fn lines_with_gutter_labels(picture: &Picture) -> Vec<Line> {
     let Some((left, right)) = gutter_strip(&lines) else {
         return lines;
     };
-    let Some(strip) = enlarged_strip(picture, left, right, GUTTER_ZOOM) else {
+    let limit = OcrEngine::MaxImageDimension()
+        .map(|value| value as i32)
+        .unwrap_or(10_000);
+    let zoom = gutter_zoom(picture.height, limit);
+    let Some(strip) = enlarged_strip(picture, left, right, zoom) else {
         return lines;
     };
     let found = read(&strip).unwrap_or_default();
-    with_gutter_labels(lines, &found, left, GUTTER_ZOOM)
+    with_gutter_labels(lines, &found, left, zoom)
 }
 
-/// How much larger the margin strip is read.
-const GUTTER_ZOOM: i32 = 3;
+/// How much larger the margin strip is read: three times, or as much as the engine takes whole (a strip it would
+/// read smaller again gains nothing from being enlarged).
+fn gutter_zoom(height: i32, limit: i32) -> i32 {
+    if height <= 0 {
+        return 1;
+    }
+    (limit / height).clamp(1, 3)
+}
 
 /// A question's number standing alone: "1.", "12)", "(3)".
 fn is_lone_number(text: &str) -> bool {
@@ -299,6 +309,14 @@ mod tests {
                 height: 20.0 / 3.0
             }
         );
+    }
+
+    #[test]
+    fn the_margin_is_enlarged_only_as_far_as_the_engine_reads_whole() {
+        assert_eq!(gutter_zoom(700, 10_000), 3);
+        assert_eq!(gutter_zoom(1_000, 2_600), 2);
+        assert_eq!(gutter_zoom(2_160, 2_600), 1);
+        assert_eq!(gutter_zoom(0, 2_600), 1);
     }
 
     #[test]
