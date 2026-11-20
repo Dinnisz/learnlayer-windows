@@ -29,6 +29,24 @@ const bare = (label: string) => label.replace(/[.)]+$/u, "");
 /** Without its group ("I.1" → "1"): the screen does not know which group a page is in. */
 const ungrouped = (label: string) => bare(label).replace(/^(?:[IVX]+|[A-D])./u, "");
 
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const centre = (box: Box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+const contains = (box: Box, point: { x: number; y: number }) =>
+  point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height;
+
+const grown = (box: Box, by: number): Box => ({
+  x: box.x - by,
+  y: box.y - by,
+  width: box.width + 2 * by,
+  height: box.height + 2 * by,
+});
+
 /** The scale `scripts/render-page.mjs` was run with: PDF points to the picture's pixels. */
 const scale = Number(process.env.SCREEN_SCALE ?? "1.5");
 
@@ -39,6 +57,8 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     let clicks = 0;
     let right = 0;
     const missed: string[] = [];
+    const cut: string[] = [];
+    const leaks: string[] = [];
     for (const name of readdirSync(folder).filter((file) => file.endsWith(".lines.json"))) {
       const page = name.replace(/\.lines\.json$/u, "");
       const [exam, number] = [page.replace(/-p\d+$/u, ""), Number(/-p(\d+)$/u.exec(page)![1])];
@@ -50,13 +70,18 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
       const image = greyImage(new Uint8Array(readFileSync(`${base}.bgra`)), width, height, width, height);
       const lines = JSON.parse(readFileSync(`${base}.lines.json`, "utf8")) as LocatorLine[];
       const top = text.mediaBox.y + text.mediaBox.height;
-      for (const question of questionsOn(text)) {
-        // On the words just past its label, in the picture's pixels (PDF points have their origin bottom left).
-        const label = question.labelBounds;
-        const point = {
-          x: (label.x + label.width + 30 - text.mediaBox.x) * scale,
-          y: (top - (label.y + label.height / 2)) * scale,
-        };
+      // A rectangle in PDF points (origin bottom left) in the picture's pixels (origin top left).
+      const onPicture = (rect: { x: number; y: number; width: number; height: number }) => ({
+        x: (rect.x - text.mediaBox.x) * scale,
+        y: (top - rect.y - rect.height) * scale,
+        width: rect.width * scale,
+        height: rect.height * scale,
+      });
+      const questions = questionsOn(text);
+      for (const question of questions) {
+        // On the words just past its label.
+        const label = onPicture(question.labelBounds);
+        const point = { x: label.x + label.width + 30 * scale, y: label.y + label.height / 2 };
         const region = QuestionLocator.locate({ image, window: { x: 0, y: 0, width, height }, point, lines });
         clicks += 1;
         const found = region ? bare(region.part ?? region.label ?? "—") : "nothing";
@@ -65,9 +90,32 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
           missed.push(
             `  ${page}: ${question.label} → ${region ? `${region.label ?? "—"} ${region.part ?? ""}` : "nothing"}`,
           );
+        if (!region) continue;
+        // What it shows: the question's own area on the page, and no other question's label.
+        // Each line read inside the question's area is in the crop (its middle, give or take a few pixels).
+        const bounds = onPicture(question.bounds);
+        const left = lines.filter(
+          (line) =>
+            contains(bounds, centre(line.rect)) &&
+            !region.crops.some((crop) => contains(grown(crop, 6), centre(line.rect))),
+        );
+        if (left.length > 0)
+          cut.push(
+            `  ${page}: ${question.label} leaves out ${left.map((line) => `«${line.text.slice(0, 40)}»`).join(", ")}`,
+          );
+        const others = questions.filter(
+          (other) =>
+            other !== question &&
+            !question.groupLabels.includes(other.label) &&
+            region.crops.some((crop) => contains(crop, centre(onPicture(other.labelBounds)))),
+        );
+        if (others.length > 0)
+          leaks.push(`  ${page}: ${question.label} takes in ${others.map((other) => other.label).join(", ")}`);
       }
     }
     console.log(`${right} of ${clicks} questions of the PDF found from the screen\n${missed.join("\n")}`);
+    console.log(`${cut.length} crops short of their question\n${cut.join("\n")}`);
+    console.log(`${leaks.length} crops taking in another question\n${leaks.join("\n")}`);
   },
   600000,
 );

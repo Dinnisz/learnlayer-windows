@@ -90,6 +90,7 @@ Os testes ficam ao lado do código (`*.test.ts`), portados de `referencia-mac/Le
 ## Reparos ao Mac (comportamentos portados tal como estão)
 
 - `DiskCache.store` tira da memória a entrada mais antiga quando passa do limite, mas o `save()` funde com o ficheiro e volta a trazê-la: o ficheiro em disco nunca encolhe. Portado igual (teste em `core/ai/diskCache.test.ts`).
+- `QuestionBand.isSuspect` toma por suspeita uma faixa com mais de 70 % da altura da página e procura então um bloco mais pequeno: uma pergunta que ocupa quase a página toda (Matemática A 2026, item 3, com tabela, figura e texto de completar; o enunciado do grupo 1 de Geografia A com duas figuras) fica cortada a meio no caminho do ecrã. Visto no relatório `scripts/screen-labels.test.ts`; portado igual.
 - Alguns prompts falam do «Mac» e do «SwiftMath» (`QuestionTranscription.instruction`). Ficam iguais: a versão do prompt entra na chave da cache partilhada.
 
 ## Riscos do Alt-clique (Fase 4)

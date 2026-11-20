@@ -355,8 +355,14 @@ export const QuestionLocator = {
     );
     const span: [number, number] = [left, pageRight];
 
-    // A footer (page number) is never part of it.
-    const footerLines = lines.filter((line) => QuestionBand.isFooter(line.text) && minY(line.rect) > p.y);
+    // A footer (page number) is never part of it. Only a line with no text under it is one: a number alone higher up
+    // is a fraction's denominator ("π/6" read as "6") or a table's cell (a Windows reading; see DECISOES).
+    const footerLines = lines.filter(
+      (line) =>
+        QuestionBand.isFooter(line.text) &&
+        minY(line.rect) > p.y &&
+        !lines.some((other) => !QuestionBand.isFooter(other.text) && minY(other.rect) > maxY(line.rect) + lineHeight),
+    );
     const footerTop =
       band?.footer ?? (footerLines.length ? Math.min(...footerLines.map((line) => minY(line.rect))) : null);
 
