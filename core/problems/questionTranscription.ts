@@ -106,6 +106,61 @@ export const Transcriptions = {
     return found;
   },
 
+  /**
+   * This reading of a part's own picture with `label` («l)», «(b)»), the label the PDF prints, at the start of its
+   * first line: what the reader put there in its place («1)», «I)», «|)» for «l)», «9)» for «q)») is replaced, and
+   * with nothing read there the label is put in front. Unchanged when it already carries that label alone
+   * (`QuestionTranscription.withPartLabel` @ 5701363).
+   */
+  withPartLabel(transcription: QuestionTranscription, label: string): QuestionTranscription {
+    const bare = label.replace(/^[()[\] ]+|[()[\] ]+$/g, "");
+    const labels = Transcriptions.partLabels(transcription);
+    if (!bare || (labels.size === 1 && labels.has(bare))) return transcription;
+    const index = transcription.blocks.findIndex(
+      (block) => block.type !== "figure" && (block.text ?? "").trim() !== "",
+    );
+    const text = index >= 0 ? transcription.blocks[index]!.text : null;
+    if (text === null || text === undefined) return transcription;
+    const match = /^(\s*)(\$\s*)?[([]?[0-9A-Za-z|]{1,4}[)\]](?:\s+|(?=\$)|$)/.exec(text);
+    const blocks = [...transcription.blocks];
+    blocks[index] = {
+      ...blocks[index]!,
+      text: match
+        ? `${label} ${match[2] !== undefined ? "$" : ""}${text.slice(match[0].length)}`
+        : `${label} ${text.trim()}`,
+    };
+    return { blocks };
+  },
+
+  /** The letters a reader takes a part's letter for, in a label («1)», «I)» or «|)» for «l)», «9)» for «q)»). */
+  labelLookalikes: { l: "1I|", i: "1l|", q: "9", g: "9", o: "0", s: "5", z: "2", b: "6" } as Readonly<
+    Record<string, string>
+  >,
+
+  /**
+   * This reading with the clicked part's letter in its label where the reader wrote a lookalike («1) \ln…» for part
+   * l): only when it carries no part label and exactly one line opens with such a label. Unchanged otherwise
+   * (`QuestionTranscription.withLookalikeLabel` @ 5701363).
+   */
+  withLookalikeLabel(transcription: QuestionTranscription, part: string | null): QuestionTranscription {
+    const letters = part !== null ? Transcriptions.labelLookalikes[part] : undefined;
+    if (part === null || letters === undefined || Transcriptions.partLabels(transcription).size > 0)
+      return transcription;
+    const escaped = letters.replace(/[\\\]^|-]/g, (character) => `\\${character}`);
+    const pattern = new RegExp(`^(\\s*(?:\\$\\s*)?\\(?)([${escaped}])(\\))(?=\\s|\\$|$)`, "gm");
+    const hits = transcription.blocks.flatMap((block, index) =>
+      Array.from((block.text ?? "").matchAll(pattern), () => index),
+    );
+    if (hits.length !== 1) return transcription;
+    const index = hits[0]!;
+    const blocks = [...transcription.blocks];
+    blocks[index] = {
+      ...blocks[index]!,
+      text: (blocks[index]!.text ?? "").replace(pattern, (_, open: string, __, close: string) => open + part + close),
+    };
+    return { blocks };
+  },
+
   /** A reading of the clicked part `part` ("ii"): it carries that part's label and no other. */
   isOf(transcription: QuestionTranscription, part: string | null): boolean {
     if (part === null) return true;
