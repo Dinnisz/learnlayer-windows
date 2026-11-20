@@ -204,7 +204,7 @@ function withGridOwners(labelled: readonly Labelled[], layout: ColumnLayout, pag
 }
 
 /** "2.", "1.2." or "(b)" after a space in the middle of a stored line, followed by a space. */
-const midLineLabel = /(?<=\S[ \t ])(\d{1,2}(?:\.\d{1,2})?\.|\([a-h]\))(?=[ \t ])/g;
+const midLineLabel = /(?<=\S[ \t\u00A0])(\d{1,2}(?:\.\d{1,2})?\.|\([a-h]\))(?=[ \t\u00A0])/g;
 
 /** The label is printed below the glyph stored before it, or back at the left of the line: a line of its own. */
 export function startsVisualLine(label: Rect, previous: Rect): boolean {
@@ -230,7 +230,7 @@ export function withVisualLineBreaks(raw: string, page: PageText): { text: strin
     const space = start - 1;
     if (space <= 0) continue;
     let previous = space - 1;
-    while (previous > 0 && /[ \t ]/.test(raw[previous]!)) previous -= 1;
+    while (previous > 0 && /[ \t\u00A0]/.test(raw[previous]!)) previous -= 1;
     const labelBox = selectionBounds(page, start, match[1]!.length);
     const before = selectionBounds(page, previous, 1);
     if (!labelBox || !before || labelBox.width <= 0 || before.width <= 0) continue;
