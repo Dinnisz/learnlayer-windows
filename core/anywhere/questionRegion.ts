@@ -387,7 +387,12 @@ export const QuestionLocator = {
 
     // A span that is most of the page or a sliver: look at the text's own blocks around the click instead, bridging
     // the figures in between.
-    if (QuestionBand.isSuspect(top, bottom, size.height, lineHeight)) {
+    // Between its own label and the next one, read both, a span is the question's however much of the window it
+    // takes (a group's statement with its figure, in a window that shows less than a page): only too thin is doubted
+    // (a Windows reading; see DECISOES).
+    const labelledBothEnds = band !== null && band.end !== null;
+    const tooThin = bottom - top < lineHeight * 1.6;
+    if (labelledBothEnds ? tooThin : QuestionBand.isSuspect(top, bottom, size.height, lineHeight)) {
       const columnBox = { x: left - lineHeight, y: 0, width: pageRight - left + lineHeight, height: size.height };
       const wide = ink.figures(columnBox, textRects);
       const block = QuestionBand.segment(lines, p, size.height, wide);

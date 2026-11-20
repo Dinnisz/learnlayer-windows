@@ -384,3 +384,9 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** com as páginas desenhadas a 1,0× (página com ~600 px de largura, linhas com ~10 px), o relatório de ponta a ponta encontra 92 de 132 perguntas, contra 132 de 132 a 1,5×. Ler outra vez a janela inteira ampliada 2× quando a linha mediana tem menos de 13 px?
 - **Escolha:** não.
 - **Porquê:** medido, sobe só para 100 de 132, com perguntas novas que deixam de ser encontradas: ampliar uma imagem já desenhada pequena não devolve o detalhe, e o OCR passa a custar 4 vezes mais. Num portátil com escala de 125 % e o PDF à largura da janela, a página fica a 1,5× ou mais; a letra tão pequena é um caso raro (duas páginas lado a lado num ecrã pequeno).
+
+## 2026-11-20 — Uma pergunta entre duas etiquetas lidas nunca é «grande demais»
+
+- **Dúvida:** o `locate` do Mac desconfia de uma faixa com mais de 70 % da altura da janela (`QuestionBand.isSuspect`) e procura então um bloco mais pequeno. Numa janela de browser com 1000 px de altura e a página a 1,5×, o enunciado do grupo 4 da Geografia A 2026, com a Figura 4, vai de «4.» a «4.1.» e passa dos 70 %: um clique nele dava só o primeiro parágrafo, sem a figura.
+- **Escolha:** quando a faixa começa numa etiqueta e acaba na etiqueta seguinte, as duas lidas, só se desconfia de uma faixa fina demais (`core/anywhere/longQuestion.test.ts`). Uma faixa que vai até ao fim da página continua a ser posta em causa, como no Mac.
+- **Porquê:** a regra existe para uma etiqueta que falhou ou para tinta que nunca se interrompe; com as duas pontas lidas, o maior risco é apanhar a mais, não cortar. Num relatório com 142 janelas de browser compostas (`scripts/browser-window.mjs`: barra de ferramentas, fundo cinzento, página com scroll de 0 e 300 px), as 201 perguntas visíveis são todas encontradas e o recorte do grupo 4 passa a levar a figura; nas páginas inteiras nada muda.

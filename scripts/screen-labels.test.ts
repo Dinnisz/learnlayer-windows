@@ -63,7 +63,8 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
     const drafts: string[] = [];
     for (const name of readdirSync(folder).filter((file) => file.endsWith(".lines.json"))) {
       const page = name.replace(/\.lines\.json$/u, "");
-      const [exam, number] = [page.replace(/-p\d+$/u, ""), Number(/-p(\d+)$/u.exec(page)![1])];
+      // "EX-FQA715-p4", or a browser window around it ("EX-FQA715-p4-s300", `scripts/browser-window.mjs`).
+      const [exam, number] = [page.replace(/-p\d+(?:-s\d+)?$/u, ""), Number(/-p(\d+)(?:-s\d+)?$/u.exec(page)![1])];
       const path = exams.get(exam);
       if (!path) continue;
       const text = (await pdfPages(path))[number - 1]!;
@@ -72,10 +73,16 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
       const image = greyImage(new Uint8Array(readFileSync(`${base}.bgra`)), width, height, width, height);
       const lines = JSON.parse(readFileSync(`${base}.lines.json`, "utf8")) as LocatorLine[];
       const top = text.mediaBox.y + text.mediaBox.height;
+      // Where the page's top-left is in the picture: (0, 0) unless the page is in a browser window, under its toolbar.
+      const windowed = existsSync(`${base}.offset`);
+      const [dx, dy] = windowed
+        ? (readFileSync(`${base}.offset`, "utf8").trim().split(/\s+/u).map(Number) as [number, number])
+        : [0, 0];
+      const seenTop = windowed ? 41 : 0;
       // A rectangle in PDF points (origin bottom left) in the picture's pixels (origin top left).
       const onPicture = (rect: { x: number; y: number; width: number; height: number }) => ({
-        x: (rect.x - text.mediaBox.x) * scale,
-        y: (top - rect.y - rect.height) * scale,
+        x: (rect.x - text.mediaBox.x) * scale + dx,
+        y: (top - rect.y - rect.height) * scale + dy,
         width: rect.width * scale,
         height: rect.height * scale,
       });
@@ -83,6 +90,8 @@ it.runIf(folder !== "" && existsSync(folder) && existsSync("exames"))(
       for (const question of questions) {
         // On the words just past its label.
         const label = onPicture(question.labelBounds);
+        // A question whose label is scrolled out of sight is not clicked on it.
+        if (label.y < seenTop || label.y + label.height > height) continue;
         const point = { x: label.x + label.width + 30 * scale, y: label.y + label.height / 2 };
         const region = QuestionLocator.locate({ image, window: { x: 0, y: 0, width, height }, point, lines });
         clicks += 1;
