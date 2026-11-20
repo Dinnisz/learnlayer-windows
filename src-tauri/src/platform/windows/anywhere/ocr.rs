@@ -93,15 +93,16 @@ pub fn lines_with_gutter_labels(picture: &Picture) -> Vec<Line> {
     with_gutter_labels(lines, &found, left, zoom)
 }
 
-/// The labels in fills the page-wide reading left out: a short one ("✱ 2.") is dropped even on white. A fill where a
-/// line of text starts just past it, with no line read over it, is read again with the first words of that line (the
-/// engine reads nothing in a number standing alone in a picture), twice larger; the item's number it starts with
-/// ("2.", "✱ 1.1.", "5.(AE2018)") is added as a line of its own, over the fill.
+/// The labels in fills the page-wide reading left out or misread: a short one ("✱ 2.") is dropped even on white, and
+/// thin digits ("✱ 7.1.") come out as their dots alone (". . Quando…"). Such a fill is read again with the first
+/// words of its line (the engine reads nothing in a number standing alone in a picture), twice larger; the item's
+/// number it starts with ("2.", "✱ 1.1.", "5.(AE2018)") is added as a line of its own, over the fill, in place of what
+/// the page-wide reading made of it.
 fn with_fill_labels(mut lines: Vec<Line>, picture: &Picture, fills: &[Fill]) -> Vec<Line> {
     const ROOM: f64 = 4.0;
-    for fill in unread_label_fills(&lines, fills) {
+    for fill in label_fills_to_read(&lines, fills) {
         // Its outline and its body are two fills: the number one of them gave is not read twice.
-        if is_covered(&lines, &fill) {
+        if has_label_over(&lines, &fill) {
             continue;
         }
         let height = (fill.bottom - fill.top) as f64;
@@ -112,37 +113,59 @@ fn with_fill_labels(mut lines: Vec<Line>, picture: &Picture, fills: &[Fill]) -> 
         };
         let found = read(&part).unwrap_or_default();
         let text = found.iter().map(|line| line.text.trim()).collect::<Vec<_>>().join(" ");
-        if let Some(label) = leading_item_label(&text) {
-            lines.push(Line {
-                text: label,
-                rect: PixelRect {
-                    x: fill.left as f64,
-                    y: fill.top as f64,
-                    width: (fill.right - fill.left) as f64,
-                    height: (fill.bottom - fill.top) as f64,
-                },
-            });
+        let Some(label) = leading_item_label(&text) else {
+            continue;
+        };
+        // What the page-wide reading made of the number: a line inside the fill goes, and the dots it left at the
+        // start of the line past it.
+        let (from, to) = (fill.left as f64 - 2.0, fill.right as f64 + 2.0);
+        lines.retain(|line| !(on_row(line, &fill) && line.rect.x >= from && line.rect.x + line.rect.width <= to));
+        for line in lines.iter_mut() {
+            if on_row(line, &fill) && line.rect.x >= from && line.rect.x < to {
+                line.text = line.text.trim_start_matches(['.', ' ', '*', '✱', '★', '•']).to_string();
+            }
         }
+        lines.retain(|line| !line.text.trim().is_empty());
+        lines.push(Line {
+            text: label,
+            rect: PixelRect {
+                x: fill.left as f64,
+                y: fill.top as f64,
+                width: (fill.right - fill.left) as f64,
+                height,
+            },
+        });
     }
     lines
 }
 
-/// The fills that may hold an item's number no line was read over: a line starts just past the fill, on its row.
-fn unread_label_fills(lines: &[Line], fills: &[Fill]) -> Vec<Fill> {
+/// The line's middle is on the fill's rows.
+fn on_row(line: &Line, fill: &Fill) -> bool {
+    let middle = line.rect.y + line.rect.height / 2.0;
+    middle >= fill.top as f64 && middle <= fill.bottom as f64
+}
+
+/// The fills that may hold an item's number the page-wide reading missed: a line starts inside the fill without
+/// one ("* 72", ". . Quando…"), or none does and a line starts just past it, on its row.
+fn label_fills_to_read(lines: &[Line], fills: &[Fill]) -> Vec<Fill> {
     fills
         .iter()
         .filter(|fill| {
-            let right = fill.right as f64;
-            let (top, bottom) = (fill.top as f64, fill.bottom as f64);
-            let height = bottom - top;
-            let middle = (top + bottom) / 2.0;
-            let covered = is_covered(lines, fill);
-            let text_beside = lines.iter().any(|line| {
-                line.rect.x >= right - 2.0
-                    && line.rect.x <= right + 3.0 * height
-                    && (line.rect.y + line.rect.height / 2.0 - middle).abs() < height
-            });
-            !covered && text_beside
+            let (left, right) = (fill.left as f64, fill.right as f64);
+            let height = (fill.bottom - fill.top) as f64;
+            let starting_inside: Vec<&Line> = lines
+                .iter()
+                .filter(|line| on_row(line, fill) && line.rect.x >= left - 2.0 && line.rect.x < right)
+                .collect();
+            if !starting_inside.is_empty() {
+                return starting_inside
+                    .iter()
+                    .all(|line| leading_item_label(&line.text).is_none());
+            }
+            let text_beside = lines
+                .iter()
+                .any(|line| on_row(line, fill) && line.rect.x >= right - 2.0 && line.rect.x <= right + 3.0 * height);
+            !is_covered(lines, fill) && text_beside
         })
         .copied()
         .collect()
@@ -150,13 +173,24 @@ fn unread_label_fills(lines: &[Line], fills: &[Fill]) -> Vec<Fill> {
 
 /// A line is read over the fill (inside its edge: the pill's own outline is a fill of its own, over this one).
 fn is_covered(lines: &[Line], fill: &Fill) -> bool {
-    let inner = PixelRect {
+    lines.iter().any(|line| intersects(&line.rect, &inner(fill)))
+}
+
+/// An item's number is already read over the fill.
+fn has_label_over(lines: &[Line], fill: &Fill) -> bool {
+    lines
+        .iter()
+        .any(|line| intersects(&line.rect, &inner(fill)) && leading_item_label(&line.text).is_some())
+}
+
+/// The fill a pixel inside its edge.
+fn inner(fill: &Fill) -> PixelRect {
+    PixelRect {
         x: fill.left as f64 + 1.0,
         y: fill.top as f64 + 1.0,
         width: (fill.right as f64 - fill.left as f64 - 2.0).max(0.0),
         height: (fill.bottom as f64 - fill.top as f64 - 2.0).max(0.0),
-    };
-    lines.iter().any(|line| intersects(&line.rect, &inner))
+    }
 }
 
 /// An item's number split from its closing dot: the engine reads "✱ 2.3." as "✱ 2.3" and ". Num recipiente…", two
@@ -631,11 +665,11 @@ mod tests {
             let fills = label_fills(&picture.bgra, width as usize, height as usize);
             let clean = whitened(&picture, &fills);
             let first = read(&clean).unwrap_or_default();
-            let unread = unread_label_fills(&first, &fills);
+            let unread = label_fills_to_read(&first, &fills);
             for fill in &fills {
                 println!("fill {fill:?}{}", if unread.contains(fill) { " (unread)" } else { "" });
             }
-            for fill in &unread {
+            for fill in &fills {
                 let height = (fill.bottom - fill.top) as f64;
                 let part = enlarged_part(
                     &clean,
@@ -792,7 +826,7 @@ mod tests {
     }
 
     #[test]
-    fn a_fill_is_read_again_only_where_a_line_starts_past_it_and_none_was_read_over_it() {
+    fn a_fill_is_read_again_where_its_number_was_missed_or_misread() {
         let fill = |left, right, top, bottom| Fill {
             colour: PILL,
             left,
@@ -803,14 +837,17 @@ mod tests {
         let lines = vec![
             line("A proposição expressa pela frase", 106.0, 420.0, 600.0),
             line("* 1.1. O átomo de carbono", 80.0, 168.0, 600.0),
+            line(". . Quando o acumulador", 115.0, 715.0, 600.0),
         ];
         let fills = [
             fill(58, 100, 420, 437),
             fill(76, 137, 166, 186),
             fill(300, 360, 700, 718),
+            fill(80, 137, 716, 733),
         ];
-        // Only the first: the second was read with its line, the third has no line starting past it.
-        assert_eq!(unread_label_fills(&lines, &fills), vec![fills[0]]);
+        // The first, with no line read over it; the fourth, read as its dots alone. The second was read with its
+        // line, the third has no line at all.
+        assert_eq!(label_fills_to_read(&lines, &fills), vec![fills[0], fills[3]]);
     }
 
     #[test]
