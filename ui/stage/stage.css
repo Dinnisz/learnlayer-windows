@@ -1005,6 +1005,11 @@
   margin: 0 0 12px;
 }
 
+/* A part's letter in italic, so «l)» is not read as «1)» (`italicizePartLabel`). */
+.stage-part-letter {
+  font-style: italic;
+}
+
 .stage-typeset .katex {
   font-size: 1.12em;
 }

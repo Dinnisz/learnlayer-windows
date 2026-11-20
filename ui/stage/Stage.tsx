@@ -26,7 +26,7 @@ import { ChoiceCheck } from "@core/problems/choiceCheck";
 import { formulasFor, type Card, type Focus, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { SelectionAsk } from "@core/problems/selectionAsk";
-import { markup } from "@core/problems/markup";
+import { markup, partLabelLetters } from "@core/problems/markup";
 import { FigureLabels } from "@core/voice/figureLabels";
 import { SpeechMarkLayout } from "@core/voice/speechMarkLayout";
 import { ExamNotation } from "@core/math/examNotation";
@@ -3237,10 +3237,12 @@ function MarkupText({ text }: { text: string }) {
     line,
     start: split.slice(0, index).reduce((sum, before) => sum + before.length + 1, 0),
   }));
-  // The line cut at its bold stretches, each piece typeset with its maths.
+  // The letters of a leading part label, in italic so «l)» is not read as «1)» (`italicizePartLabel`).
+  const italic = partLabelLetters(found.text);
+  // The line cut at its bold stretches (and the label's letters), each piece typeset with its maths.
   const pieces = (line: string, start: number) => {
     const cuts = new Set([0, line.length]);
-    for (const [from, to] of found.bold) {
+    for (const [from, to] of italic ? [...found.bold, italic] : found.bold) {
       if (to > start && from < start + line.length) {
         cuts.add(Math.max(0, from - start));
         cuts.add(Math.min(line.length, to - start));
@@ -3250,13 +3252,9 @@ function MarkupText({ text }: { text: string }) {
     return points.slice(0, -1).map((at, index) => {
       const piece = line.slice(at, points[index + 1]);
       const bold = found.bold.some(([from, to]) => start + at >= from && start + at < to);
-      return bold ? (
-        <strong key={index}>
-          <MathText text={piece} />
-        </strong>
-      ) : (
-        <MathText key={index} text={piece} />
-      );
+      const slanted = italic !== null && start + at >= italic[0] && start + at < italic[1];
+      const typeset = slanted ? <em className="stage-part-letter">{piece}</em> : <MathText text={piece} />;
+      return bold ? <strong key={index}>{typeset}</strong> : <span key={index}>{typeset}</span>;
     });
   };
   if (!found.hasTable && !found.text.includes("\n")) return <p>{pieces(found.text, 0)}</p>;
