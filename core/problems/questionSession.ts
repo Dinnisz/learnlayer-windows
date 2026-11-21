@@ -31,7 +31,8 @@ import { RouteDecision, type RouteOutcome } from "./routeDecision";
 import { realigned, signTableProblems } from "./signTable";
 import { noteStage, solveClock, SolutionReveal, SolveKind, SolveProgress, type SolveClock } from "./solutionReveal";
 import type { SolutionProvider } from "./solutionProvider";
-import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
+import { DifferentialEquation, typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
+import { differentialEquation, normalizedAnswer, typedExpression } from "./typedAnswer";
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
 import { CircuitCheck, circuitOf, CircuitSpecs } from "../illustrations/circuit";
 import type { PremadeFigure } from "../illustrations/premadeFigure";
@@ -2123,10 +2124,20 @@ ${part.label}`,
 
   check(attempt: string): void {
     this.lastAttempt = attempt;
+    // A differential equation: any function that satisfies it is right.
+    const equation = differentialEquation(this.part?.equation);
+    if (equation) {
+      const candidate = typedFunction(normalizedAnswer(attempt));
+      const solves = candidate ? DifferentialEquation.solves(equation, candidate) : null;
+      this.attemptResult = solves === null ? "unreadable" : solves ? "matches" : "differs";
+      if (solves && !this.sawSolution) this.solvedAlone = true;
+      this.changed();
+      return;
+    }
     const expression = this.part?.answer.expression;
     const expected = expression ? tryParseExpression(expression) : null;
     if (!expected) return;
-    const given = tryParseExpression(attempt);
+    const given = typedExpression(attempt, variables(expected));
     if (!given) {
       this.attemptResult = "unreadable";
       this.changed();

@@ -3,6 +3,7 @@
 
 import { evaluate, parseExpression, tryParseExpression, variables, type Expression } from "../math/expression";
 import { swiftSchema, swiftText } from "../prompts/swiftText";
+import { typedExpression } from "./typedAnswer";
 
 export interface VariantValue {
   name: string;
@@ -258,7 +259,7 @@ export function typedFunction(typed: string): Expression | null {
 export function typedNumber(typed: string): number | null {
   const cleaned = typed.replaceAll(",", ".").replaceAll("×10^", "e").replaceAll("x10^", "e");
   try {
-    const value = evaluate(parseExpression(cleaned), {});
+    const value = evaluate(typedExpression(typed, new Set()) ?? parseExpression(cleaned), {});
     return Number.isFinite(value) ? value : null;
   } catch {
     return null;

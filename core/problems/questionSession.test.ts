@@ -337,6 +337,37 @@ describe("QuestionSession solving", () => {
     expect(attempt.attemptResult).toBe("unreadable");
     attempt.check("21");
     expect(attempt.attemptResult).toBe("differs");
+    // Written as on the exam: a unit, a decimal comma, a name before «=» (Mac report M3).
+    for (const typed of ["22 m/s", "22m/s", "v = 22 m/s", "22,0 m s^-1", "22 m·s⁻¹"]) {
+      attempt.check(typed);
+      expect(attempt.attemptResult, typed).toBe("matches");
+    }
+    attempt.check("21 m/s");
+    expect(attempt.attemptResult).toBe("differs");
+  });
+
+  it("accepts any function that solves the part's differential equation", async () => {
+    const solution = () =>
+      decodeProblemSolution({
+        subject: "Matemática",
+        parts: [
+          {
+            label: "1",
+            asks: "y?",
+            hint: "h",
+            steps: [],
+            answer: { text: "y = C e^{2t}" },
+            equation: { variable: "t", left: "y1", right: "2*y", nonZero: true },
+          },
+        ],
+      });
+    const { session: attempt } = session(question("1", "1. Resolve y′ = 2y.", ["1"]), solution, "Matemática A");
+    attempt.choose("tryIt");
+    await until(() => attempt.state.kind === "ready" && !attempt.isConfirming);
+    attempt.check("y = 3*exp(2t)");
+    expect(attempt.attemptResult).toBe("matches");
+    attempt.check("exp(3t)");
+    expect(attempt.attemptResult).toBe("differs");
   });
 
   it("asks for a transcript instead of solving a listening item", async () => {
