@@ -31,6 +31,8 @@ import { FigureLabels } from "@core/voice/figureLabels";
 import { SpeechMarkLayout } from "@core/voice/speechMarkLayout";
 import { ExamNotation } from "@core/math/examNotation";
 import { uprightUnits } from "@core/math/units";
+import { trailingProse } from "@core/math/formulaProse";
+import { readableOperators } from "@core/math/operators";
 import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
 import { GuideSpots } from "../lesson/guideSpot";
@@ -522,7 +524,7 @@ function ScrollCue({ stage }: { stage: React.RefObject<HTMLDivElement | null> })
   useEffect(() => {
     const element = stage.current;
     if (!element) return;
-    const check = () => setMore(element.scrollHeight - element.scrollTop - element.clientHeight > 24);
+    const check = () => setMore(element.scrollHeight - element.scrollTop - element.clientHeight > 12);
     check();
     element.addEventListener("scroll", check, { passive: true });
     const observer = new ResizeObserver(check);
@@ -1284,7 +1286,7 @@ function FocusPointer({
       )}
       {note && (
         <span className="stage-focus-note" style={{ left: place.label.x, top: place.label.y }}>
-          {note}
+          {readableOperators(note)}
         </span>
       )}
     </>
@@ -1482,14 +1484,19 @@ function FormulaList({ formulas }: { formulas: readonly { name: string; latex: s
   return (
     <>
       <h3 className="stage-formulas-title">{t("Formulas")}</h3>
-      {formulas.map((formula) => (
-        <div key={formula.name + formula.latex} className="stage-formula">
-          <span>{formula.name}</span>
-          <FitWidth>
-            <MathView latex={formula.latex} display />
-          </FitWidth>
-        </div>
-      ))}
+      {formulas.map((formula) => {
+        // A sentence at the formula's end is a caption in the interface's font, not maths (`trailingProse`).
+        const { math, prose } = trailingProse(formula.latex);
+        return (
+          <div key={formula.name + formula.latex} className="stage-formula">
+            <span>{formula.name}</span>
+            <FitWidth>
+              <MathView latex={math} display />
+            </FitWidth>
+            {prose && <small className="stage-formula-note">{prose}</small>}
+          </div>
+        );
+      })}
     </>
   );
 }
@@ -1623,7 +1630,7 @@ function HintView({ session }: { session: QuestionSession }) {
     <div className="stage-panel">
       <p className="stage-hint">
         <Icon symbol="lightbulb" size={18} className="stage-hint-icon" />
-        <MathText text={part.hint} />
+        <NoteText text={part.hint} />
       </p>
       {shown > 0 && <StepCard part={part} index={shown - 1} session={session} advanced={moved.forward} />}
       {session.showsAnswer && <AnswerBox part={part} language={session.notationLanguage} />}
@@ -2131,7 +2138,12 @@ function AnswerBox({ part, language }: { part: Part; language: string }) {
                 key={index}
                 className={`stage-answer-line${AnswerTextLayout.isProseLine(piece.line) ? " prose" : ""}`}
               >
-                <MathText text={piece.line} />
+                {/* A sentence with maths in it («… para g(x) = f(x) + x») composes that maths, as a step's note does. */}
+                {AnswerTextLayout.isProseLine(piece.line) && !piece.line.includes("$") ? (
+                  <NoteText text={piece.line} />
+                ) : (
+                  <MathText text={piece.line} />
+                )}
               </div>
             ),
           )

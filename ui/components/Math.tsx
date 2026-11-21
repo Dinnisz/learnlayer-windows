@@ -7,6 +7,7 @@ import { memo, useLayoutEffect, useMemo, useRef } from "react";
 import { latexToUnicode, normalized } from "@core/math/latexText";
 import { CodeText } from "@core/code/codeText";
 import { NoteMath } from "@core/math/noteMath";
+import { latexOperators } from "@core/math/operators";
 import { CodeBlockView } from "./CodeBlockView";
 
 const macros: Record<string, string> = {
@@ -22,7 +23,7 @@ const macros: Record<string, string> = {
 /** HTML for `latex`, or null when KaTeX can't read it. */
 export function typeset(latex: string, display = false): string | null {
   try {
-    return katex.renderToString(normalized(latex), {
+    return katex.renderToString(normalized(latexOperators(latex)), {
       displayMode: display,
       throwOnError: true,
       macros: { ...macros },
@@ -40,7 +41,7 @@ export function typeset(latex: string, display = false): string | null {
  */
 export function typesetInlineDisplay(latex: string): string | null {
   try {
-    return katex.renderToString("\\displaystyle " + normalized(latex), {
+    return katex.renderToString("\\displaystyle " + normalized(latexOperators(latex)), {
       displayMode: false,
       throwOnError: true,
       macros: { ...macros },

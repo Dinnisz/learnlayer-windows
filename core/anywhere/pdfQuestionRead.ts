@@ -475,9 +475,16 @@ export const PDFQuestionReading = {
    * point past the end of a line to that line's part, never the part above, under or across
    * (`PDFQuestionRead.question(at:on:)` @ 5701363).
    */
-  question(click: { x: number; y: number }, page: PageText): ExamQuestion | null {
+  question(point: { x: number; y: number }, page: PageText): ExamQuestion | null {
     const all = questionsOn(page);
     const typical = PDFQuestionReading.typicalLabelHeight(all);
+    // A click in the leading just above a label's line (aimed at that line, a few points high) is on that line, not
+    // at the end of the question above it (live test 2026-11-21: a click 3 pt over «2.2.» opened 2.1).
+    const snapped = all.find((question) => {
+      const above = minY(question.labelBounds) - point.y;
+      return above > 0 && above <= typical * 0.6 && point.x >= minX(question.labelBounds) - 4;
+    });
+    const click = snapped ? { x: point.x, y: minY(snapped.labelBounds) + 0.5 } : point;
     const headings = headingBounds(page);
     const partLabels = PDFQuestionReading.partLabelBoxes(page).map((box) => PDFQuestionReading.lineBox(box, typical));
     const areas = all.map((question) => ({

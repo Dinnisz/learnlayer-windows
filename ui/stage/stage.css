@@ -1610,3 +1610,14 @@
     transform: translateY(3px);
   }
 }
+
+/* The sentence a formula ended with (`trailingProse`), under it in the interface's font. */
+.stage-formula-note {
+  font-size: 12px;
+  color: var(--stage-muted);
+}
+
+/* Maths inside the hint's sentence at the words' own size (KaTeX sets it 21 % larger, which stood out mid-line). */
+.stage-hint .katex {
+  font-size: 1.04em;
+}
