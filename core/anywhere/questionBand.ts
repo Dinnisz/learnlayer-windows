@@ -278,7 +278,9 @@ function selectWith(
   const labels = labelled
     .filter((index) => {
       const x = labelX(index);
-      const reach = QuestionBand.anyPart(lines[index]!.text) !== null ? 4 : 1.2;
+      // A label in the exam's grey pill («✱ 1.») starts further left than a plain one («2.»), by the pill's star and
+      // padding: about a line and a half at a page's usual zoom (live test 2026-11-21, an exam page as a picture).
+      const reach = QuestionBand.anyPart(lines[index]!.text) !== null ? 4 : 2;
       return x >= columnLeft - h && x <= columnLeft + reach * h && inColumn(rect(index));
     })
     .sort((a, b) => minY(rect(a)) - minY(rect(b)));
