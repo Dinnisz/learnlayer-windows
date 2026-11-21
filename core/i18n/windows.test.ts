@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catalog, platformWording, supportedLanguages, translatorFor } from "./index";
+import { additions, catalog, platformWording, supportedLanguages, translatorFor } from "./index";
 import unused from "./windows/unused.json";
 
 /** Words that only make sense on a Mac. A string shown on Windows must not carry any of them. */
@@ -51,5 +51,41 @@ describe("Windows wording", () => {
   it("another platform keeps the catalog wording", () => {
     expect(translatorFor("en", "macos")("⌥-click in any app")).toBe("⌥-click in any app");
     expect(translatorFor("pt-PT", "macos")("This Mac")).toBe("Este Mac");
+  });
+});
+
+/** Words that only make sense on Windows. A string shown on a Mac must not carry any of them. */
+const windowsOnly = /\bWindows\b|\bAlt\b|\bCtrl\b|\bWin\b|UI Automation|Credential Manager|Gestor de Credenciais/;
+
+describe("Mac wording (Mac report M4)", () => {
+  it("only rewords strings the app adds", () => {
+    for (const language of supportedLanguages)
+      for (const key of Object.keys(platformWording.macos[language]))
+        expect(additions[language][key], `“${key}” (${language}) is not an added string`).toBeDefined();
+  });
+
+  it("never shows Windows words on a Mac, except the Windows-only talk keys never offered there", () => {
+    const windowsKeys = new Set([
+      "Copilot key",
+      "Right Ctrl",
+      "Ctrl + Shift + Space reads the question under the pointer, too.",
+    ]);
+    for (const language of supportedLanguages) {
+      const t = translatorFor(language, "macos");
+      for (const key of Object.keys(additions[language])) {
+        if (windowsKeys.has(key)) continue;
+        const shown = text(t(key));
+        expect(windowsOnly.test(shown), `(${language}) “${key}” would show: ${shown}`).toBe(false);
+      }
+    }
+  });
+
+  it("reads the added strings and the plural forms on a Mac too", () => {
+    const pt = translatorFor("pt-PT", "macos");
+    expect(pt("Mathematics A")).toBe("Matemática A");
+    expect(pt("Start with Windows")).toBe("Abrir ao iniciar sessão");
+    expect(translatorFor("en", "macos")("%lld documents", 1)).toBe("1 document");
+    expect(translatorFor("en", "windows")("%lld documents", 2)).toBe("2 documents");
+    expect(pt("%lld questions asked", 1)).toBe("1 pergunta feita");
   });
 });

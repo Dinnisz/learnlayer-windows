@@ -1,5 +1,6 @@
 import "katex/dist/katex.min.css";
 import "../../styles/base.css";
+import "../../dragScroll";
 import { installSprings } from "../../styles/springs";
 import "../../components/settings/settings.css";
 import "./home.css";

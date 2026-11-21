@@ -738,7 +738,9 @@ export class TemplateBuilder {
     return (fraction < 1.5 ? 1 : fraction < 3.5 ? 2 : fraction < 7.5 ? 5 : 10) * magnitude;
   }
 
-  /** Ticks with numbers along both axes of a plot. `clearance` is the gap between a tick label and the axis. */
+  /** Ticks with numbers along both axes of a plot. `clearance` is the gap between a tick label and the axis.
+   * `curves`: every curve drawn (`curveY`, the main one, when not given); an x number the curve runs through goes above
+   * the axis instead, or is left out when it would sit on ink there too (0f76bd7, 9574a07 @ 5701363). */
   ticks(
     xRange: XY,
     yRange: XY,
@@ -748,12 +750,58 @@ export class TemplateBuilder {
     wy: (y: number) => number,
     clearance = 0.55,
     curveY: ((x: number) => number) | null = null,
+    curves: ((x: number) => number)[] | null = null,
   ) {
     const n = TemplateBuilder.n;
     const hits = (a: Box, b: Box) => a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
     const occupied: Box[] = [];
     this.tickObstacles = [];
     const lineHeight = 0.58;
+    const ink = curves ?? (curveY ? [curveY] : []);
+    /** Whether a drawn curve passes through `box` (world units), sampled across its width. */
+    const inkCrosses = (box: Box): boolean => {
+      const span = xRange[1] - xRange[0];
+      const worldSpan = wx(xRange[1]) - wx(xRange[0]);
+      if (!(span > 0) || !(worldSpan > 0) || ink.length === 0) return false;
+      const low = box.minY - 0.04;
+      const high = box.maxY + 0.04;
+      for (const curve of ink) {
+        /** The drawn height at a world x, null where nothing is drawn (the plot cuts the curve at its window). */
+        const drawn = (sx: number): number | null => {
+          const x = xRange[0] + ((sx - wx(xRange[0])) / worldSpan) * span;
+          if (x < xRange[0] || x > xRange[1]) return null;
+          const height = curve(x);
+          if (!Number.isFinite(height) || height < yRange[0] || height > yRange[1]) return null;
+          return wy(height);
+        };
+        let previous: { sx: number; sy: number } | null = null;
+        for (let index = 0; index <= 24; index++) {
+          const sx = box.minX - 0.04 + ((box.maxX - box.minX + 0.08) * index) / 24;
+          const sy = drawn(sx);
+          if (sy === null) {
+            previous = null;
+            continue;
+          }
+          if (sy >= low && sy <= high) return true;
+          // From under the box to over it between two samples: a steep stretch crosses it, a jump (a branch ending
+          // at the point) does not. Halving the gap tells them apart.
+          if (previous && previous.sy < low !== sy < low) {
+            let a = previous;
+            let b = { sx, sy };
+            for (let step = 0; step < 12; step++) {
+              const mid = (a.sx + b.sx) / 2;
+              const my = drawn(mid);
+              if (my === null) break;
+              if (my >= low && my <= high) return true;
+              if (my < low === a.sy < low) a = { sx: mid, sy: my };
+              else b = { sx: mid, sy: my };
+            }
+          }
+          previous = { sx, sy };
+        }
+      }
+      return false;
+    };
     const xStep = TemplateBuilder.step(xRange[1] - xRange[0]);
     let value = Math.ceil(xRange[0] / xStep) * xStep;
     while (value <= xRange[1] + 1e-9) {
@@ -762,9 +810,24 @@ export class TemplateBuilder {
         const width = this.width(text);
         this.lineN(wx(value), axisY - 0.07, wx(value), axisY + 0.07, "muted");
         const x = Math.min(Math.max(0.08, wx(value) - width / 2), 9.9 - width);
-        const y = Math.max(0.36, axisY - clearance);
+        const boxAt = (y: number): Box => ({
+          minX: x - 0.06,
+          maxX: x + width + 0.06,
+          minY: y - lineHeight / 2,
+          maxY: y + lineHeight / 2,
+        });
+        // Under the axis, but not off the bottom of a short picture; above it where the curve runs under the axis
+        // there; no number where it runs on both sides.
+        const below = Math.max(0.36, axisY - clearance);
+        const above = axisY + clearance;
+        const y = [below, above].find((candidate) => !inkCrosses(boxAt(candidate)));
+        if (y === undefined) {
+          value += xStep;
+          continue;
+        }
+        // Centred on its tick, so a number drawn wider than estimated stays under it.
         this.label(n(x + width / 2), n(y), text, { color: "muted", counted: false, anchor: "center" });
-        const box = { minX: x - 0.06, maxX: x + width + 0.06, minY: y - lineHeight / 2, maxY: y + lineHeight / 2 };
+        const box = boxAt(y);
         occupied.push(box);
         this.tickObstacles.push(new Rect(box.minX, box.minY, box.maxX, box.maxY));
       }
@@ -1028,7 +1091,17 @@ export class TemplateBuilder {
     const yAxis = template.yName ? template.yName : "y";
     this.axis(left - 0.2, axisY, right + 0.3, axisY, xAxis);
     this.axis(axisX, bottom - 0.2, axisX, top + 0.3, yAxis);
-    this.ticks([xLow, xHigh], [yLow, yHigh], axisX, axisY, wx, wy, 0.55, (x) => evalAt(primary, x));
+    this.ticks(
+      [xLow, xHigh],
+      [yLow, yHigh],
+      axisX,
+      axisY,
+      wx,
+      wy,
+      0.55,
+      (x) => evalAt(primary, x),
+      drawn.map((curve) => (x: number) => evalAt(curve, x)),
+    );
 
     const worldY = (height: string) => TemplateBuilder.worldY(height, bottom, yLow, yHigh, sy);
     const worldX = `${n(left)} + (s - (${n(xLow)}))*${n(sx)}`;
@@ -1801,10 +1874,16 @@ export class TemplateBuilder {
     const axisX = xLow <= 0 && 0 <= xHigh ? wx(0) : left0;
     this.axis(left0 - 0.2, axisY, right + 0.3, axisY, "x");
     this.axis(axisX, bottom0 - 0.2, axisX, top + 0.3, "y");
-    this.ticks([xLow, xHigh], [yLow, yHigh], axisX, axisY, wx, wy);
+    // The numbers stay off the branches: an x number goes above the axis where a branch runs under it.
+    const branches = (x: number) => (x < a ? evalAt(leftBranch, x) : x > a ? evalAt(rightBranch, x) : NaN);
+    this.ticks([xLow, xHigh], [yLow, yHigh], axisX, axisY, wx, wy, 0.55, branches);
     const tickGap = 1.05;
     if (axisY - tickGap > bottom0 + 0.05) this.lineN(wx(a), bottom0 + 0.05, wx(a), axisY - tickGap, "muted", true);
-    this.lineN(wx(a), axisY + 0.45, wx(a), Math.min(top, 5.45), "muted", true);
+    // Above the point's own number when it moved above the axis.
+    const raised = this.tickObstacles.find((box) => box.minX <= wx(a) && box.maxX >= wx(a) && box.minY > axisY);
+    const upperGuide = raised ? raised.maxY + 0.1 : axisY + 0.45;
+    const guideTop = Math.min(top, 5.45);
+    if (guideTop - upperGuide > 0.2) this.lineN(wx(a), upperGuide, wx(a), guideTop, "muted", true);
     const worldY = (height: string) => TemplateBuilder.worldY(height, bottom0, yLow, yHigh, sy);
     const worldX = `${n(left0)} + (s - (${n(xLow)}))*${n(sx)}`;
     const gap = (xHigh - xLow) * 0.004;
@@ -1825,10 +1904,11 @@ export class TemplateBuilder {
       to: n(xHigh),
     });
     let strokes = TemplateBuilder.axisStrokes(axisX, axisY, left0, right, bottom0, top);
-    strokes.push([
-      [wx(a), axisY + 0.45],
-      [wx(a), Math.min(top, 5.45)],
-    ]);
+    if (guideTop - upperGuide > 0.2)
+      strokes.push([
+        [wx(a), upperGuide],
+        [wx(a), guideTop],
+      ]);
     if (axisY - tickGap > bottom0 + 0.05)
       strokes.push([
         [wx(a), bottom0 + 0.05],

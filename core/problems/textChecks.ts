@@ -127,6 +127,7 @@ const shortWords = new Set([
 export const TextLayerMath = {
   looksGarbled(text: string): boolean {
     if (bracketPieces.test(text)) return true;
+    if (TextLayerMath.lostTeXSymbols(text)) return true;
     // A backslash before a digit, a space or a bracket is a matrix's bracket, not LaTeX («\{0}» is a set).
     if (/\\(?=[\s\d)]|$)/.test(text)) return true;
     // An exponent set on the line: «eAt», «= x2», «(2−x2)», «(−1)n», «(x+1)2».
@@ -137,8 +138,13 @@ export const TextLayerMath = {
     ) {
       return true;
     }
+    // Primes read as zeros by the PDF's font: «y00 + 2y0 + 10y = tet + 1» is y'' + 2y' + 10y = teᵗ + 1. «y00» or
+    // «y000» is never a word or a number (lower case only: «S00», «Q00» are states of a circuit).
+    if (/(?<![\p{L}\p{N}_])[a-z]0{2,3}(?![\p{L}\p{N}_])/u.test(text)) return true;
     // A set or a root the line cannot hold: set-builder «{x∈R : …}», a union «[∪{2}», a root «√2».
     if (/\{[^{}]*∈[^{}]*[:|]/u.test(text) || /[[\]{}()]\s*∪|∪\s*[[\]{(]/u.test(text) || text.includes("√")) return true;
+    // A fraction set on the line: «(4 5 ,g(4 5 ))» is (4/5, g(4/5)), its bar lost and its digits apart.
+    if (/[([,;]\s*[−-]?\d+\s+\d+\s*[,;)\]]/u.test(text)) return true;
     const tokens = text.split(/\s+/u).filter((token) => token !== "");
     // Bars that stand alone are the middle of a tall bracket.
     if (tokens.filter((token) => token === "|").length >= 2) return true;
@@ -165,6 +171,30 @@ export const TextLayerMath = {
       const isOption = /^\(?[A-Ha-h][.)]$/.test(token);
       return Array.from(token).length <= 2 && !isOption && !shortWords.has(bare.toLowerCase());
     });
+  },
+
+  /**
+   * A TeX paper whose fonts carry no Unicode map: its symbols come out as other characters — a prime as «f 0(x)», an
+   * arrow as «R ! R», «≠» as «6=», «∈» as «x 2 R», a root as «px2», «∀» as «8n» — an exponent sits on the line
+   * («x3/2ex»), a symbol is lost («pA () = (2 )», «tg x  x»), and accents are read through the wrong code page
+   * («combinaÁ„o», «polinÛmio»), a matrix space loses its «×» («M3 3(R)») (`TextLayerMath.lostTeXSymbols` @ 5701363).
+   */
+  lostTeXSymbols(text: string): boolean {
+    return [
+      /(?<![\p{L}\p{N}_])[a-zA-Z] 0\(/u,
+      /[\p{L}\p{N}_)] ! [\p{L}\p{N}_(]/u,
+      /(?<![\p{N}.])6= ?[\p{L}\p{N}_(−-]/u,
+      /(?<![\p{L}\p{N}_])[A-Za-z] 2 [A-Z]/u,
+      /(?<![\p{L}\p{N}_])p[xyz]\p{N}*(?![\p{L}\p{N}_])/u,
+      /(?<![\p{L}\p{N}_])8[a-z](?![\p{L}\p{N}_])/u,
+      /(?<![\p{L}\p{N}_])[a-z]\p{N}\/\p{N}/u,
+      /\p{Ll}[ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÛ„]/u,
+      /[A-Za-z] \(\s*\)/u,
+      /\(\p{N}+ \)/u,
+      /(?<![\p{L}\p{N}_])[A-Za-z] {2,}[A-Za-z](?![\p{L}\p{N}_])/u,
+      // A space of matrices whose «×» is lost, with «∈» read as «2» before it, words glued: «A2M3 3(R)», «Mn n(R)».
+      /(?<![a-z])M[0-9a-z]{1,2} [0-9a-z]{1,2} ?\([RCKQ]\)/u,
+    ].some((pattern) => pattern.test(text));
   },
 };
 

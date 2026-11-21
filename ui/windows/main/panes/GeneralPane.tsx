@@ -12,7 +12,7 @@ import {
   SettingsSelect,
   SettingsToggle,
 } from "../../../components/settings/SettingsKit";
-import { useT } from "../../../i18n";
+import { usePlatformName, useT } from "../../../i18n";
 import {
   anywhereEnabled,
   isTauri,
@@ -80,6 +80,8 @@ function useFlag(key: string): [boolean, (on: boolean) => void] {
 
 export function GeneralPane({ onRestartIntroduction }: { onRestartIntroduction?: () => void }) {
   const t = useT();
+  // A Mac has one talk chord (Control + Option) and no keyboard alternative to ⌥-click (Mac report M4).
+  const mac = usePlatformName() === "macos";
   const stored = read(preferences.subject) ?? "";
   const isListed = (examSubjects as readonly string[]).includes(stored);
   const [subject, setSubject] = useState(stored === "" ? "" : isListed ? stored : "other");
@@ -206,8 +208,12 @@ export function GeneralPane({ onRestartIntroduction }: { onRestartIntroduction?:
             value={talk}
             options={[
               { value: "controlWindows", title: t("Ctrl + Win") },
-              { value: "copilot", title: t("Copilot key") },
-              { value: "rightControl", title: t("Right Ctrl") },
+              ...(mac
+                ? []
+                : [
+                    { value: "copilot" as const, title: t("Copilot key") },
+                    { value: "rightControl" as const, title: t("Right Ctrl") },
+                  ]),
               { value: "none", title: t("Microphone button only") },
             ]}
             onChange={(choice) => {
@@ -218,7 +224,11 @@ export function GeneralPane({ onRestartIntroduction }: { onRestartIntroduction?:
         </SettingsRow>
         <SettingsRow
           title={t("⌥-click in any app")}
-          detail={`${t("Lets Alt-click read the question under the pointer in other apps.")} ${t("Ctrl + Shift + Space reads the question under the pointer, too.")}`}
+          detail={
+            mac
+              ? t("Lets Alt-click read the question under the pointer in other apps.")
+              : `${t("Lets Alt-click read the question under the pointer in other apps.")} ${t("Ctrl + Shift + Space reads the question under the pointer, too.")}`
+          }
         >
           <SettingsToggle
             label={t("⌥-click in any app")}

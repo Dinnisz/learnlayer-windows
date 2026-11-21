@@ -21,7 +21,8 @@
   backdrop-filter: blur(10px) saturate(110%);
   color: var(--stage-text);
   font-family: var(--font-text);
-  animation: stage-in 180ms var(--ease-out);
+  /* The ground fades in over 0.25 s (QuestionOverlay's backdrop). */
+  animation: stage-in 250ms var(--ease-out);
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -45,7 +46,103 @@
   width: min(1272px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  /* Stage.gap: 16 from the question to the work (8 in a compact window, at most 420 high). */
+  gap: 16px;
+}
+
+@media (max-height: 420px) {
+  .stage-column {
+    gap: 8px;
+  }
+}
+
+/* The stage's side column (QuestionOverlay's `sideColumn`): beside the question in a wide window, with its own
+   scroll, the drawing, the formulas at hand and the curve 22 apart. */
+.stage-side {
+  zoom: var(--stage-scale, 1);
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  animation: stage-fade 200ms ease-in-out;
+}
+
+.stage-side-graph {
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 35%));
+}
+
+/* Only a listener for a click on the question: it lays nothing out. */
+.stage-question-toggle {
+  display: contents;
+}
+
+/* The exam's question while a similar one is drawn in its place. */
+.stage-question-toggle.away {
+  display: none;
+}
+
+/* VariantStage (Mac): the similar question as a new exam question, at 21 pt, its answer field right under it. */
+.stage-variant-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stage-variant-badge,
+.stage-variant-original {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 600 12px var(--font-text);
+}
+
+.stage-variant-badge {
+  background: var(--stage-accent);
+  color: #fff;
+}
+
+.stage-variant-original {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  background: transparent;
+  color: rgb(255 255 255 / 75%);
+  font-weight: 500;
+}
+
+.stage-variant {
+  gap: 12px;
+}
+
+.stage-variant-question {
+  margin: 0;
+  font-size: 21px;
+  user-select: text;
+}
+
+.stage-try.stage-variant-answer input {
+  font: 18px var(--font-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-try.stage-variant-answer.matches input {
+  border-bottom-color: var(--stage-accent);
+}
+
+.stage-variant-help {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: rgb(255 255 255 / 50%);
+}
+
+.stage-variant-help .stage-result {
+  margin: 0;
+  font-size: 14px;
 }
 
 /* The question lifted off the page: drawn black on clear, turned white. */
@@ -76,7 +173,8 @@
 /* Drawn in the stage's ink (PageInk): white on nothing, the page's colours in the palette's hues. */
 .stage-crop canvas {
   display: block;
-  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
+  /* The question's ink shadow (QuestionOverlay): black 45 %, radius 8, 2 down. */
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 45%));
 }
 
 /* An open step's datum: a straight line under it, as thick as the Mac's (StatementUnderlines' capsule). */
@@ -85,7 +183,8 @@
   height: 2.5px;
   border-radius: 1.25px;
   background: var(--stage-accent);
-  animation: stage-draw 260ms var(--ease-out);
+  /* Fades in place, as the Mac's StatementUnderlines: nothing moves or draws from left to right. */
+  animation: stage-fade 200ms ease-in-out;
   transform-origin: left;
 }
 
@@ -111,6 +210,14 @@
 
 .stage-crop .stage-lens canvas {
   filter: none;
+}
+
+/* The typeset question's words copied into its lens, magnified about the datum. */
+.stage-lens-copy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
 }
 
 /* What can be selected and asked about (SelectableText): the open step's words, the hint, the answers written for the
@@ -306,18 +413,27 @@
   line-height: 1.45;
 }
 
+/* What a part asks, above the answer field (QuestionPanel.tryIt): white at 75 %. */
 .stage-asks {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  color: rgb(255 255 255 / 75%);
 }
 
+/* The hint (QuestionPanel.hint): the blue bulb and the words at 17 pt. */
 .stage-hint {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
-  font-size: 19px;
+  font-size: 17px;
   line-height: 1.35;
+}
+
+/* The names an answer may use, and how to write it: 12 pt, white at 50 %. */
+.stage-try-help {
+  margin: 0;
+  font-size: 12px;
+  color: rgb(255 255 255 / 50%);
 }
 
 .stage-hint-icon {
@@ -379,6 +495,10 @@
 .stage-answer-value {
   font-size: 21px;
   overflow-x: auto;
+  /* Only sideways: auto on one axis makes the other auto too, and a fraction a few pixels taller than its line got a
+     scrollbar of its own (live test, 2026-11-19). The padding keeps sub- and superscripts from being clipped. */
+  overflow-y: hidden;
+  padding-block: 0.2em;
 }
 
 .stage-answer-value .katex-display {
@@ -386,32 +506,63 @@
   text-align: left;
 }
 
+/* The columns are ExplanationLayout's (set inline by the solution): one column until it has measured itself, or
+   when the window is narrow or there is no figure; words then figures when side by side. */
 .stage-solution-body {
-  display: flex;
-  gap: 32px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
 }
 
+/* SolutionOverview (Mac): 4 between the steps, 14 under the answer card. */
 .stage-steps {
-  flex: 1 1 0;
-  min-width: 300px;
-  max-width: 720px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 4px;
+}
+
+.stage-steps > .stage-answer {
+  margin-bottom: 10px;
 }
 
 .stage-step {
   display: flex;
-  gap: 14px;
-  padding: 4px 8px 4px 0;
-  border-radius: 10px;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 9px;
   animation: stage-arrive var(--spring-cascade-duration) var(--spring-cascade);
+  transition:
+    background 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
 }
 
-.stage-step:hover,
+/* The open step on white 7 %; the one the lesson teaches in the blue with a blue edge. */
 .stage-step.selected {
-  background: rgb(255 255 255 / 5%);
+  background: rgb(255 255 255 / 7%);
+}
+
+.stage-step.lesson-lit {
+  background: rgb(10 132 255 / 22%);
+  box-shadow: inset 0 0 0 1.5px rgb(10 132 255 / 90%);
+}
+
+/* While a lesson is on another step, this one is dimmed, all but its «Watch out» tag. */
+.stage-step.faded > .stage-step-number,
+.stage-step.faded > .stage-step-body > :not(.stage-pitfall) {
+  opacity: 0.45;
+}
+
+/* The data an open step uses, in the exam's type and the blue, three spaces apart (StepQuotes). */
+.stage-step-quotes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 1.5em;
+  margin: 4px 0 0;
+  font-family: "Times New Roman", serif;
+  font-size: 13px;
+  color: var(--stage-accent);
 }
 
 @keyframes stage-arrive {
@@ -425,18 +576,18 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   margin-top: 1px;
   border-radius: 50%;
-  background: rgb(10 132 255 / 30%);
-  font-size: 14px;
+  background: rgb(10 132 255 / 35%);
+  font-size: 12px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.stage-step.selected .stage-step-number,
-.stage-step.arriving .stage-step-number {
-  background: var(--stage-accent);
+.stage-step.number-lit .stage-step-number {
+  background: rgb(10 132 255 / 90%);
 }
 
 .stage-step-body {
@@ -444,16 +595,48 @@
   flex: 1;
 }
 
+.stage-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .stage-step-body h4 {
-  margin: 2px 0 2px;
-  font-size: 15px;
+  margin: 1px 0 0;
+  font-size: 14px;
   font-weight: 600;
+}
+
+/* A short window (`compactSolution`): the figure beside the steps at most 200 tall, the rest under them. */
+.stage-compact-figure {
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.stage-compact-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* A short window (`SolutionOverview.compact`): tighter rows, the title a size smaller until the step is opened. */
+.stage-step.compact {
+  padding: 1px 4px;
+}
+
+.stage-step.compact:not(.selected) .stage-step-body h4 {
+  font-size: 13px;
 }
 
 .stage-step-latex {
   display: block;
   font-size: 17px;
   overflow-x: auto;
+  /* Only sideways: auto on one axis makes the other auto too, and a fraction a few pixels taller than its line got a
+     scrollbar of its own (live test, 2026-11-19). The padding keeps sub- and superscripts from being clipped. */
+  overflow-y: hidden;
+  padding-block: 0.2em;
 }
 
 .stage-step-latex .katex-display {
@@ -500,8 +683,6 @@
 }
 
 .stage-formulas {
-  flex: 1 0 min(520px, 42%);
-  max-width: 640px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -533,10 +714,24 @@
   color: rgb(255 255 255 / 60%);
 }
 
+/* A formula shrunk to its column's width (FitWidth): the box takes the width, the content its own. */
+.stage-fit-width {
+  width: 100%;
+  min-width: 0;
+}
+
+.stage-fit-width-content {
+  display: inline-block;
+  max-width: none;
+}
+
 .stage-formula .katex-display {
-  max-width: 100%;
   margin: 0;
   overflow-x: auto;
+  /* Only sideways: auto on one axis makes the other auto too, and a fraction a few pixels taller than its line got a
+     scrollbar of its own (live test, 2026-11-19). The padding keeps sub- and superscripts from being clipped. */
+  overflow-y: hidden;
+  padding-block: 0.2em;
   color: var(--stage-text);
   font-size: 18px;
 }
@@ -593,10 +788,27 @@
   resize: vertical;
 }
 
+/* The answer field: 17 pt in the stage's own font (figures of one width) over a 1-pt white line at 40 %. The Mac
+   used a monospaced font, which looked out of place beside the rest of the stage (Mac report P6). */
+.stage-try input {
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 40%);
+  font: 17px var(--font-text);
+  font-variant-numeric: tabular-nums;
+}
+
 .stage-try input:focus,
 .stage-result {
   margin: 0;
   font-weight: 600;
+}
+
+.stage-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgb(255 255 255 / 75%);
+  font-weight: 400;
 }
 
 .stage-result-matches {
@@ -789,20 +1001,6 @@
   }
 }
 
-@media (max-width: 760px) {
-  .stage-solution-body {
-    flex-direction: column;
-  }
-
-  .stage-steps,
-  .stage-formulas {
-    flex: none;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-  }
-}
-
 /* A question read from the screen: its text typeset in white, or its crop on a soft white plate. */
 .stage-screen-question {
   display: flex;
@@ -810,28 +1008,62 @@
   align-items: flex-start;
 }
 
+/* TranscriptionRenderer (Mac): the exam's look, STIX Two Text where it is installed (else the serif Windows has),
+   the body at the stage's reading size (17, 14 once the solution is open), 4 of leading, 6 of margin and 12 between
+   blocks; maths in a line 1.12 × the text, a formula on its own 1.2 × and centred. */
 .stage-typeset {
+  position: relative;
   max-width: 720px;
+  padding: 6px;
   color: var(--stage-text, #fff);
-  font-size: 19px;
-  line-height: 1.5;
+  font-family: "STIX Two Text", Cambria, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: calc(1.2em + 4px);
 }
 
-.stage-compact .stage-typeset {
+/* The computer's own reading while the model's comes: at the compact size once the solution is open. */
+.stage-compact .stage-draft {
   font-size: 14px;
 }
 
 .stage-typeset p {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
+}
+
+/* A part's letter in italic, so «l)» is not read as «1)» (`italicizePartLabel`). */
+.stage-part-letter {
+  font-style: italic;
+}
+
+.stage-typeset .katex {
+  font-size: 1.12em;
+}
+
+.stage-typeset .stage-typeset-formula .katex {
+  font-size: 1.2em;
+}
+
+/* A figure of the typeset question, with the open step's spot ringed on it. */
+.stage-figure-marks {
+  position: relative;
+}
+
+/* A step's spot on a block of the typeset question, over the whole question. */
+.stage-typeset-focus {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
 }
 
 .stage-typeset-formula {
   display: block;
-  margin: 6px 0 10px;
+  margin: 0 0 12px;
+  text-align: center;
 }
 
 .stage-figure {
-  margin: 8px 0 12px;
+  margin: 0 0 12px;
 }
 
 .stage-figure > canvas {
@@ -840,15 +1072,18 @@
 }
 
 .stage-figure figcaption {
-  margin-top: 4px;
+  margin-top: 3px;
+  font-family: var(--font-text);
   font-size: 13px;
-  opacity: 0.75;
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .stage-screen-crop {
   display: block;
   max-width: 100%;
-  filter: drop-shadow(0 1px 6px rgb(0 0 0 / 60%));
+  /* The question's ink shadow (QuestionOverlay): black 45 %, radius 8, 2 down. */
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 45%));
 }
 
 .stage-draft {
@@ -1025,11 +1260,6 @@
   margin-top: 8px;
 }
 
-.stage-step.lesson-lit {
-  outline: 2px solid var(--accent, #0a84ff);
-  outline-offset: 2px;
-}
-
 /* The «Watch out» tag (PitfallTag): the theme's one warm colour, for a mistake to avoid, not a wrong answer. */
 .stage-pitfall {
   --amber: rgb(255 184 71);
@@ -1107,8 +1337,14 @@
   transition: opacity 0.35s ease-in-out;
 }
 
+/* While a lesson works the answer out, its box stays with the word «Answer» and nothing in it, so the steps don't
+   sit under an empty gap and nothing moves when the answer arrives. */
+.stage-answer.waiting .stage-answer-value {
+  visibility: hidden;
+}
+
 .stage-answer.waiting {
-  opacity: 0;
+  opacity: 0.55;
 }
 
 @media (forced-colors: active) {
@@ -1180,6 +1416,60 @@
 .stage-figure-fit {
   max-width: 100%;
   overflow-x: auto;
+}
+
+/* The 3D figure and the graph, one at a time, in a box of one height for the window (QuestionPanel.figureBox). */
+.stage-figure-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stage-figure-box-body {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* The «3D | Graph» selector: a segmented control at its own width. */
+.stage-figure-tabs {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 10%);
+}
+
+.stage-figure-tabs button {
+  min-width: 64px;
+  padding: 3px 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: rgb(255 255 255 / 75%);
+  font: 500 12px/16px var(--font-ui, "Segoe UI Variable", "Segoe UI", sans-serif);
+  cursor: pointer;
+}
+
+.stage-figure-tabs button.selected {
+  background: rgb(255 255 255 / 22%);
+  color: #fff;
+}
+
+.stage-figure-tabs button:focus-visible {
+  outline: 2px solid var(--accent, #0a84ff);
+  outline-offset: 1px;
+}
+
+/* One column (a narrow window): the figure above the steps, small enough for the steps to fit under it (a sign table
+   in 360 wide, a drawing or a space figure 300 wide). */
+.stage-figures-above {
+  margin: 0 0 6px;
+  max-width: 360px;
+}
+
+.stage-figures-above > :not(.stage-figure-fit) {
+  max-width: 300px;
 }
 
 .stage-spinner {
@@ -1290,4 +1580,117 @@
   font-style: normal;
   font-size: 17px;
   font-weight: 500;
+}
+
+/* «More below» (ScrollCue): a small round button at the foot of the stage while the work goes past the window. */
+.stage-scroll-cue {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 14%);
+  color: var(--stage-text);
+  cursor: pointer;
+  animation: stage-fade 200ms ease-in-out;
+}
+
+.stage-scroll-cue:hover {
+  background: rgb(255 255 255 / 24%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stage-scroll-cue svg {
+    animation: stage-scroll-nudge 1.6s ease-in-out 2;
+  }
+}
+
+@keyframes stage-scroll-nudge {
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* The sentence a formula ended with (`trailingProse`), under it in the interface's font. */
+.stage-formula-note {
+  font-size: 12px;
+  color: var(--stage-muted);
+}
+
+/* Maths inside the hint's sentence at the words' own size (KaTeX sets it 21 % larger, which stood out mid-line). */
+.stage-hint .katex {
+  font-size: 1.04em;
+}
+
+/* A formula turning into the next one starts at the left edge, as every typeset line on the stage does (the morph's
+   frame was centred, so a step's line jumped to the middle while it changed; live test 2026-11-21). */
+.stage .morph-frame {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* The question stays put and only the work under it scrolls (the Mac: when room runs out, the steps scroll; the
+   question never leaves the screen). The column is as tall as the stage, the work takes what
+   the question leaves and scrolls inside it, with no scrollbar (base.css). */
+.stage-column {
+  /* Not divided by the zoom: WebView2 resolves a zoomed element's percentage height against its parent as is. */
+  height: 100%;
+  min-height: 0;
+}
+
+.stage-work {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the last row's descenders and for a step's ring drawn a little past its box. */
+  padding-bottom: 12px;
+}
+
+/* The solution's formulas and figure (FixedSide): in the stage's top-right corner, out of the work's scroll and not
+   lined up with the steps. No plates: the groups are told apart by space alone. They arrive one after the other. */
+.stage-side-slot {
+  min-height: 1px;
+}
+
+.stage-fixed-side {
+  zoom: var(--stage-scale, 1);
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 2;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.stage-card {
+  animation: stage-card-in 320ms var(--spring-arrive, ease-out) both;
+}
+
+.stage-figure-card {
+  animation-delay: 120ms;
+}
+
+.stage-formulas-card .stage-formulas-title {
+  margin: 0 0 8px;
+}
+
+@keyframes stage-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-card {
+    animation: stage-fade 200ms ease-in-out;
+  }
 }

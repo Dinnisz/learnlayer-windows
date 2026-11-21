@@ -25,7 +25,7 @@ import { decodeProblemSolution, restrictedTo, type ProblemSolution } from "./pro
 import { decodeFromContent } from "../ai/replyDecoding";
 import { decodeVariant, VariantPrompt, type ProblemVariant } from "./problemVariant";
 import { RouteDecision, type Classification, type RouteOutcome } from "./routeDecision";
-import { solution as plainSolution, streamedSolution, type SolveOptions } from "./solutionRequest";
+import { solution as plainSolution, streamedSolution, TutorLanguage, type SolveOptions } from "./solutionRequest";
 
 /** What the solver needs from the app: where answers are saved, how to reach a model, and the settings. */
 export interface SolverServices {
@@ -39,8 +39,8 @@ export interface SolverServices {
   hasCredentials(): boolean;
   config(): RoutingConfig;
   plan(): Plan;
-  /** `TutorLanguage.promptName` of the language Settings chose. */
-  language(): string;
+  /** `TutorLanguage.promptName` of the language to answer in: Settings' choice, or the question's own (`forQuestion`). */
+  language(question?: string): string;
   /** The figure model from Settings; the strong model when empty. */
   figureModel?(): string;
   /** Development without the API: every solve answers with `MockSolution.json` after half a second (the request
@@ -97,6 +97,7 @@ export class SolutionProvider {
       route,
       promptVersion: ProblemPrompt.version,
       config: this.services.config(),
+      language: TutorLanguage.fromPromptName(this.services.language(groupText)),
       usesMock: this.usesMock,
     });
   }
@@ -269,7 +270,7 @@ export class SolutionProvider {
     avoiding: readonly string[];
   }): Promise<ProblemVariant> {
     const reply = await this.services.client({ model: AISettings.defaultModel }).complete({
-      system: VariantPrompt.system(this.services.language()),
+      system: VariantPrompt.system(this.services.language(request.groupText)),
       user: VariantPrompt.user(request.groupText, request.label, request.asks, request.formula, request.avoiding),
       schemaName: "variant",
       schema: VariantPrompt.schema,
@@ -287,7 +288,8 @@ export class SolutionProvider {
     const running = this.confirmations.get(id);
     if (running) return running;
     const pass = (async () => {
-      const solution = await this.request(request, model, null, null, null);
+      // A follow-up inside the explanation already shown (the server lets it run a little past the limit).
+      const solution = await this.request(request, model, null, null, null, true);
       await this.services.solutions.store(solution, saved);
       await this.services.escalated.store(true, saved);
       return solution;
@@ -306,7 +308,7 @@ export class SolutionProvider {
       labels: request.labels,
       figureNote: request.figureNote,
       images: request.images,
-      language: this.services.language(),
+      language: this.services.language(request.groupText),
       transcribing,
       signal: request.signal,
     };
@@ -318,6 +320,7 @@ export class SolutionProvider {
     images: readonly Uint8Array[],
     route: SolverRoute | null,
     area: Area | null,
+    continuesExplanation = false,
   ) {
     return this.services.client({
       model,
@@ -325,6 +328,7 @@ export class SolutionProvider {
       routeArea: area,
       routeName: route,
       routeHasFigure: route !== null ? images.length > 0 : null,
+      ...(continuesExplanation ? { continuesExplanation } : {}),
     });
   }
 
@@ -360,6 +364,7 @@ export class SolutionProvider {
     reasoningBudget: number | null,
     route: SolverRoute | null,
     area: Area | null,
+    continuesExplanation = false,
   ): Promise<ProblemSolution> {
     const mock = this.services.mockSolution;
     if (mock) {
@@ -368,7 +373,7 @@ export class SolutionProvider {
     }
     const transcribing = (await this.services.transcribing?.(request.images)) ?? false;
     const reply = await plainSolution(
-      this.client(model, reasoningBudget, request.images, route, area),
+      this.client(model, reasoningBudget, request.images, route, area, continuesExplanation),
       this.options(request, transcribing),
     );
     return restrictedTo(reply.solution, request.labels);

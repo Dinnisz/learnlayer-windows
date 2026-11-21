@@ -600,7 +600,7 @@ const folded = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").to
 export const NoteMath = {
   pieces(note: string): NotePiece[] {
     const segments = NoteMath.delimited(note);
-    if (!segments) return scannedPieces(note);
+    if (!segments) return scannedPieces(NoteMath.setDifferences(note));
     // The marked stretches are the formulas; the words between them are read as usual.
     const pieces: NotePiece[] = [];
     for (const segment of segments) {
@@ -610,7 +610,8 @@ export const NoteMath = {
         else if (isAscii(commandsForSymbols(latex))) append(pieces, latex, true, true);
         else append(pieces, latexToUnicode(latex), false);
       } else {
-        for (const piece of scannedPieces(segment.text)) append(pieces, piece.text, piece.isMath);
+        for (const piece of scannedPieces(NoteMath.setDifferences(segment.text)))
+          append(pieces, piece.text, piece.isMath);
       }
     }
     return absorbPunctuation(pieces);
@@ -619,10 +620,23 @@ export const NoteMath = {
   /** The note as plain text, its "$…$" maths as Unicode: "$x_1 \in V_\delta(c)$" → "x₁ ∈ V_δ(c)". */
   plainText(note: string): string {
     const segments = NoteMath.delimited(note);
-    if (!segments) return note;
+    if (!segments) return NoteMath.setDifferences(note);
     return segments
-      .map((segment) => (segment.isMath ? latexToUnicode(mendedInline(segment.text)) : segment.text))
+      .map((segment) =>
+        segment.isMath ? latexToUnicode(mendedInline(segment.text)) : NoteMath.setDifferences(segment.text),
+      )
       .join("");
+  },
+
+  /**
+   * A set minus a set written in plain words, where the model's backslash is the difference and not LaTeX's escaped
+   * brace: "R\{0}" and "R \setminus {0}" → "R∖{0}", never "R{0}" (`NoteMath.setDifferences` @ 5701363).
+   */
+  setDifferences(text: string): string {
+    return text
+      .replace(/\\setminus\s*/g, "∖")
+      .replace(/(?<=[A-Za-zℝℕℤℚℂ)\]])\s*\\\s*(?=\\?\{)/g, "∖")
+      .replace(/∖\\\{([^{}]*?)\\?\}/g, "∖{$1}");
   },
 
   /** The note cut at its "$…$", "$$…$$" and "\(…\)" marks, or null when it has none. An escaped "\$" is a dollar sign. */

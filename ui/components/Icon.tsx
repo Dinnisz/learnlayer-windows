@@ -82,6 +82,9 @@ const shapes: Record<string, readonly string[]> = {
   "speaker.slash": [speaker, "M3.5 3.5l17 17"],
   "stop.fill": ["F:M8 6h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"],
   "arrow.turn.down.right": ["M6 4.5V11a3 3 0 0 0 3 3h10M15 10l4 4-4 4"],
+  // The tick is cut out of the filled circle (even-odd), so it shows the ground.
+  "checkmark.circle.fill": [`E:${ring(12, 12, 9)}M7.6 12.4l1.1-1.1 2.2 2.2 4.4-4.6 1.1 1.1-5.5 5.7z`],
+  "arrow.uturn.backward": ["M9 14L4.5 9.5 9 5M4.5 9.5H15a4.5 4.5 0 0 1 0 9h-3"],
   lightbulb: [
     "M9.2 18h5.6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.6V16h5.6v-.6c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z",
   ],

@@ -4,6 +4,7 @@
 
 import mockSolution from "@core/mocks/MockSolution.json";
 import sampleSolution from "@core/mocks/SampleQuestionSolution.json";
+import typesetSolution from "@core/mocks/DemoTypesetSolution.json";
 import mockTextHelp from "@core/mocks/MockTextHelp.json";
 import mockIllustrations from "@core/mocks/MockIllustrations.json";
 import { decodeIllustration, type Illustration } from "@core/illustrations/illustration";
@@ -68,9 +69,19 @@ async function usesLocalKey(fastModel: boolean): Promise<string | null> {
   return (fastModel ? fastModelUsesLocalKey(question) : prefersLocalKey(question)) ? key : null;
 }
 
-/** Known once the key has been looked up: whether the fast model can be asked at all. */
+/**
+ * Whether the fast model can be asked at all: with a local key (the Mac's Debug path), or signed in, now that the
+ * Worker lets `qwen/qwen3.8-flash` through on every plan (docs/backend-qwen-transcricao.patch, deployed 2026-11-21).
+ * Before, a signed-in student never had the fast reading, and a picture question waited for the whole solve (~25 s)
+ * to be shown typeset. Looked up at launch and again every minute (a sign-in or sign-out in between).
+ */
 let fastModelAvailable = false;
-void usesLocalKey(true).then((key) => (fastModelAvailable = key !== null));
+const lookUpFastModel = async () => {
+  const key = await usesLocalKey(true);
+  fastModelAvailable = key !== null || (await session.accessToken(false).catch(() => null)) !== null;
+};
+void lookUpFastModel();
+window.setInterval(() => void lookUpFastModel(), 60_000);
 
 const environment: ModelEnvironment = {
   async transport(purpose, local) {
@@ -99,24 +110,35 @@ const read = (key: string) => {
 
 let provider: SolutionProvider | null = null;
 
+/** `overlay.html?demo=typeset`: the circuit question solved by a mock that reads the question back. */
+const typesetDemo = () => new URLSearchParams(window.location.search).get("demo") === "typeset";
+
 /** One solver for the window, so its caches and in-flight requests are shared by every question. */
 export function solutionProvider(): SolutionProvider {
   if (provider) return provider;
   const mock = usesMock();
   provider = new SolutionProvider({
-    solutions: new DiskCache<ProblemSolution>("solutions.json", 100, dataFiles),
+    // The typeset demo answers the same picture as `?demo=anywhere` with another mock: kept in a file of its own.
+    solutions: new DiskCache<ProblemSolution>(
+      mock && typesetDemo() ? "demo-typeset-solutions.json" : "solutions.json",
+      100,
+      dataFiles,
+    ),
     escalated: new DiskCache<boolean>("escalated-answers.json", 300, dataFiles),
     client: (options) => new ModelClient(environment, options),
     // Signed-in is checked by the call itself (no token: `signedOut`); the classifier needs it known first.
     hasCredentials: () => !mock,
     config: () => ModelRouting.config(read(ModelRouting.configKey)),
     plan: () => ModelRouting.plan(read(ModelRouting.planKey)),
-    language: () =>
-      TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages)),
+    language: (question) => answerLanguage(question),
     // A question read from the screen (labelled "Q", as the onboarding's sample) has a mock of its own: the exam's parts
     // would never match it.
+    // `?demo=typeset`: the circuit question with its reading of the picture and a focus on each step.
     mockSolution: mock
-      ? (request) => decodeProblemSolution(request.labels.includes("Q") ? sampleSolution : mockSolution)
+      ? (request) =>
+          decodeProblemSolution(
+            request.labels.includes("Q") ? sampleSolution : typesetDemo() ? typesetSolution : mockSolution,
+          )
       : undefined,
     transcribing: (images) => transcriptionRequests.isRequested(images),
   });
@@ -152,8 +174,7 @@ export function textHelpProvider(): TextHelpProvider {
   textHelp = new TextHelpProvider({
     passages: new DiskCache<TextHelp>("passages.json", 200, dataFiles),
     client: () => new ModelClient(environment, { model: AISettings.defaultModel }),
-    language: () =>
-      TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages)),
+    language: (question) => answerLanguage(question),
     mock: mock ? () => decodeTextHelp(mockTextHelp) : undefined,
   });
   return textHelp;
@@ -212,6 +233,13 @@ export function illustrationProvider(): IllustrationProvider {
     mock: usesMock() ? decodeIllustration((mockIllustrations as unknown[])[0]) : null,
   });
   return illustrations;
+}
+
+/** The language to answer `question` in: Settings' choice, or the question's own when Settings follows the system. */
+export function answerLanguage(question?: string): string {
+  return TutorLanguage.promptName(
+    TutorLanguage.forQuestion(read(TutorLanguage.settingKey), navigator.languages, question ?? null),
+  );
 }
 
 /** The language the app writes into drawings and asks the model to write in. */

@@ -1,6 +1,7 @@
 // Port of LearnLayer/Onboarding/OnboardingView.swift, OnboardingScreens.swift and OnboardingModel.swift
 // @ ref 2026-11-04: the first-run card, one idea per screen, one big button. On Windows it sits over the main window
-// (the window opens at launch); the permissions screen is not on the Windows path (core/onboarding).
+// (the window opens at launch); the permissions screen is only on a Mac (core/onboarding), where the keycaps are
+// ⌃ and ⌥ instead of Ctrl, Win and Alt (Mac report M5).
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { PlanDefaults } from "@core/account/accountModel";
@@ -23,7 +24,13 @@ import {
   type MascotColor,
 } from "../components/Mascot";
 import { LocalizationProvider, useLanguage, usePlatformName, useT } from "../i18n";
-import { onTalkKey, openMicrophoneSettings } from "../native";
+import {
+  onTalkKey,
+  openMicrophoneSettings,
+  requestPermission,
+  systemPermissions,
+  type SystemPermissions,
+} from "../native";
 import { sessionServices, Stage, type StageSource } from "../stage/Stage";
 import { Recorder } from "../voice/recorder";
 import { playClip } from "../voice/speaker";
@@ -374,8 +381,8 @@ function Screen(props: ScreenProps) {
     case "talk":
       return <Talk {...props} />;
     case "permissions":
-      // Not on the Windows path.
-      return null;
+      // Only on a Mac's path (Windows asks for none of these).
+      return <Permissions {...props} />;
     case "tryIt":
       return <TryIt {...props} />;
     case "look":
@@ -519,6 +526,7 @@ function Keycap({ symbol, label, down = false }: { symbol: string; label?: strin
 
 function Talk({ voice }: ScreenProps) {
   const t = useT();
+  const mac = usePlatformName() === "macos";
   const [phase, setPhase] = useState<"waiting" | "listening" | "speaking">("waiting");
   const phaseRef = useRef(phase);
   const { play } = voice;
@@ -535,12 +543,16 @@ function Talk({ voice }: ScreenProps) {
         timer = window.setTimeout(() => setPhase("waiting"), 2400);
       }
     };
-    // The global talk key (the hook), and the same keys pressed in this window (where the browser sees them).
+    // The global talk key (the hook), and the same keys pressed in this window (where the browser sees them):
+    // Ctrl + Win, or Control + Option on a Mac.
     const stop = onTalkKey(held);
+    const second = mac ? "Alt" : "Meta";
     const onKey = (event: KeyboardEvent) => {
-      const chord = event.ctrlKey && event.metaKey && !event.altKey && !event.shiftKey;
+      const chord = mac
+        ? event.ctrlKey && event.altKey && !event.metaKey && !event.shiftKey
+        : event.ctrlKey && event.metaKey && !event.altKey && !event.shiftKey;
       if (event.type === "keydown" && chord) held(true);
-      if (event.type === "keyup" && (event.key === "Control" || event.key === "Meta")) held(false);
+      if (event.type === "keyup" && (event.key === "Control" || event.key === second)) held(false);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
@@ -550,7 +562,7 @@ function Talk({ voice }: ScreenProps) {
       window.removeEventListener("keyup", onKey);
       void stop.then((unlisten) => unlisten());
     };
-  }, [play]);
+  }, [play, mac]);
   const listening = phase === "listening";
   return (
     <Layout
@@ -562,9 +574,13 @@ function Talk({ voice }: ScreenProps) {
     >
       <div className="onboarding-stack">
         <div className="onboarding-row">
-          <Keycap symbol="Ctrl" down={listening} />
+          {mac ? (
+            <Keycap symbol="⌃" label={t("control")} down={listening} />
+          ) : (
+            <Keycap symbol="Ctrl" down={listening} />
+          )}
           <span className="onboarding-dim">{t("and")}</span>
-          <Keycap symbol="Win" down={listening} />
+          {mac ? <Keycap symbol="⌥" label={t("option")} down={listening} /> : <Keycap symbol="Win" down={listening} />}
         </div>
         <Chip text={t("“Hi, what is a derivative?”")} />
         {phase === "waiting" ? (
@@ -579,8 +595,66 @@ function Talk({ voice }: ScreenProps) {
   );
 }
 
+/**
+ * The Swift app's OnboardingPermissions, on a Mac: Accessibility (⌥-click, the talk key) and Screen Recording (the
+ * window picture), each with its state, read again every second, and a button that asks for it. Each is optional.
+ */
+function Permissions({ voice }: ScreenProps) {
+  const t = useT();
+  const [state, setState] = useState<SystemPermissions | null>(null);
+  useEffect(() => {
+    let live = true;
+    const read = () => void systemPermissions().then((found) => live && setState(found));
+    read();
+    const timer = window.setInterval(read, 1000);
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+  const row = (title: string, purpose: string, granted: boolean | undefined, ask: () => void) => (
+    <div className="onboarding-permission">
+      <div>
+        <strong>{t(title)}</strong>
+        <small>{t(purpose)}</small>
+      </div>
+      {granted ? (
+        <Status text={t("Allowed")} positive />
+      ) : (
+        <button type="button" className="onboarding-secondary" onClick={ask}>
+          {t("Open")}
+        </button>
+      )}
+    </div>
+  );
+  return (
+    <Layout
+      voice={voice}
+      title={t("Permissions")}
+      subtitle={t("One at a time. Each one is optional, and you can change it later in Settings.")}
+    >
+      <div className="onboarding-stack">
+        {row(
+          "Accessibility",
+          "This lets me read the question you’re looking at.",
+          state?.accessibility,
+          () => void requestPermission("accessibility"),
+        )}
+        {row(
+          "Screen Recording",
+          "This lets me see the part of the screen you choose.",
+          state?.screenRecording,
+          () => void requestPermission("screenRecording"),
+        )}
+        <span className="onboarding-dim">{t("Restart LearnLayer so macOS applies it.")}</span>
+      </div>
+    </Layout>
+  );
+}
+
 function TryIt({ voice, openSample }: ScreenProps) {
   const t = useT();
+  const mac = usePlatformName() === "macos";
   return (
     <Layout
       voice={voice}
@@ -595,7 +669,7 @@ function TryIt({ voice, openSample }: ScreenProps) {
           <span>{t(sampleQuestion)}</span>
         </button>
         <div className="onboarding-row">
-          <Keycap symbol="Alt" />
+          {mac ? <Keycap symbol="⌥" label={t("option")} /> : <Keycap symbol="Alt" />}
           <span className="onboarding-dim">+</span>
           <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
             <path d="M8 4l12 9-5.5 1 3 6-2.4 1.1-3-6L8 19z" fill="currentColor" />
@@ -691,7 +765,7 @@ function Plan({ voice }: ScreenProps) {
         <span>{price(cents)}</span>
         {monthly && <small>{t("/ month")}</small>}
       </div>
-      <p>{t("A daily limit and %lld explanations a month.", count)}</p>
+      <p>{t("%lld credits a month.", count)}</p>
       <em>{t(note)}</em>
     </div>
   );
@@ -702,7 +776,7 @@ function Plan({ voice }: ScreenProps) {
           "Free",
           free?.monthlyPriceCents ?? 0,
           false,
-          free?.monthlyRequestLimit ?? PlanDefaults.freeMonthlyRequests,
+          free?.monthlyCreditLimit ?? PlanDefaults.freeMonthlyCredits,
           true,
           "No card needed.",
         )}
@@ -710,7 +784,7 @@ function Plan({ voice }: ScreenProps) {
           "Plus",
           plus?.monthlyPriceCents ?? PlanDefaults.paidMonthlyCents,
           true,
-          plus?.monthlyRequestLimit ?? PlanDefaults.paidMonthlyRequests,
+          plus?.monthlyCreditLimit ?? PlanDefaults.paidMonthlyCredits,
           false,
           "Upgrade in Settings",
         )}
@@ -718,7 +792,7 @@ function Plan({ voice }: ScreenProps) {
           "Pro",
           pro?.monthlyPriceCents ?? PlanDefaults.proMonthlyCents,
           true,
-          pro?.monthlyRequestLimit ?? PlanDefaults.proMonthlyRequests,
+          pro?.monthlyCreditLimit ?? PlanDefaults.proMonthlyCredits,
           false,
           "Upgrade in Settings",
         )}

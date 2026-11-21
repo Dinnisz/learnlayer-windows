@@ -51,6 +51,28 @@ export const StepFocusGeometry = {
     return { x: x * size.width, y: y * size.height, width: w * size.width, height: h * size.height };
   },
 
+  /**
+   * The box in one of the lifted crops when the model was sent a picture of `sent` (page points, y up): the union of the
+   * group, its statement and the part (`QuestionPages.region`), so its shares are of that whole picture, whichever crop
+   * it names. Placed on the page, then in `crop` (page points, y up) drawn at `size`; null when the spot is in another
+   * crop (the group's statement above the part, say) or is not a box.
+   */
+  onCrop(focus: Focus, sent: Box, crop: Box, size: { width: number; height: number }): Box | null {
+    const spot = StepFocusGeometry.rect(focus, { width: sent.width, height: sent.height });
+    if (!spot || !(crop.width > 0 && crop.height > 0)) return null;
+    const left = sent.x + spot.x;
+    const top = sent.y + sent.height - spot.y;
+    const centre = { x: left + spot.width / 2, y: top - spot.height / 2 };
+    if (centre.x < crop.x || centre.x > maxX(crop) || centre.y < crop.y || centre.y > maxY(crop)) return null;
+    const scale = size.width / crop.width;
+    return {
+      x: (left - crop.x) * scale,
+      y: (maxY(crop) - top) * scale,
+      width: spot.width * scale,
+      height: spot.height * scale,
+    };
+  },
+
   /** How far to magnify `region` in a crop of `size`: to about half its width, within reason and never past the crop. */
   zoom(region: Box, size: { width: number; height: number }): number {
     if (!(region.width > 0 && region.height > 0)) return 1;

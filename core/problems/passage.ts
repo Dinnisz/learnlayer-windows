@@ -92,7 +92,8 @@ export function passageChunk(lines: readonly PassageLine[]): PassageChunk {
     if (text.endsWith("-") && isLowercase(Array.from(piece)[0])) {
       text = text.slice(0, -1);
     } else if (text !== "") {
-      text += " ";
+      // As the exam prints it, one verse or line per line (`PassageChunk(lines:)` @ 5701363).
+      text += "\n";
     }
     if (line.number !== null && line.number % 5 === 0) markers.push({ offset: count(text), number: line.number });
     const base = count(text);

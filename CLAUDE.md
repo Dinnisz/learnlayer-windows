@@ -4,6 +4,23 @@
 
 ---
 
+## Mac e Windows no mesmo código (desde 2026-11-21)
+
+Esta app (Tauri 2 + React) vai **substituir a app Swift**: o Dinis lança Mac e Windows ao mesmo tempo, com um só código.
+- Tudo o que é igual nos dois sistemas fica em `core/` e `ui/`. O que é do sistema fica atrás do trait `Platform`
+  (`src-tauri/src/platform/mod.rs`): `platform/windows/` e `platform/macos/`. Nunca mudes o comportamento do Windows
+  por causa do Mac: um método novo do trait tem uma predefinição que deixa o Windows como está.
+- No Mac, o código nativo é o da app Swift, copiado para o pacote `src-tauri/macos-native/` (Swift, ligado pelo
+  swift-rs no `build.rs`, só compila no macOS). Cada ficheiro diz de onde veio: `// Port of LearnLayer/<caminho> @ <commit>`.
+  Já faz: ⌥-clique (ClickMonitor, AccessibilityReader), imagem da janela e OCR Vision, o PDF aberto no Pré-visualização,
+  a pílula no notch e a tecla Control+Option.
+- O estado, o que falta no Mac e o último teste ao vivo: `docs/PROGRESSO.md` e `docs/RELATORIO-MAC-2026-11-21.md`.
+- Textos visíveis que dependem do sistema (teclas, «Windows», «Alt») escolhem-se por `usePlatformName()`.
+- Verificação: `cargo fmt`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `npm test` e `npm run lint`
+  passam nos dois sistemas (o CI corre Windows e macOS).
+
+---
+
 ## 0. Quem és e o que vais fazer
 
 Vais construir a versão **Windows** do LearnLayer, uma app de estudo que já existe para macOS (Swift + SwiftUI, ~88 000 linhas). Não tens acesso ao repositório do Mac. Tens uma cópia de referência do código-fonte em `referencia-mac/` (só leitura) e capturas de ecrã e vídeos da app em `referencia-mac/capturas/`.

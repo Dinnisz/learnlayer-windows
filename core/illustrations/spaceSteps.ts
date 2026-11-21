@@ -54,7 +54,8 @@ export function spaceParts(formula: string, words: string, figure: SpaceFigure):
     if (parts.has(name) && !found.includes(name)) found.push(name);
   };
   // Edges and vectors between two named points: \overrightarrow{AB}, [AB], AB.
-  const names = new Set(figure.points.map((point) => point.name));
+  // "O" names the origin in edges ("OA") even when it is not a drawn point (@ 5701363).
+  const names = new Set([...figure.points.map((point) => point.name), "O"]);
   for (const match of maths.matchAll(/(?:overrightarrow\{|vec\{|\[)?([A-Z][0-9']?)([A-Z][0-9']?)(?:\}|\])?/gu)) {
     const a = match[1]!;
     const b = match[2]!;

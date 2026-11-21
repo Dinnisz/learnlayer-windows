@@ -13,19 +13,27 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
-import { FitToHeight } from "./FitToHeight";
+import { compactStageHeight, FitToHeight, stageFitFloor } from "./FitToHeight";
+import { questionScale, StageGeometry } from "./questionScale";
+import { ExplanationLayout } from "@core/problems/explanationLayout";
+import { LatexText } from "@core/math/latexText";
+import { quoteRects } from "./typesetUnderlines";
 import { springDuration, springEasing, Springs } from "../styles/springs";
 import { bodyFontSize, linesOf, Rects, type PageText, type Rect } from "@core/pdf/page";
 import { passageLinesOfPages } from "@core/pdf/passageLines";
 import { ChoiceCheck } from "@core/problems/choiceCheck";
-import { formulasFor, type Card, type Part } from "@core/problems/problemSolution";
+import { formulasFor, type Card, type Focus, type Part } from "@core/problems/problemSolution";
 import { StepFocusGeometry, StepFocusMarks, type Box } from "@core/problems/stepFocus";
 import { SelectionAsk } from "@core/problems/selectionAsk";
-import { markup } from "@core/problems/markup";
+import { markup, partLabelLetters } from "@core/problems/markup";
 import { FigureLabels } from "@core/voice/figureLabels";
 import { SpeechMarkLayout } from "@core/voice/speechMarkLayout";
 import { ExamNotation } from "@core/math/examNotation";
+import { uprightUnits } from "@core/math/units";
+import { trailingProse } from "@core/math/formulaProse";
+import { readableOperators } from "@core/math/operators";
 import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
 import { GuideSpots } from "../lesson/guideSpot";
@@ -35,8 +43,13 @@ import { Variant } from "@core/problems/problemVariant";
 import { FastTranscriptionReader } from "@core/problems/fastTranscription";
 import type { ExamQuestion } from "@core/problems/questionDetector";
 import { QuestionPages } from "@core/problems/questionPages";
-import { Transcriptions, type QuestionTranscription } from "@core/problems/questionTranscription";
-import { QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
+import {
+  Transcriptions,
+  type QuestionTranscription,
+  type TranscriptionBlock,
+} from "@core/problems/questionTranscription";
+import { isFigure3D, QuestionSession, type Mode, type SessionServices } from "@core/problems/questionSession";
+import { FigureBoxSize } from "./figureBox";
 import { CurveGraph, type GraphControlling } from "../figures/CurveGraph";
 import { FunctionPlot } from "@core/illustrations/graph";
 import { ConceptSlug } from "@core/memory/memory";
@@ -145,6 +158,13 @@ async function prepareSource(source: StageSource): Promise<{ session: QuestionSe
   return { session, page: null };
 }
 
+/** The page area the model was sent a picture of (`QuestionPages.region` on the question's own page); null when the
+ * text alone went. */
+function sentArea(page: PageText, question: ExamQuestion): Rect | null {
+  if (QuestionPages.textSuffices(question, QuestionPages.pages(question, page))) return null;
+  return QuestionPages.region(page, question, page);
+}
+
 /** The pages, pictures and source lines that go with the clicked question, then its session (no call yet). */
 async function prepare(
   document: ReaderDocument,
@@ -181,7 +201,8 @@ async function prepare(
   void memoryStore().then((memory) =>
     memory.record({
       text: question.text,
-      documentName: `${document.name}.pdf`,
+      // The name may already end in .pdf (a Mac open dialog keeps it): never «.pdf.pdf» (Mac report P1).
+      documentName: `${document.name.replace(/\.pdf$/i, "")}.pdf`,
       page: question.pageIndex,
       concepts: [ConceptSlug.make(question.text)],
       kind: "exercise",
@@ -240,8 +261,12 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   const [cue, setCue] = useState<{ cue: MascotTransient } | null>(null);
   // Larger on a tall screen, exactly as laid out on the laptop's (StageScale): the column is zoomed by it.
   const [stageScale, setStageScale] = useState(() => StageScale.factor(window.innerHeight));
+  const [stageWidth, setStageWidth] = useState(() => window.innerWidth);
   useEffect(() => {
-    const resize = () => setStageScale(StageScale.factor(window.innerHeight));
+    const resize = () => {
+      setStageScale(StageScale.factor(window.innerHeight));
+      setStageWidth(window.innerWidth);
+    };
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
@@ -388,63 +413,154 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
     return () => window.removeEventListener("keydown", onKey, true);
   }, [session, choose, close, stopLesson, stopVoice]);
 
+  const [questionExpanded, setQuestionExpanded] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // The work's own height (the Mac's `panelHeight`), for the compact question to make room for it.
+  const [workHeight, setWorkHeight] = useState(0);
+  const measuredWork = useCallback((height: number) => setWorkHeight(Math.round(height)), []);
+  const panelHeight = useMemo(() => ({ height: workHeight, measured: measuredWork }), [workHeight, measuredWork]);
+
   const mode = session?.mode ?? null;
   const showsLesson = mode === "solution" && session?.part != null && session.state.kind === "ready";
-  const compact = mode === "solution" || mode === "followUp";
+  // Reading while the student works on it; compact once the solution is open, unless a click on the question opened
+  // it to its reading size again (QuestionOverlay's `phase` and `questionExpanded`).
+  const compact = mode === "solution" && !questionExpanded;
+  const toggleQuestion = () => {
+    if (mode !== "solution") return;
+    // A click that ends a selection of the question's words keeps it as it is.
+    if (!(window.getSelection()?.isCollapsed ?? true)) return;
+    setQuestionExpanded((expanded) => !expanded);
+  };
+  // The stage's side column (`Stage.hasSide`): beside the question when the window is at least 1000 pt wide,
+  // `min(440, 34 %)` of it, the question and the work in what is left (36 pt apart).
+  const widthPoints = stageWidth / stageScale;
+  const sideWidth = Math.min(440, 0.34 * widthPoints);
+  const extrasAtSide = session !== null && hasStageExtras(session) && widthPoints >= 1000;
 
   return (
-    <LessonContext.Provider value={{ state: lesson.state, player: lesson.player, toggle: lesson.toggle }}>
-      <VoiceContext.Provider value={voice.state}>
-        <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
-          <div
-            className="stage"
-            style={{ "--stage-scale": stageScale } as React.CSSProperties}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("What do you want to do?")}
-            onMouseDown={(event) => event.target === event.currentTarget && close()}
-          >
-            <div className={`stage-column${compact ? " stage-compact" : ""}`}>
-              {source.kind === "pdf" ? (
-                <QuestionCrop
-                  document={source.document}
-                  opened={source.opened}
-                  page={prepared?.page ?? null}
-                  session={session}
-                  compact={compact}
-                />
-              ) : (
-                <ScreenQuestionView source={source} session={session} compact={compact} />
+    <PanelHeight.Provider value={panelHeight}>
+      <LessonContext.Provider value={{ state: lesson.state, player: lesson.player, toggle: lesson.toggle }}>
+        <VoiceContext.Provider value={voice.state}>
+          <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
+            <div
+              ref={stageRef}
+              className="stage"
+              style={{ "--stage-scale": stageScale } as React.CSSProperties}
+              role="dialog"
+              aria-modal="true"
+              aria-label={t("What do you want to do?")}
+              onMouseDown={(event) => event.target === event.currentTarget && close()}
+            >
+              <div
+                className={`stage-column${compact ? " stage-compact" : ""}`}
+                style={extrasAtSide ? { width: `min(1272px, calc(100% - ${sideWidth + 36}px))` } : undefined}
+              >
+                {/* A similar question is drawn where the exam's was; the exam's waits, hidden (`VariantStage`). */}
+                {mode === "variant" && session && <VariantHeader session={session} />}
+                {/* A click on the compact question opens it to its reading size, and back (`toggleQuestion`). */}
+                <div className={`stage-question-toggle${mode === "variant" ? " away" : ""}`} onClick={toggleQuestion}>
+                  {source.kind === "pdf" ? (
+                    <QuestionCrop
+                      document={source.document}
+                      opened={source.opened}
+                      page={prepared?.page ?? null}
+                      session={session}
+                      compact={compact}
+                    />
+                  ) : (
+                    <ScreenQuestionView source={source} session={session} compact={compact} />
+                  )}
+                </div>
+                {session === null || mode === null ? (
+                  <Menu
+                    explains={session?.explains ?? false}
+                    onChoose={choose}
+                    onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
+                  />
+                ) : (
+                  // The work scrolls under the question, which stays where it is (the Mac: only the steps scroll).
+                  <div className="stage-work">
+                    <ModeView session={session} extrasAtSide={extrasAtSide} />
+                  </div>
+                )}
+              </div>
+              {extrasAtSide && session && (
+                <aside
+                  className="stage-side"
+                  aria-label={t("Formulas")}
+                  style={{ width: sideWidth, maxHeight: window.innerHeight / stageScale - 28 - 16 }}
+                >
+                  <StageExtras session={session} atSide />
+                </aside>
               )}
-              {session === null || mode === null ? (
-                <Menu
-                  explains={session?.explains ?? false}
-                  onChoose={choose}
-                  onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
+              {/* Every stage has the tutor (QuestionOverlay): the sphere, when the mascot is on; the lesson's card. */}
+              {(session && mascotOn) || showsLesson ? (
+                <LessonOverlay
+                  player={lesson.player}
+                  state={lesson.state}
+                  onTap={tapMascot}
+                  voice={voice.state}
+                  presence={mascotPresence}
+                  transient={cue?.cue ?? null}
+                  showsMascot={mascotOn && session !== null}
+                  restsBeside={session?.mode === "solution" && (session.isGuiding || (lesson.state?.playing ?? false))}
                 />
-              ) : (
-                <ModeView session={session} />
-              )}
+              ) : null}
+              <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
+              {session && <SelectionAskPill session={session} />}
+
+              <ScrollCue stage={stageRef} />
             </div>
-            {/* Every stage has the tutor (QuestionOverlay): the sphere, when the mascot is on; the lesson's card. */}
-            {(session && mascotOn) || showsLesson ? (
-              <LessonOverlay
-                player={lesson.player}
-                state={lesson.state}
-                onTap={tapMascot}
-                voice={voice.state}
-                presence={mascotPresence}
-                transient={cue?.cue ?? null}
-                showsMascot={mascotOn && session !== null}
-                restsBeside={session?.mode === "solution" && (session.isGuiding || (lesson.state?.playing ?? false))}
-              />
-            ) : null}
-            <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
-            {session && <SelectionAskPill session={session} />}
-          </div>
-        </TalkContext.Provider>
-      </VoiceContext.Provider>
-    </LessonContext.Provider>
+          </TalkContext.Provider>
+        </VoiceContext.Provider>
+      </LessonContext.Provider>
+    </PanelHeight.Provider>
+  );
+}
+
+/**
+ * A quiet «more below» at the foot of the stage while what is on it goes past the window's bottom: the stage has no
+ * scrollbar (base.css), and a long solution ran off the screen with nothing to say there was more (Mac report I10).
+ * A click scrolls down most of a window; the cue leaves once the end is in view.
+ */
+/** The scrolling work under the question on a stage (`.stage-work`); null before a mode is chosen. */
+const workOf = (stage: HTMLElement | null) => stage?.querySelector<HTMLElement>(".stage-work") ?? null;
+
+function ScrollCue({ stage }: { stage: React.RefObject<HTMLDivElement | null> }) {
+  const t = useT();
+  const [more, setMore] = useState(false);
+  // The stage stays still; the work under the question scrolls (`.stage-work`), and exists only once a mode is
+  // chosen, so it is looked up each time.
+  useEffect(() => {
+    const check = () => {
+      const element = workOf(stage.current);
+      setMore(element !== null && element.scrollHeight - element.scrollTop - element.clientHeight > 12);
+    };
+    check();
+    // Scrolls inside the work don't bubble: caught on the way down. Steps arriving one by one: read again often.
+    document.addEventListener("scroll", check, { capture: true, passive: true });
+    const timer = window.setInterval(check, 400);
+    return () => {
+      document.removeEventListener("scroll", check, { capture: true });
+      window.clearInterval(timer);
+    };
+  }, [stage]);
+  if (!more) return null;
+  return (
+    <button
+      type="button"
+      className="stage-scroll-cue"
+      aria-label={t("More below")}
+      onClick={() => {
+        const element = workOf(stage.current);
+        element?.scrollBy({ top: element.clientHeight * 0.7, behavior: "smooth" });
+      }}
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path d="M4 7l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    </button>
   );
 }
 
@@ -618,27 +734,20 @@ function useQuestionFlight(
   }, [flight, holder, targets, laidOut, sized]);
 }
 
-/** `Stage.init`'s scale for the lifted question: its body text at `readingSize` or `compactSize` points. */
-function questionScale({
-  body,
-  compact,
-  fits,
-  height,
-}: {
-  body: number;
-  compact: boolean;
-  fits: number;
-  height: number;
-}) {
-  // In the column's own pixels, which StageScale enlarges.
+/** The stage's height in the column's own pixels, which StageScale enlarges. */
+function stageHeight(): number {
   const windowHeight = window.innerHeight || 800;
-  const available = windowHeight / StageScale.factor(windowHeight);
-  const size = compact ? 14 : 17;
-  const share = compact ? 0.3 : 0.45;
-  const scale = Math.min(size / Math.max(1, body), fits, (available * share) / Math.max(1, height));
-  // Never below the smallest readable size.
-  return Math.max(scale, Math.min(fits, 11 / Math.max(1, body)));
+  return windowHeight / StageScale.factor(windowHeight);
 }
+
+/**
+ * The work's own height on this stage (the Mac's `panelHeight`), told by the solution as it measures itself, so the
+ * compact question gives up only the room it needs.
+ */
+const PanelHeight = createContext<{ height: number; measured: (height: number) => void }>({
+  height: 0,
+  measured: () => {},
+});
 
 /** The question lifted off the page: drawn by pdf.js, white on the dark stage, with the open step's data underlined. */
 function QuestionCrop({
@@ -683,7 +792,20 @@ function QuestionCrop({
   const body = useMemo(() => (page ? bodyFontSize(page, question.bounds) : 11), [page, question]);
   const widest = Math.max(...regions.map((region) => region.width));
   const tall = regions.reduce((sum, region) => sum + region.height, 0);
-  const scale = width === 0 ? 1 : questionScale({ body, compact, fits: width / widest, height: tall });
+  const panel = useContext(PanelHeight).height;
+  const available = stageHeight();
+  const scale =
+    width === 0
+      ? 1
+      : questionScale({
+          body,
+          compact,
+          fits: width / widest,
+          height: tall,
+          available,
+          panel,
+          compactWindow: available <= compactStageHeight,
+        });
 
   const sources = useMemo(
     () => sourceRects(opened.frame, question.bounds, regions),
@@ -796,6 +918,19 @@ function CropPiece({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, region, session, version, shows],
   );
+  // The model's box is a share of the picture it was sent: the question's whole area on the page (the group, its
+  // statement and the part, QuestionPages.region), whichever crop it names. Placed on the page, it is drawn on the crop
+  // it falls in. With no picture sent, it is a share of the crop "on" names.
+  const sent = useMemo(() => (page && session ? sentArea(page, session.question) : null), [page, session]);
+  const focusOnCrop = useCallback(
+    (focus: Focus): Box | null => {
+      const size = { width: region.width * scale, height: region.height * scale };
+      if (sent) return StepFocusGeometry.onCrop(focus, sent, region, size);
+      const on = focus.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
+      return on === role ? StepFocusGeometry.rect(focus, size) : null;
+    },
+    [sent, region, scale, hasStatement, role],
+  );
   // While the mascot walks the steps, the step's datum magnified in a lens (QuoteLoupe): its spot on the crop, else
   // the first of its data underlined. Not with Reduce Motion.
   const lens = useMemo(() => {
@@ -804,8 +939,7 @@ function CropPiece({
     if (!session || session.mascotFocusStep === null || reducedMotion() || width <= 1 || height <= 1) return null;
     const crop = { width, height };
     const focus = session.part?.cards?.[session.mascotFocusStep]?.focus ?? null;
-    const on = focus?.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
-    const spot = focus && on === role ? StepFocusGeometry.rect(focus, crop) : null;
+    const spot = focus ? focusOnCrop(focus) : null;
     const line = marks.underlines[0] ?? marks.penUnderlines[0];
     const target = spot ?? (line ? cropBox(line, region, scale) : null);
     if (!target) return null;
@@ -901,8 +1035,7 @@ function CropPiece({
       {session && (
         <StepFocusMark
           session={session}
-          role={role}
-          hasStatement={hasStatement}
+          place={focusOnCrop}
           width={region.width * scale}
           height={region.height * scale}
           lens={lens?.box ?? null}
@@ -1085,15 +1218,14 @@ function TintLayer({
  */
 function StepFocusMark({
   session,
-  role,
-  hasStatement,
+  place,
   width,
   height,
   lens = null,
 }: {
   session: QuestionSession;
-  role: "question" | "statement";
-  hasStatement: boolean;
+  /** Where a step's spot is on this crop, or null when it is on another one. */
+  place: (focus: Focus) => Box | null;
   width: number;
   height: number;
   /** The lens showing the spot magnified: it is the spot's one mark, and the label keeps clear of it. */
@@ -1102,9 +1234,7 @@ function StepFocusMark({
   const step = session.underlinedStep;
   const focus = step !== null ? (session.part?.cards?.[step]?.focus ?? null) : null;
   if (!focus) return null;
-  const on = focus.on?.toLowerCase() === "statement" && hasStatement ? "statement" : "question";
-  if (on !== role) return null;
-  const region = StepFocusGeometry.rect(focus, { width, height });
+  const region = place(focus);
   if (!region) return null;
   const note = focus.note?.trim() ? focus.note.trim() : null;
   return (
@@ -1167,7 +1297,7 @@ function FocusPointer({
       )}
       {note && (
         <span className="stage-focus-note" style={{ left: place.label.x, top: place.label.y }}>
-          {note}
+          {readableOperators(note)}
         </span>
       )}
     </>
@@ -1324,7 +1454,118 @@ function cropMarks(
   return { underlines, penUnderlines, circles, answer, highlights, strikes, pointers, tints };
 }
 
-function ModeView({ session }: { session: QuestionSession }) {
+/** Content scaled down (never up) to the width it is given, keeping its top left (the Mac's `scaledToFit` formulas). */
+function FitWidth({ children }: { children: React.ReactNode }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const box = outer.current;
+    const content = inner.current;
+    if (!box || !content) return;
+    // Both in their own pixels, which the content's zoom does not change: no loop.
+    const measure = () => {
+      const natural = content.offsetWidth;
+      const room = box.clientWidth;
+      const next = natural > room && room > 0 ? room / natural : 1;
+      setScale((now) => (Math.abs(now - next) < 0.005 ? now : next));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={outer} className="stage-fit-width">
+      <div ref={inner} className="stage-fit-width-content" style={scale < 1 ? { zoom: scale } : undefined}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The formulas the solution uses (`FormulaList`): «Formulas», then each one's name small and its formula under it,
+ * made smaller to fit the column, never cut or slid sideways.
+ */
+function FormulaList({ formulas }: { formulas: readonly { name: string; latex: string }[] }) {
+  const t = useT();
+  if (formulas.length === 0) return null;
+  return (
+    <>
+      <h3 className="stage-formulas-title">{t("Formulas")}</h3>
+      {formulas.map((formula) => {
+        // A sentence at the formula's end is a caption in the interface's font, not maths (`trailingProse`).
+        const { math, prose } = trailingProse(formula.latex);
+        return (
+          <div key={formula.name + formula.latex} className="stage-formula">
+            <span>{formula.name}</span>
+            <FitWidth>
+              <MathView latex={math} display />
+            </FitWidth>
+            {prose && <small className="stage-formula-note">{prose}</small>}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+/** The formulas at hand once a mode is chosen (`formulasAtHand`): none for a similar question. */
+function formulasAtHand(session: QuestionSession) {
+  const solution = session.solution;
+  const part = session.part;
+  if (!solution || !part || session.mode === null || session.mode === "variant") return [];
+  return formulasFor(solution, part);
+}
+
+/**
+ * What goes beside the question before the solution is open (QuestionOverlay's `hasSideContent` and `sideColumn`):
+ * the drawing, the formulas at hand and the curve. The solution lays these out in its own columns.
+ */
+function hasStageExtras(session: QuestionSession | null): boolean {
+  if (!session || session.mode === null || session.mode === "solution" || session.mode === "variant") return false;
+  return (
+    (session.showsGraph && Boolean(session.sideGraph) && session.hasGraph) ||
+    session.showsIllustrationPanel ||
+    formulasAtHand(session).length > 0
+  );
+}
+
+/** The stage's side column (`sideColumn`), or the same under the work when the window has no room for it. */
+function StageExtras({ session, atSide }: { session: QuestionSession; atSide: boolean }) {
+  const graph = session.sideGraph;
+  return (
+    <>
+      {session.showsIllustrationPanel && <IllustrationPanel session={session} />}
+      {formulasAtHand(session).length > 0 && (
+        <div className="stage-formulas stage-card stage-formulas-card">
+          <FormulaList formulas={formulasAtHand(session)} />
+        </div>
+      )}
+      {session.showsGraph && graph && session.hasGraph && (
+        <div className={atSide ? "stage-side-graph" : undefined}>
+          <CurveGraph graph={graph} session={session} height={atSide ? 280 : 260} />
+        </div>
+      )}
+    </>
+  );
+}
+
+function ModeView({ session, extrasAtSide = false }: { session: QuestionSession; extrasAtSide?: boolean }) {
+  const extras = hasStageExtras(session) && !extrasAtSide;
+  const view = <ModeContent session={session} />;
+  if (!extras) return view;
+  return (
+    <>
+      {view}
+      <StageExtras session={session} atSide={false} />
+    </>
+  );
+}
+
+function ModeContent({ session }: { session: QuestionSession }) {
   const t = useT();
   const state = session.state;
   if (session.needsTranscript) return <TranscriptRequest session={session} />;
@@ -1402,7 +1643,7 @@ function HintView({ session }: { session: QuestionSession }) {
     <div className="stage-panel">
       <p className="stage-hint">
         <Icon symbol="lightbulb" size={18} className="stage-hint-icon" />
-        <MathText text={part.hint} />
+        <NoteText text={part.hint} />
       </p>
       {shown > 0 && <StepCard part={part} index={shown - 1} session={session} advanced={moved.forward} />}
       {session.showsAnswer && <AnswerBox part={part} language={session.notationLanguage} />}
@@ -1428,15 +1669,30 @@ function TryView({ session }: { session: QuestionSession }) {
   const [attempt, setAttempt] = useState("");
   const part = session.part;
   const result = session.attemptResult;
+  // QuestionPanel.tryIt: what is asked, the field, the names it may use, then what the check found.
   const messages: Record<string, string> = {
-    matches: t("That’s right."),
+    matches: t("That matches."),
     differs: t("Not yet: it differs from the expected result."),
     unreadable: t("I couldn’t read that expression."),
     checking: t("Checking the expected result…"),
   };
+  if (part && session.state.kind !== "loading" && !session.canTry) {
+    return (
+      <div className="stage-panel">
+        <p className="stage-asks">
+          {t("This part has no formula to check. Try writing your answer, then compare with the solution.")}
+        </p>
+        <Actions session={session} />
+      </div>
+    );
+  }
   return (
     <div className="stage-panel">
-      {part && <p className="stage-asks">{part.asks}</p>}
+      {part && (
+        <p className="stage-asks">
+          <MathText text={part.asks} />
+        </p>
+      )}
       <form
         className="stage-try"
         onSubmit={(event) => {
@@ -1453,13 +1709,14 @@ function TryView({ session }: { session: QuestionSession }) {
         />
       </form>
       {session.answerNames.length > 0 && (
-        <p className="stage-step-note">
+        <p className="stage-try-help">
           {t("Use %@; * for ×, ^ for powers, sqrt(), abs().", session.answerNames.join(", "))}
         </p>
       )}
       {session.state.kind === "loading" && <Progress session={session} />}
       {result && (
         <p className={`stage-result stage-result-${result}`} role="status">
+          {result === "matches" && <Icon symbol="checkmark.circle.fill" size={15} />}
           {messages[result]}
         </p>
       )}
@@ -1468,10 +1725,82 @@ function TryView({ session }: { session: QuestionSession }) {
   );
 }
 
+/** An element's width in its own pixels, kept as it changes (0 until it is laid out). */
+function useWidth<T extends HTMLElement>(): [(element: T | null) => void, number] {
+  const [width, setWidth] = useState(0);
+  const observer = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((element: T | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!element) return;
+    const measure = () => setWidth(Math.round(element.clientWidth));
+    observer.current = new ResizeObserver(measure);
+    observer.current.observe(element);
+    measure();
+  }, []);
+  return [ref, width];
+}
+
+/**
+ * The solution's columns (QuestionOverlay with ExplanationLayout): words and figures side by side only when there is
+ * a figure, a graph or a drawing, by the Mac's sums; without one, the formulas go in the stage's side column when the
+ * window has room for it (≥ 1000 pt, `min(440, 34 %)`, the work at most 720 beside it), else after the steps.
+ */
+function solutionColumns(
+  width: number,
+  hasFigure: boolean,
+  hasFormulas: boolean,
+): { style: React.CSSProperties | undefined; figureColumn: boolean; compactWindow: boolean } {
+  const compactWindow = stageHeight() <= compactStageHeight;
+  const style = columnsStyle(width, hasFigure, hasFormulas);
+  const figureColumn = style !== undefined && hasFigure;
+  return { style, figureColumn, compactWindow };
+}
+
+/**
+ * The answer on top, the whole width (`answerIsAbove`): in one column it heads it anyway; beside a figure (or in a
+ * compact window) only a typeset answer longer than 36 characters goes above; otherwise it heads the column of words.
+ */
+function answerIsAbove(part: Part, columns: ReturnType<typeof solutionColumns>): boolean {
+  if (!columns.style) return true;
+  if (!columns.figureColumn && !columns.compactWindow) return false;
+  const latex = part.answerLatex;
+  if (!latex || LatexText.isProse(latex)) return false;
+  return [...LatexText.unicode(latex)].length > 36;
+}
+
+function columnsStyle(width: number, hasFigure: boolean, hasFormulas: boolean): React.CSSProperties | undefined {
+  if (width <= 0) return undefined;
+  const compactWindow = stageHeight() <= compactStageHeight;
+  const margin = StageGeometry.edge(compactWindow);
+  const windowWidth = width + 2 * margin;
+  const columns = ExplanationLayout.make({
+    windowWidth,
+    margin,
+    stackedWidth: width,
+    hasFigure,
+    compact: compactWindow,
+  });
+  if (columns.arrangement === "sideBySide" && columns.figureWidth !== null) {
+    return {
+      gridTemplateColumns: `${columns.textWidth}px ${columns.figureWidth}px`,
+      columnGap: columns.gutter,
+    };
+  }
+  if (!hasFigure && hasFormulas && windowWidth >= 1000) {
+    const side = Math.min(440, 0.34 * windowWidth);
+    const work = Math.min(720, width - side - 36);
+    return { gridTemplateColumns: `${work}px ${side}px`, columnGap: 36, justifyContent: "space-between" };
+  }
+  return undefined;
+}
+
 function SolutionView({ session }: { session: QuestionSession }) {
   const t = useT();
   const part = session.part;
   const solution = session.solution;
+  const panelHeight = useContext(PanelHeight);
+  const [bodyRef, bodyWidth] = useWidth<HTMLDivElement>();
 
   // The steps come in one after another the first time the solution is shown.
   useEffect(() => {
@@ -1499,9 +1828,19 @@ function SolutionView({ session }: { session: QuestionSession }) {
     (session.solutionFigure !== null ||
       session.expectsFigure ||
       (session.showsGraph && session.hasGraph) ||
-      session.showsIllustration);
+      session.showsIllustrationPanel);
+  // A short window (`compactSolution`): beside the steps only the figure, at most 200 tall; the formulas and the
+  // graph (150) under them.
+  const shortWindow = stageHeight() <= compactStageHeight && evidence === null;
+  const columns = solutionColumns(bodyWidth, side, formulas.length > 0 && !shortWindow);
+  const above = evidence !== null || answerIsAbove(part, columns);
+  const answer = <AnswerBox part={part} language={session.notationLanguage} />;
+  // One column with a figure (a narrow window): the figure above the steps, small; the graph and the drawing after
+  // the work, then the formulas.
+  const stacked = side && bodyWidth > 0 && !columns.figureColumn;
+  const compactSide = shortWindow && side && !stacked;
   return (
-    <FitToHeight>
+    <FitToHeight floor={stageFitFloor(stageHeight())} onNatural={panelHeight.measured}>
       <div className="stage-panel stage-solution">
         {solution.figure && (
           <details className="stage-figure-reading">
@@ -1509,38 +1848,112 @@ function SolutionView({ session }: { session: QuestionSession }) {
             <MathText text={solution.figure} />
           </details>
         )}
-        <AnswerBox part={part} language={session.notationLanguage} />
+        {above && answer}
         <ExplainEntry session={session} />
         {!session.isConfirmed && !session.isConfirming && session.state.kind === "ready" && (
           <p className="stage-caution">{t("I couldn’t check every step of this. Double-check it.")}</p>
         )}
         {session.isConfirming && <p className="stage-progress">{t("Checking the result…")}</p>}
-        <div className="stage-solution-body">
+        {stacked && <SideFigures session={session} show="figure" />}
+        <div className="stage-solution-body" ref={bodyRef} style={columns.style}>
           <div className="stage-steps">
+            {!above && answer}
             {evidence ? (
               <EvidenceView evidence={evidence} />
             ) : (
               Array.from({ length: session.stepCount }, (_, index) => index)
                 .filter((index) => index < visible)
-                .map((index) => <StepCard key={index} part={part} index={index} session={session} interactive />)
+                .map((index) => (
+                  <StepCard
+                    key={index}
+                    part={part}
+                    index={index}
+                    session={session}
+                    interactive
+                    compact={columns.compactWindow}
+                  />
+                ))
             )}
           </div>
-          {(formulas.length > 0 || side) && (
-            <aside className="stage-formulas" aria-label={t("Formulas")}>
-              {formulas.length > 0 && <h3 className="stage-formulas-title">{t("Formulas")}</h3>}
-              {formulas.map((formula) => (
-                <div key={formula.name + formula.latex} className="stage-formula">
-                  <span>{formula.name}</span>
-                  <MathView latex={formula.latex} display />
-                </div>
-              ))}
-              {side && <SideFigures session={session} />}
-            </aside>
-          )}
+          {shortWindow
+            ? compactSide && (
+                <aside className="stage-formulas stage-compact-figure">
+                  <SideFigures session={session} show="figure" />
+                </aside>
+              )
+            : (formulas.length > 0 || side) && (
+                // The formulas and the figure keep their column but not the work's scroll: drawn fixed where the
+                // column is, they stay still while the steps scroll under the question (`FixedSide`).
+                <FixedSide label={t("Formulas")}>
+                  {stacked && <SideFigures session={session} show="rest" />}
+                  {formulas.length > 0 && (
+                    <section className="stage-card stage-formulas-card">
+                      <FormulaList formulas={formulas} />
+                    </section>
+                  )}
+                  {side && !stacked && (
+                    <section className="stage-card stage-figure-card">
+                      <SideFigures session={session} />
+                    </section>
+                  )}
+                </FixedSide>
+              )}
         </div>
+        {shortWindow && (formulas.length > 0 || side) && (
+          <div className="stage-compact-extras">
+            {formulas.length > 0 && (
+              <aside className="stage-formulas" aria-label={t("Formulas")}>
+                <FormulaList formulas={formulas} />
+              </aside>
+            )}
+            {side && <SideFigures session={session} show="rest" graphHeight={150} />}
+          </div>
+        )}
         <Actions session={session} />
       </div>
     </FitToHeight>
+  );
+}
+
+/**
+ * The solution's right column (formulas, figure), out of the work's scroll: an empty slot keeps its place in the
+ * columns, and the content is drawn fixed on the stage where the slot was when the solution opened, so it stays still
+ * while the steps scroll under the question. Placed again when the window or the columns change size, never on scroll.
+ */
+function FixedSide({ label, children }: { label: string; children: React.ReactNode }) {
+  const slot = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState<{ host: HTMLElement; style: React.CSSProperties } | null>(null);
+  useLayoutEffect(() => {
+    const element = slot.current;
+    const host = element?.closest<HTMLElement>(".stage");
+    if (!element || !host) return;
+    const measure = () => {
+      const scale = Number.parseFloat(getComputedStyle(host).getPropertyValue("--stage-scale")) || 1;
+      // Its own place, the stage's top-right corner (as the side column before the solution), not lined up with
+      // any step: only the slot's width is taken, so the steps keep the room they were laid out in.
+      const width = element.getBoundingClientRect().width / scale;
+      setPlace({ host, style: { width, maxHeight: window.innerHeight / scale - 56 } });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+  return (
+    <>
+      <div ref={slot} className="stage-formulas stage-side-slot" aria-hidden="true" />
+      {place &&
+        createPortal(
+          <aside className="stage-fixed-side" aria-label={label} style={place.style}>
+            {children}
+          </aside>,
+          place.host,
+        )}
+    </>
   );
 }
 
@@ -1554,7 +1967,16 @@ function spaceStepHighlight(session: QuestionSession): string | null {
 }
 
 /** The right column's figures: the one beside the steps (or the drawing on its way), and the solution's curve. */
-function SideFigures({ session }: { session: QuestionSession }) {
+function SideFigures({
+  session,
+  show = "all",
+  graphHeight = 260,
+}: {
+  session: QuestionSession;
+  /** In one column the figure goes above the steps and the rest after them. */
+  show?: "all" | "figure" | "rest";
+  graphHeight?: number;
+}) {
   const lessonFigure3D = useLessonState()?.figure3D ?? null;
   // The point the beat being said rings on the graph (`LessonRun.graphRing`).
   const lessonGraphRing = useLessonState()?.shows.find((show) => LessonShows.isOnGraph(show))?.point ?? null;
@@ -1564,11 +1986,29 @@ function SideFigures({ session }: { session: QuestionSession }) {
   // pointing at figures, a step that adds nothing points at the figure as a whole.
   const guided = session.mascotFocusStep;
   const pointer = guided !== null && (questionPlan(session)?.pointer ?? false);
+  // The 3D figure and the graph share one box of a fixed size, one at a time (QuestionPanel.figureBox).
+  if (session.figureIsBoxed) {
+    if (show === "rest") return session.showsIllustrationPanel ? <IllustrationPanel session={session} /> : null;
+    return (
+      <div className={`stage-figures${show === "figure" ? " stage-figures-above" : ""}`}>
+        <FigureBox session={session} graphRing={lessonGraphRing} />
+        {show === "all" && session.showsIllustrationPanel && <IllustrationPanel session={session} />}
+      </div>
+    );
+  }
   return (
-    <div className="stage-figures">
-      {figure?.kind === "table" ? (
+    <div className={`stage-figures${show === "figure" ? " stage-figures-above" : ""}`}>
+      {show === "rest" ? null : figure?.kind === "drawing" &&
+        session.drawingIsBesideSteps &&
+        isFigure3D(figure.scene) ? (
+        // A solid or a circuit beside the steps is drawn by its own view, once.
+        <IllustrationPanel session={session} />
+      ) : figure?.kind === "table" ? (
         <div className="stage-figure-fit">
-          <SignTableView table={figure.table} />
+          {/* Drawn at its own size, often wider than the column: made smaller to fit, never larger. */}
+          <FitWidth>
+            <SignTableView table={figure.table} />
+          </FitWidth>
         </div>
       ) : figure?.kind === "space" ? (
         <SpaceFigureView
@@ -1584,20 +2024,81 @@ function SideFigures({ session }: { session: QuestionSession }) {
           focus={guided === null ? null : { step: guided, text: session.stepText(guided), wholeFigure: pointer }}
           bodySize={mascotSize}
         />
-      ) : session.expectsFigure && !session.showsIllustration ? (
+      ) : session.expectsFigure && !session.showsIllustrationPanel ? (
         // The drawing on its way, or why it isn't there (the drawing's own item shows it otherwise).
         <IllustrationPanel session={session} />
       ) : null}
-      {session.showsGraph && graph && session.hasGraph && (
-        <CurveGraph graph={graph} session={session} height={220} ring={lessonGraphRing} />
+      {show !== "figure" && session.showsGraph && graph && session.hasGraph && (
+        <CurveGraph graph={graph} session={session} height={graphHeight} ring={lessonGraphRing} />
       )}
-      {session.showsIllustration && <IllustrationPanel session={session} />}
+      {show !== "figure" && session.showsIllustrationPanel && <IllustrationPanel session={session} />}
+    </div>
+  );
+}
+
+/** The box's fixed height for this window (`FigureBoxSize`): the work is what is left under the stage's margins. */
+function figureBoxHeight(): number {
+  const overlay = stageHeight();
+  return FigureBoxSize.height(overlay, overlay - 2 * StageGeometry.edge(overlay <= compactStageHeight));
+}
+
+/**
+ * The 3D figure and the graph, one at a time, in a box of a fixed size under the formulas, with a «3D | Graph» selector
+ * when there are both (QuestionPanel.figureBox). A step about the solid shows the solid, so the mascot points into it.
+ */
+function FigureBox({ session, graphRing }: { session: QuestionSession; graphRing: { x: number; y: number } | null }) {
+  const t = useT();
+  const height = figureBoxHeight();
+  const tabs = session.figureTabs;
+  const active = session.activeFigureTab ?? "figure";
+  const figure = session.solutionFigure;
+  const graph = session.sideGraph;
+  // Windows draws a circuit as a flat schematic, so only a solid or a space figure is called «3D».
+  const flatCircuit = figure?.kind === "drawing" && circuitOf(figure.scene) !== null;
+  const figureName = session.figureIs3D && !flatCircuit ? t("3D") : t("Figure");
+  const explaining = session.mascotFocusStep !== null;
+  useEffect(() => {
+    if (explaining && tabs.includes("figure") && active !== "figure") session.selectFigureTab("figure");
+  }, [explaining, tabs, active, session]);
+  return (
+    <div className="stage-figure-box">
+      {tabs.length > 1 && (
+        <div className="stage-figure-tabs" role="tablist">
+          {(["figure", "graph"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={active === tab}
+              className={active === tab ? "selected" : undefined}
+              onClick={() => session.selectFigureTab(tab)}
+            >
+              {tab === "figure" ? figureName : t("Graph")}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="stage-figure-box-body" style={{ height }}>
+        {active === "graph" && graph ? (
+          <CurveGraph graph={graph} session={session} height={height} ring={graphRing} />
+        ) : figure?.kind === "space" ? (
+          <SpaceFigureView figure={figure.figure} step={session.figureStep} highlight={spaceStepHighlight(session)} />
+        ) : figure?.kind === "drawing" && !isFigure3D(figure.scene) ? (
+          <IllustrationView scene={figure.scene} revealed={session.figureRevealed} step={session.figureStep} />
+        ) : figure?.kind === "table" ? (
+          <FitWidth>
+            <SignTableView table={figure.table} />
+          </FitWidth>
+        ) : (
+          <IllustrationPanel session={session} height={height - FigureBoxSize.titleRoom} />
+        )}
+      </div>
     </div>
   );
 }
 
 /** The question's drawing, or what is happening with it: never a spinner with nothing behind it. */
-function IllustrationPanel({ session }: { session: QuestionSession }) {
+function IllustrationPanel({ session, height }: { session: QuestionSession; height?: number }) {
   const t = useT();
   const lessonFigure3D = useLessonState()?.figure3D ?? null;
   switch (session.illustrationState) {
@@ -1634,6 +2135,7 @@ function IllustrationPanel({ session }: { session: QuestionSession }) {
           highlight={lit}
           assembleStep={assembleStep}
           yaw={asked?.yaw ?? null}
+          height={height}
         />
       ) : (
         <IllustrationView scene={session.illustration} revealed={session.sawSolution} />
@@ -1695,13 +2197,18 @@ function AnswerBox({ part, language }: { part: Part; language: string }) {
         {pieces ? (
           pieces.map((piece, index) =>
             piece.kind === "latex" ? (
-              <MathView key={index} latex={ExamNotation.trigInLatex(piece.line, language)} display />
+              <MathView key={index} latex={uprightUnits(ExamNotation.trigInLatex(piece.line, language))} display />
             ) : (
               <div
                 key={index}
                 className={`stage-answer-line${AnswerTextLayout.isProseLine(piece.line) ? " prose" : ""}`}
               >
-                <MathText text={piece.line} />
+                {/* A sentence with maths in it («… para g(x) = f(x) + x») composes that maths, as a step's note does. */}
+                {AnswerTextLayout.isProseLine(piece.line) && !piece.line.includes("$") ? (
+                  <NoteText text={piece.line} />
+                ) : (
+                  <MathText text={piece.line} />
+                )}
               </div>
             ),
           )
@@ -1719,6 +2226,7 @@ function StepCard({
   session,
   interactive = false,
   advanced = false,
+  compact = false,
 }: {
   part: Part;
   index: number;
@@ -1726,6 +2234,8 @@ function StepCard({
   interactive?: boolean;
   /** The student has just moved one step on to this one: its formula grows out of the last. */
   advanced?: boolean;
+  /** A short window (`SolutionOverview.compact`): the step shows its title until it is opened. */
+  compact?: boolean;
 }) {
   const card: Card | null = part.cards && part.cards.length > 0 ? (part.cards[index] ?? null) : null;
   const selected = session.selectedStep === index;
@@ -1733,9 +2243,26 @@ function StepCard({
   const lit = lesson?.step === index;
   const pitfall = lesson?.pitfall?.step === index ? lesson.pitfall : null;
   const [pitfallOpen, setPitfallOpen] = useState(false);
+  // SolutionOverview.row: the step the lesson teaches is open too; the one just come in, or the one the mascot is on,
+  // has its number lit; while a lesson is on another step, this one is dimmed (all but its «Watch out» tag).
+  const open = selected || lit;
+  const numberLit = open || session.revealingStep === index || session.mascotFocusStep === index;
+  const faded = lesson?.step != null && !lit;
+  const quotes = open ? session.verifiedQuotes(index).map((found) => found.quote) : [];
+  // In a short window the formula and the note wait until the step is opened, unless they are all the step says.
+  const untitled = (card?.title ?? "").trim() === "";
+  const detailed = !compact || open || untitled;
+  const classes = [
+    "stage-step",
+    compact ? "compact" : "",
+    open ? "selected" : "",
+    numberLit ? "number-lit" : "",
+    lit ? "lesson-lit" : "",
+    faded ? "faded" : "",
+  ].filter((name) => name !== "");
   return (
     <article
-      className={`stage-step${selected ? " selected" : ""}${session.revealingStep === index ? " arriving" : ""}${lit ? " lesson-lit" : ""}`}
+      className={classes.join(" ")}
       onMouseEnter={() => session.hover(index, true)}
       onMouseLeave={() => session.hover(index, false)}
       onClick={interactive ? () => session.select(index) : undefined}
@@ -1749,7 +2276,7 @@ function StepCard({
             <h4>
               <MathText text={card.title} />
             </h4>
-            {card.latex.trim() !== "" && !NoteMath.formulaRepeats(card.latex, card.note ?? "") && (
+            {detailed && card.latex.trim() !== "" && !NoteMath.formulaRepeats(card.latex, card.note ?? "") && (
               <StepFormula
                 part={part}
                 index={index}
@@ -1758,7 +2285,7 @@ function StepCard({
                 language={session.notationLanguage}
               />
             )}
-            {card.branches && card.branches.length > 0 && (
+            {open && card.branches && card.branches.length > 0 && (
               <div className="stage-branches">
                 {card.branches.map((branch, position) => (
                   <div key={position}>
@@ -1768,7 +2295,7 @@ function StepCard({
                 ))}
               </div>
             )}
-            {card.note && (
+            {detailed && card.note && (
               <p className="stage-step-note">
                 <NoteText
                   text={CodeText.mapProse(card.note, (prose) =>
@@ -1781,6 +2308,14 @@ function StepCard({
         ) : (
           <p className="stage-step-note">
             <NoteText text={part.steps[index] ?? ""} />
+          </p>
+        )}
+        {quotes.length > 0 && (
+          // The data it uses, in the exam's type and the blue, as they stand in the statement (`StepQuotes`).
+          <p className="stage-step-quotes">
+            {quotes.map((quote) => (
+              <span key={quote}>{quote}</span>
+            ))}
           </p>
         )}
         {pitfall && (
@@ -1977,7 +2512,7 @@ function followUpContext(session: QuestionSession, asked: string): string {
   const part = session.part;
   return TextHelpContext.followUp({
     studentQuestion: asked,
-    exercise: session.question.groupText,
+    exercise: session.exerciseWithSource,
     partLabel: part?.label ?? "",
     partAsks: part?.asks ?? "",
     partAnswer: part?.answer.text ?? "",
@@ -1986,6 +2521,28 @@ function followUpContext(session: QuestionSession, asked: string): string {
 }
 
 /** The same question with new numbers: the app wrote the numbers in and knows the answer. */
+/**
+ * A similar question drawn where the exam's was (`VariantStage`): the blue «Similar question» capsule and «Original»
+ * (or Esc), which brings the exam's question back.
+ */
+function VariantHeader({ session }: { session: QuestionSession }) {
+  const t = useT();
+  return (
+    <div className="stage-variant-header">
+      <span className="stage-variant-badge">{t("Similar question")}</span>
+      <button
+        type="button"
+        className="stage-variant-original"
+        title={t("Back to the exam’s question (Esc)")}
+        onClick={() => session.backToOriginal()}
+      >
+        <Icon symbol="arrow.uturn.backward" size={12} />
+        {t("Original")}
+      </button>
+    </div>
+  );
+}
+
 function VariantView({ session }: { session: QuestionSession }) {
   const t = useT();
   const [typed, setTyped] = useState("");
@@ -2020,13 +2577,12 @@ function VariantView({ session }: { session: QuestionSession }) {
         : Variant.format(session.variantAnswer);
   const unreadable = variant.kind === "function" ? t("I couldn’t read that expression.") : t("Type just the number.");
   return (
-    <div className="stage-panel">
-      <p className="stage-menu-title">{t("Similar question")}</p>
-      <p className="stage-hint">
+    <div className="stage-panel stage-variant">
+      <p className="stage-variant-question">
         <MathText text={session.variantText} />
       </p>
       <form
-        className="stage-try"
+        className={`stage-try stage-variant-answer${result === "matches" ? " matches" : ""}`}
         onSubmit={(event) => {
           event.preventDefault();
           if (typed.trim() !== "") session.checkVariant(typed);
@@ -2040,11 +2596,18 @@ function VariantView({ session }: { session: QuestionSession }) {
           aria-label={t("Your answer")}
         />
       </form>
-      {result && (
-        <p className={`stage-result stage-result-${result}`} role="status">
-          {result === "matches" ? t("That’s right.") : result === "differs" ? t("Not yet.") : unreadable}
-        </p>
-      )}
+      <div className="stage-variant-help">
+        <span>
+          {variant.kind === "function"
+            ? t("A function of %@, like exp(-t)*cos(3*t).", variant.variable ?? "t")
+            : t("A number; 2.5e-3 for 2.5 × 10⁻³.")}
+        </span>
+        {result && (
+          <span className={`stage-result stage-result-${result}`} role="status">
+            {result === "matches" ? t("That’s right.") : result === "differs" ? t("Not yet.") : unreadable}
+          </span>
+        )}
+      </div>
       {session.showsVariantHint && variant.hint !== "" && (
         <p className="stage-step-note">
           <MathText text={variant.hint} />
@@ -2130,21 +2693,13 @@ function Actions({ session }: { session: QuestionSession }) {
   const actions: [string, () => void, boolean][] = [
     [t("Hint"), () => session.showFirstStep(), session.mode !== "hint"],
     [t("Let me try"), () => session.choose("tryIt"), session.mode !== "tryIt"],
+    // QuestionOverlay.footerButtons, in its order.
+    [session.explains ? t("Explain") : t("Solution"), () => session.choose("solution"), session.mode !== "solution"],
+    [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant && session.mode !== "variant"],
     [
-      session.explains ? t("Show the explanation") : t("Solution"),
-      () => session.choose("solution"),
-      session.mode !== "solution",
-    ],
-    [t("Try a Similar One"), () => void session.tryVariant(), session.canPractiseVariant],
-    [
-      session.showsIllustration ? t("Hide Drawing") : t("Draw It"),
+      session.drawingVisible ? t("Hide Drawing") : t("Draw It"),
       () => session.toggleIllustration(),
       session.canDraw && session.part !== null,
-    ],
-    [
-      session.showsTiming ? t("Hide Waveforms") : t("Draw Waveforms"),
-      () => session.toggleTiming(),
-      session.canDrawTiming,
     ],
     [
       session.showsGraph ? t("Hide Graph") : t("Show the graph"),
@@ -2152,9 +2707,14 @@ function Actions({ session }: { session: QuestionSession }) {
       session.hasGraph && session.mode !== null,
     ],
     [
+      session.showsTiming ? t("Hide Waveforms") : t("Draw Waveforms"),
+      () => session.toggleTiming(),
+      session.canDrawTiming,
+    ],
+    [
       t("Explain Better"),
       () => session.solveWithStrongerModel(),
-      session.mode === "solution" && session.part !== null && !session.solvedByStrongerModel,
+      session.part !== null && !session.solvedByStrongerModel && !session.isConfirming,
     ],
   ];
   return (
@@ -2195,9 +2755,9 @@ type Shown = { kind: "waiting" } | { kind: "crop" } | { kind: "typeset"; transcr
 
 /**
  * A question read from the screen (`AnywhereController.opened`): its text typeset when it can be trusted; while the
- * model reads the picture, the computer's own reading (or soft bars), then the model's reading typeset. If that
- * reading fails, drops the numbers the computer read, or takes longer than `placeholderLimit`, the crop itself is
- * shown; a reading accepted later still replaces it.
+ * model reads the picture, the crop itself (with no picture, the computer's own reading or soft bars), then the
+ * model's reading typeset. If that reading fails or drops the numbers the computer read, the crop stays; a reading
+ * accepted later still replaces it.
  */
 function ScreenQuestionView({
   source,
@@ -2210,7 +2770,10 @@ function ScreenQuestionView({
 }) {
   const t = useT();
   const [shown, setShown] = useState<Shown>(() => {
-    if (source.transcribes) return { kind: "waiting" };
+    // While the model reads the picture, the picture itself: the question at once, and never wrong. The computer's
+    // own reading drops what OCR can't see (an exponent, «m/s²» read «m/s»), so it is shown only when there is no
+    // picture (Mac report I6, I7).
+    if (source.transcribes) return source.picture ? { kind: "crop" } : { kind: "waiting" };
     const plain = Transcriptions.fromPlainText(source.question.text);
     if (Transcriptions.isUsable(plain) && untypesetMath(plain.blocks) === null)
       return { kind: "typeset", transcription: plain };
@@ -2229,6 +2792,7 @@ function ScreenQuestionView({
         found &&
         Transcriptions.isUsable(found) &&
         Transcriptions.agrees(found, source.ocrText) &&
+        !Transcriptions.dropsFormula(found) &&
         untypesetMath(found.blocks) === null;
       // The crop is shown once; after that only a typeset reading replaces what is there.
       setShown((now) =>
@@ -2263,14 +2827,42 @@ function ScreenQuestionView({
     () => (from ? [new DOMRectReadOnly(from.left, from.top, from.width, from.height)] : []),
     [from],
   );
-  useQuestionFlight(holder, targets, from !== null, true, 0, ":scope > *");
-
+  // Sized as the PDF's crop is (Stage.init), its body text taken as 13 pt on the screen (the Mac's `softened` crop):
+  // 17 pt to read, 14 once the solution is open, giving the work only the room it needs.
   const picture = source.picture;
-  const scale = compact ? 0.85 : 1;
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const element = holder.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const panel = useContext(PanelHeight).height;
+  const available = stageHeight();
+  const scale =
+    picture && width > 0
+      ? questionScale({
+          body: 13,
+          compact,
+          fits: width / Math.max(1, picture.width),
+          height: picture.height,
+          available,
+          panel,
+          compactWindow: available <= compactStageHeight,
+        })
+      : 1;
+  useQuestionFlight(holder, targets, from !== null, true, scale, ":scope > *");
   return (
     <div className="stage-question stage-screen-question" aria-live="polite" ref={holder}>
       {shown.kind === "typeset" ? (
-        <TypesetQuestion transcription={shown.transcription} source={source} />
+        <TypesetQuestion
+          transcription={shown.transcription}
+          source={source}
+          session={session}
+          compact={compact}
+          columnWidth={width}
+        />
       ) : shown.kind === "crop" && picture ? (
         <InkPicture
           className="stage-screen-crop"
@@ -2370,16 +2962,312 @@ function InkPicture({
   );
 }
 
+/** Between a step's quotes in one key: a quote's key never holds a line break (`StatementQuotes.key`). */
+const quoteSeparator = String.fromCharCode(10);
+
+/** One line under a datum, and the datum's own box, in the typeset question's pixels. */
+interface TypesetLine {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  /** Which of the step's quotes it is under, in the step's order. */
+  quote: number;
+}
+
+/**
+ * The open step's data under the typeset question's words (`RenderedUnderlines`): the same blue line, fading in. While
+ * the mascot walks the steps, the step's first datum is magnified in place instead (`QuoteLoupe`), and is not
+ * underlined as well.
+ */
+function TypesetUnderlines({
+  session,
+  container,
+}: {
+  session: QuestionSession | null;
+  container: React.RefObject<HTMLDivElement | null>;
+}) {
+  const step = session?.underlinedStep ?? null;
+  const quotes = step !== null && session ? session.verifiedQuotes(step).map((found) => found.quote) : [];
+  const key = quotes.join(quoteSeparator);
+  // Measured for one set of quotes: lines of another set (or of none) are never drawn.
+  const [measured, setMeasured] = useState<{ key: string; lines: TypesetLine[]; width: number; height: number }>({
+    key: "",
+    lines: [],
+    width: 0,
+    height: 0,
+  });
+  const lines = measured.key === key ? measured.lines : [];
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (!element || key === "") return;
+    const measure = () => {
+      const origin = element.getBoundingClientRect();
+      const zoom = cssZoom(element) || 1;
+      const found = key
+        .split(quoteSeparator)
+        .flatMap((quote, index) => quoteRects(element, quote).map((rect) => ({ rect, quote: index })));
+      setMeasured({
+        key,
+        width: element.offsetWidth,
+        height: element.offsetHeight,
+        lines: found.map(({ rect, quote }) => ({
+          left: (rect.left - origin.left) / zoom,
+          top: (rect.top - origin.top) / zoom,
+          width: Math.max(4, rect.width / zoom),
+          height: rect.height / zoom,
+          quote,
+        })),
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [container, key]);
+  const first = lines[0] ?? null;
+  const loupe =
+    first && session?.mascotFocusStep !== null && session?.mascotFocusStep === step && !reducedMotion()
+      ? (() => {
+          const target = { x: first.left, y: first.top, width: first.width, height: first.height };
+          const box = StepFocusGeometry.lens(target, QuoteLoupeScale, {
+            x: 0,
+            y: 0,
+            width: measured.width,
+            height: measured.height,
+          });
+          return { box, anchor: StepFocusGeometry.zoomAnchor(target, box, QuoteLoupeScale) };
+        })()
+      : null;
+  return (
+    <>
+      {lines
+        .filter((line) => !(loupe && line.quote === first?.quote))
+        .map((line, index) => (
+          <span
+            key={`${key}-${index}`}
+            className="stage-underline"
+            data-underline-skip=""
+            data-overlay=""
+            aria-hidden="true"
+            // 2 pt under the letters (the glyphs' box without the line's leading).
+            style={{ left: line.left, top: line.top + line.height * 0.88 + 2 - 1.25, width: line.width }}
+          />
+        ))}
+      {loupe && <TypesetLoupe container={container} box={loupe.box} anchor={loupe.anchor} />}
+    </>
+  );
+}
+
+/**
+ * The datum magnified in a lens over the typeset question (the Mac's QuoteLoupe): a copy of the question's words,
+ * scaled about the point that carries the datum to the lens' centre, on a dark ground that hides the words under it.
+ */
+function TypesetLoupe({
+  container,
+  box,
+  anchor,
+}: {
+  container: React.RefObject<HTMLDivElement | null>;
+  box: Box;
+  anchor: { x: number; y: number };
+}) {
+  const inner = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const source = container.current;
+    const target = inner.current;
+    if (!source || !target) return;
+    const copy = source.cloneNode(true) as HTMLElement;
+    for (const overlay of copy.querySelectorAll("[data-overlay]")) overlay.remove();
+    copy.removeAttribute("style");
+    copy.style.width = `${source.offsetWidth}px`;
+    target.replaceChildren(copy);
+  }, [container, box]);
+  // A point x of the question is drawn at anchor + zoom·(x − anchor), less the lens' own corner.
+  const transform = `translate(${-box.x}px, ${-box.y}px) translate(${anchor.x}px, ${anchor.y}px) scale(${QuoteLoupeScale}) translate(${-anchor.x}px, ${-anchor.y}px)`;
+  return (
+    <div
+      className="stage-lens"
+      data-underline-skip=""
+      data-overlay=""
+      aria-hidden="true"
+      style={{ left: box.x, top: box.y, width: box.width, height: box.height }}
+    >
+      <div ref={inner} className="stage-lens-copy" style={{ transform }} />
+    </div>
+  );
+}
+
+/**
+ * A step's spot on a figure of the typeset question (`RenderedQuestion.focus`): the model's box, a share of the
+ * picture it saw, carried into the figure drawn here when it falls on that figure; nothing when it falls elsewhere
+ * (no mark is better than a wrong one).
+ */
+function TypesetFigureFocus({
+  session,
+  box,
+  width,
+  height,
+}: {
+  session: QuestionSession | null;
+  box: { x: number; y: number; width: number; height: number };
+  width: number;
+  height: number;
+}) {
+  const step = session?.underlinedStep ?? null;
+  const focus = step !== null ? (session?.part?.cards?.[step]?.focus ?? null) : null;
+  if (!focus || box.width <= 0 || box.height <= 0) return null;
+  const centre = { x: focus.x + focus.w / 2, y: focus.y + focus.h / 2 };
+  if (centre.x < box.x || centre.x > box.x + box.width || centre.y < box.y || centre.y > box.y + box.height)
+    return null;
+  // In the figure's own share, at least 0.08 of it on each side and inside it.
+  const share = (value: number, from: number, size: number) => (value - from) / size;
+  let w = Math.max(0.08, focus.w / box.width);
+  let h = Math.max(0.08, focus.h / box.height);
+  w = Math.min(1, w);
+  h = Math.min(1, h);
+  const x = Math.min(1 - w, Math.max(0, share(centre.x, box.x, box.width) - w / 2));
+  const y = Math.min(1 - h, Math.max(0, share(centre.y, box.y, box.height) - h / 2));
+  const note = focus.note?.trim() ? focus.note.trim() : null;
+  return (
+    <FocusPointer
+      region={{ x: x * width, y: y * height, width: w * width, height: h * height }}
+      arrow={StepFocusGeometry.isArrow(focus)}
+      note={note}
+      width={width}
+      height={height}
+    />
+  );
+}
+
+/**
+ * A step's spot on a text or formula block of the typeset question (`RenderedQuestion.focus` @ 5701363): the model's
+ * box, on the picture it read, carried to the block drawn from that band of the picture. A line of text is marked
+ * across the column, a formula with a little room round it; on a figure the figure's own mark is drawn
+ * (`TypesetFigureFocus`), elsewhere nothing.
+ */
+function TypesetBlockFocus({
+  session,
+  container,
+  blocks,
+  figures,
+}: {
+  session: QuestionSession | null;
+  container: React.RefObject<HTMLDivElement | null>;
+  blocks: readonly TranscriptionBlock[];
+  figures: readonly Rect[];
+}) {
+  const step = session?.underlinedStep ?? null;
+  const focus = step !== null ? (session?.part?.cards?.[step]?.focus ?? null) : null;
+  const index = focus ? Transcriptions.focusedBlock(focus, blocks, figures) : null;
+  const [spot, setSpot] = useState<{ index: number; region: Box; width: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (!element || index === null) return;
+    const measure = () => {
+      const target = element.querySelector<HTMLElement>(`[data-typeset-block="${index}"]`);
+      if (!target) return setSpot(null);
+      const zoom = cssZoom(element) || 1;
+      const origin = element.getBoundingClientRect();
+      const inner = (target.querySelector(".stage-typeset-formula .katex") as HTMLElement | null) ?? target;
+      const rect = inner.getBoundingClientRect();
+      const top = (rect.top - origin.top) / zoom;
+      const height = rect.height / zoom;
+      const region =
+        target.dataset.kind === "formula"
+          ? { x: (rect.left - origin.left) / zoom - 4, y: top - 3, width: rect.width / zoom + 8, height: height + 6 }
+          : { x: 0, y: top - 2, width: element.offsetWidth, height: height + 4 };
+      setSpot({ index, region, width: element.offsetWidth, height: element.offsetHeight });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [container, index]);
+  if (!focus || index === null || spot?.index !== index) return null;
+  const note = focus.note?.trim() ? focus.note.trim() : null;
+  return (
+    <div
+      className="stage-typeset-focus"
+      data-underline-skip=""
+      data-overlay=""
+      aria-hidden="true"
+      style={{ width: spot.width, height: spot.height }}
+    >
+      <FocusPointer
+        region={spot.region}
+        arrow={StepFocusGeometry.isArrow(focus)}
+        note={note}
+        width={spot.width}
+        height={spot.height}
+      />
+    </div>
+  );
+}
+
 /** The question typeset from a reading of its picture: prose with inline maths, display formulas, and the figures
  * cut from the picture where the reading says they are. */
-function TypesetQuestion({ transcription, source }: { transcription: QuestionTranscription; source: PictureQuestion }) {
+function TypesetQuestion({
+  transcription,
+  source,
+  session,
+  compact,
+  columnWidth,
+}: {
+  transcription: QuestionTranscription;
+  source: PictureQuestion;
+  session: QuestionSession | null;
+  compact: boolean;
+  /** The column's width in its own pixels; 0 before it is laid out. */
+  columnWidth: number;
+}) {
   const picture = source.picture;
+  const container = useRef<HTMLDivElement>(null);
+  // Typeset at 17 pt, then sized as the lifted crop is (RenderedQuestion is an image the stage scales): never taller
+  // than its share of the stage, 14 pt once the solution is open, ceding to the work down to 11.
+  const [natural, setNatural] = useState({ width: 0, height: 0 });
+  useLayoutEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    // In its own pixels, which its zoom does not change: no loop.
+    const measure = () =>
+      setNatural((now) =>
+        now.width === element.offsetWidth && now.height === element.offsetHeight
+          ? now
+          : { width: element.offsetWidth, height: element.offsetHeight },
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const panel = useContext(PanelHeight).height;
+  const available = stageHeight();
+  const scale =
+    natural.height > 0 && columnWidth > 0
+      ? questionScale({
+          body: 17,
+          compact,
+          fits: columnWidth / Math.max(1, natural.width),
+          height: natural.height,
+          available,
+          panel,
+          compactWindow: available <= compactStageHeight,
+        })
+      : compact
+        ? 14 / 17
+        : 1;
   // The i-th figure block without a box of its own takes the i-th figure found on the picture.
   const figureOrder = transcription.blocks.map(
     (_, index) => transcription.blocks.slice(0, index).filter((block) => block.type === "figure").length,
   );
+  const figureBoxes = transcription.blocks.flatMap((block, index) => {
+    if (block.type !== "figure") return [];
+    const box = Transcriptions.rect(block) ?? source.figureBoxes[figureOrder[index]!] ?? null;
+    return box ? [box] : [];
+  });
   return (
-    <div className="stage-typeset">
+    <div className="stage-typeset" ref={container} style={{ zoom: scale }}>
       {transcription.blocks.map((block, index) => {
         if (block.type === "figure") {
           const box = Transcriptions.rect(block) ?? source.figureBoxes[figureOrder[index]!] ?? null;
@@ -2387,24 +3275,35 @@ function TypesetQuestion({ transcription, source }: { transcription: QuestionTra
           const width = box.width * picture.width;
           const height = box.height * picture.height;
           return (
-            <figure key={index} className="stage-figure">
-              <InkPicture
-                picture={picture}
-                label={block.caption ?? ""}
-                width={width}
-                height={height}
-                region={{ x: box.x * picture.width, y: box.y * picture.height, width, height }}
-              />
+            <figure key={index} className="stage-figure" data-underline-skip="">
+              <div className="stage-figure-marks" style={{ width, height }}>
+                <InkPicture
+                  picture={picture}
+                  label={block.caption ?? ""}
+                  width={width}
+                  height={height}
+                  region={{ x: box.x * picture.width, y: box.y * picture.height, width, height }}
+                />
+                <TypesetFigureFocus session={session} box={box} width={width} height={height} />
+              </div>
               {block.caption ? <figcaption>{block.caption}</figcaption> : null}
             </figure>
           );
         }
         const text = block.text ?? "";
         if (text.trim() === "") return null;
-        if (block.type === "formula")
-          return <MathView key={index} latex={text} display className="stage-typeset-formula" />;
-        return <MarkupText key={index} text={text} />;
+        return (
+          <div key={index} data-typeset-block={index} data-kind={block.type}>
+            {block.type === "formula" ? (
+              <MathView latex={text} display className="stage-typeset-formula" />
+            ) : (
+              <MarkupText text={text} />
+            )}
+          </div>
+        );
       })}
+      <TypesetUnderlines session={session} container={container} />
+      <TypesetBlockFocus session={session} container={container} blocks={transcription.blocks} figures={figureBoxes} />
     </div>
   );
 }
@@ -2473,7 +3372,7 @@ function SelectionAskPill({ session }: { session: QuestionSession }) {
   const ask = () => {
     const part = session.part;
     const request = picked.ask.helpRequest({
-      exercise: session.question.groupText,
+      exercise: session.exerciseWithSource,
       partLabel: part?.label ?? "",
       partAsks: part?.asks ?? "",
       partAnswer: part?.answer.text ?? "",
@@ -2581,10 +3480,12 @@ function MarkupText({ text }: { text: string }) {
     line,
     start: split.slice(0, index).reduce((sum, before) => sum + before.length + 1, 0),
   }));
-  // The line cut at its bold stretches, each piece typeset with its maths.
+  // The letters of a leading part label, in italic so «l)» is not read as «1)» (`italicizePartLabel`).
+  const italic = partLabelLetters(found.text);
+  // The line cut at its bold stretches (and the label's letters), each piece typeset with its maths.
   const pieces = (line: string, start: number) => {
     const cuts = new Set([0, line.length]);
-    for (const [from, to] of found.bold) {
+    for (const [from, to] of italic ? [...found.bold, italic] : found.bold) {
       if (to > start && from < start + line.length) {
         cuts.add(Math.max(0, from - start));
         cuts.add(Math.min(line.length, to - start));
@@ -2594,13 +3495,9 @@ function MarkupText({ text }: { text: string }) {
     return points.slice(0, -1).map((at, index) => {
       const piece = line.slice(at, points[index + 1]);
       const bold = found.bold.some(([from, to]) => start + at >= from && start + at < to);
-      return bold ? (
-        <strong key={index}>
-          <MathText text={piece} />
-        </strong>
-      ) : (
-        <MathText key={index} text={piece} />
-      );
+      const slanted = italic !== null && start + at >= italic[0] && start + at < italic[1];
+      const typeset = slanted ? <em className="stage-part-letter">{piece}</em> : <MathText text={piece} />;
+      return bold ? <strong key={index}>{typeset}</strong> : <span key={index}>{typeset}</span>;
     });
   };
   if (!found.hasTable && !found.text.includes("\n")) return <p>{pieces(found.text, 0)}</p>;

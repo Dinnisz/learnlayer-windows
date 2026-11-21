@@ -31,6 +31,134 @@
       "text": "(?m)^\\s*(?:\\d+\\s*\\.?\\s*)?\\(?([ivx]+|[a-z])\\)(?=\\s|$)"
     }
   ],
+  "bare#0": [
+    {
+      "text": "()[] "
+    }
+  ],
+  "index#0": [],
+  "lookalike#0": [
+    {
+      "text": "^(\\s*)(\\$\\s*)?[\\(\\[]?[0-9A-Za-z|]{1,4}[\\)\\]](?:\\s+|(?=\\$)|$)"
+    }
+  ],
+  "dollar#0": [],
+  "dollar#1": [
+    {
+      "text": "$"
+    }
+  ],
+  "dollar#2": [
+    {
+      "text": " "
+    }
+  ],
+  "dollar#3": [
+    {
+      "text": " "
+    }
+  ],
+  "labelLookalikes#0": [
+    {
+      "text": "l"
+    }
+  ],
+  "labelLookalikes#1": [
+    {
+      "text": "1I|"
+    }
+  ],
+  "labelLookalikes#2": [
+    {
+      "text": "i"
+    }
+  ],
+  "labelLookalikes#3": [
+    {
+      "text": "1l|"
+    }
+  ],
+  "labelLookalikes#4": [
+    {
+      "text": "q"
+    }
+  ],
+  "labelLookalikes#5": [
+    {
+      "text": "9"
+    }
+  ],
+  "labelLookalikes#6": [
+    {
+      "text": "g"
+    }
+  ],
+  "labelLookalikes#7": [
+    {
+      "text": "9"
+    }
+  ],
+  "labelLookalikes#8": [
+    {
+      "text": "o"
+    }
+  ],
+  "labelLookalikes#9": [
+    {
+      "text": "0"
+    }
+  ],
+  "labelLookalikes#10": [
+    {
+      "text": "s"
+    }
+  ],
+  "labelLookalikes#11": [
+    {
+      "text": "5"
+    }
+  ],
+  "labelLookalikes#12": [
+    {
+      "text": "z"
+    }
+  ],
+  "labelLookalikes#13": [
+    {
+      "text": "2"
+    }
+  ],
+  "labelLookalikes#14": [
+    {
+      "text": "b"
+    }
+  ],
+  "labelLookalikes#15": [
+    {
+      "text": "6"
+    }
+  ],
+  "pattern#1": [
+    {
+      "text": "(?m)^(\\s*(?:\\$\\s*)?\\(?)(["
+    }
+  ],
+  "pattern#2": [
+    {
+      "text": "])(\\))(?=\\s|\\$|$)"
+    }
+  ],
+  "text#3": [],
+  "out#0": [
+    {
+      "text": "$1"
+    }
+  ],
+  "out#1": [
+    {
+      "text": "$3"
+    }
+  ],
   "rejection#0": [
     {
       "text": "isUsable"
@@ -83,7 +211,7 @@
     }
   ],
   "at#0": [],
-  "pattern#1": [
+  "pattern#3": [
     {
       "text": "\\d+(?:[.,]\\d+)?"
     }

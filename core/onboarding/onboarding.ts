@@ -388,7 +388,7 @@ export class OnboardingCoordinator {
  * as `<step>_<language>`. Listed once `scripts/onboarding-clips/generate.py` has recorded them; until then those screens
  * show their text without the voice.
  */
-export const windowsClips: ReadonlySet<string> = new Set<string>([]);
+export const windowsClips: ReadonlySet<string> = new Set<string>(["talk_en", "tryIt_en"]);
 
 /** The recorded line of a screen (`ui/public/clips/onboarding/`), or null when its words name a Mac key or permission. */
 export function onboardingClip(

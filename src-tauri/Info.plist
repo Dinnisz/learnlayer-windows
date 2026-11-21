@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged by the Tauri bundler into the Mac app's Info.plist (macOS only; Windows ignores this file). Without the
+     microphone key macOS refuses the microphone without asking, and the talk key never hears anything
+     (docs/RELATORIO-MAC-2026-11-21.md, M1). -->
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>LearnLayer listens only while you hold the talk key, so you can ask the tutor about a question.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>LearnLayer turns what you say to the tutor into text.</string>
+</dict>
+</plist>

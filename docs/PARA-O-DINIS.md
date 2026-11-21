@@ -37,6 +37,17 @@ Quando uma destas estiver feita, diz «continua» e eu retomo a parte nativa a p
 - **Causa (vista na página de faturação):** não há pagamento em falta. A conta é GitHub Free e os minutos grátis de novembro já se gastaram (12,46 USD de uso, quase todo do repositório do Mac, «LearnLayer»). Com o limite de gastos a 0 USD, o GitHub para os trabalhos em vez de cobrar.
 - **Decisão: não pagar.** A 17/11 o Dinis tornou o repositório **público**, e o Actions é grátis e sem limite em repositórios públicos. O CI corre a cada push.
 
+### 0. Trabalho do Mac que não está no GitHub (2026-11-20)
+A cópia `referencia-mac/` que me deste tinha alterações que não estão em nenhum ramo do `Dinnisz/LearnLayer`: `TextHelp` v5 e `VoiceTutorPrompt` v24 (o `main` tem v4 e v23), a resposta a uma dúvida a partir da resolução no ecrã («explica o ponto 2»: `TextHelpContext.followUp(solution:step:)`, `StepRequest`, `SelectionAsk`) e `FollowUpAnswer` no `QuestionOverlay`. Juntei-as ao `main` na referência do Windows. Se forem para ficar, faz push desse ramo do Mac; se foram experiências, diz-me e volto ao `main`. A cópia antiga está em `referencia-mac-2026-11-05/`.
+
+### 0a. Ctrl + Win não começa a ouvir (2026-11-20)
+Com uma pergunta aberta no palco, mantém **Ctrl+Win** carregado um segundo e larga, duas ou três vezes. Depois abre `%APPDATA%\LearnLayer\talk-keys.jsonl` (funciona na app instalada e na de desenvolvimento). Cada linha tem só a hora e se a tecla estava premida.
+- **Sem o ficheiro, ou sem linhas novas:** o Windows não deixa o gancho ver o Ctrl+Win neste teclado. Diz-me a marca do teclado ou do portátil, e experimenta em Definições › Geral a tecla **Ctrl direito**.
+- **Com linhas:** o gancho vê as teclas e o problema está na interface. Na app de desenvolvimento (`npm run tauri dev`) também fica `talk-debug.jsonl`, com o que o palco tinha nesse momento. Manda-me os dois ficheiros.
+
+### 0b. Cabeçalho `X-LearnLayer-Step` (painel de administração)
+O servidor passou a ler `X-LearnLayer-Step` (`explain`, `hint`, `attempt`, `solution`, `other`) para o painel de administração (a0b88dd), mas nem o Mac (em 5701363) nem o Windows o enviam, por isso a coluna fica vazia. Se o quiseres, diz-me que valor cada pedido deve levar e ponho-o nos dois clientes (no Windows é uma linha em `core/ai/modelClient.ts`). O `X-LearnLayer-Continuation`, esse, já vai: na confirmação pelo modelo forte e na lição da mascote.
+
 ### 1b. Identidade dos commits
 Os commits estão com `Dinis Santos <dinis@learnlayer.invalid>` (só na configuração local deste repositório), para não pôr um e-mail verdadeiro no histórico sem tu decidires. Antes do primeiro push: `git config user.email "o-teu@email"` e, se quiseres corrigir os commits antigos, `git rebase -r --root --exec "git commit --amend --no-edit --reset-author"`.
 
@@ -104,6 +115,8 @@ Para as gravar com as mesmas vozes do Mac (Kokoro «af_heart» em en, grátis; �
 3. `python scripts/onboarding-clips/generate.py en` e `python scripts/onboarding-clips/generate.py pt --cost-cap 0.05` (lê a chave da OpenRouter do Credential Manager, `LearnLayer.OpenRouter`; regista o custo em `docs/CUSTOS.md`).
 4. Acrescenta `"talk_en", "tryIt_en", "talk_pt", "tryIt_pt"` a `windowsClips` em `core/onboarding/onboarding.ts`.
 
+**Feito em inglês a 2026-11-19, neste PC** (Python 3.12, FFmpeg e os modelos do Kokoro instalados com a tua autorização): `onboarding_talk_windows_en.m4a` (3,8 s) e `onboarding_tryIt_windows_en.m4a` (2,9 s), já em `windowsClips`. **Falta o português:** `generate.py pt` custa menos de 1 cêntimo e precisa da tua autorização e de uma chave da OpenRouter no Credential Manager (`LearnLayer.OpenRouter`). Até lá, em português, esses dois ecrãs aparecem sem voz.
+
 ### 10. Gerar o instalador (quando houver uma máquina que compile, ponto 1)
 **Feito a 2026-11-17 pelo CI:** `dist\LearnLayer_0.1.0_x64-setup.exe`, sem assinatura. Cada push para o `main` gera um novo, no artefacto «learnlayer-windows-installer» da corrida do CI. Para o trazer: `gh run download <id da corrida> --name learnlayer-windows-installer --dir dist`. Experimentado a 2026-11-17: o Smart App Control desta máquina **bloqueou o instalador** («Uma política de Controlo de Aplicações bloqueou este ficheiro») e nada foi instalado. Para o experimentar aqui é precisa a assinatura (ponto 4), ou usa outro PC.
 
@@ -120,8 +133,38 @@ Depois, num Windows limpo:
 2. Segue a introdução até à pergunta de exemplo resolvida.
 3. Liga «Abrir com o Windows» e reinicia: só devem aparecer a pílula e o ícone na área de notificação.
 
+### 11. Mac: permissões, assinatura e notarização (2026-11-21)
+**Permissões (cada Mac, uma vez):** ao abrir, a app pede a Acessibilidade e depois a Gravação de Ecrã.
+1. Definições do Sistema › Privacidade e Segurança › Acessibilidade: arrasta a app para a lista e liga-a.
+2. Privacidade e Segurança › Gravação de Ecrã e Áudio do Sistema: o mesmo. O macOS pede para «Sair e reabrir».
+3. No macOS 15 aparece, uma vez por mês, «… is requesting to bypass the system private window picker»: «Permitir».
+4. O microfone só vai funcionar depois de corrigido o ponto M1 do relatório (`docs/RELATORIO-MAC-2026-11-21.md`).
+
+**Para distribuir aos alunos (só tu podes):**
+1. Inscrição no Apple Developer Program (99 USD/ano), se ainda não tiveres.
+2. Em developer.apple.com › Certificates, cria um certificado **Developer ID Application** e instala-o no Porta-chaves.
+3. Cria uma palavra-passe específica da app em appleid.apple.com (para a notarização) e diz-me o Team ID.
+   A palavra-passe nunca vai para o repositório: fica nos segredos do GitHub (`APPLE_ID`, `APPLE_PASSWORD`,
+   `APPLE_TEAM_ID`, `APPLE_SIGNING_IDENTITY`, `APPLE_CERTIFICATE` em base64 e `APPLE_CERTIFICATE_PASSWORD`). O Tauri assina e notariza o `.app` e
+   o `.dmg` com estes segredos.
+4. O identificador da app será `si.learnlayer.LearnLayer.Desktop` até decidires se fica com o da app Swift
+   (`si.learnlayer.LearnLayer`). Com o mesmo identificador e a mesma equipa, as permissões e as Chaves passam da Swift
+   para esta app; com outro, os alunos dão as permissões outra vez.
+5. Atualizações: o Sparkle da app Swift não serve. Será o atualizador do Tauri, com o URL do ponto 5.
+
+**Para testar no teu Mac (já feito a 2026-11-21):** `~/Applications/LearnLayer Desktop.app`, assinada com «LearnLayer
+Local Signing», com o servidor de teste em `~/Library/Application Support/LearnLayer Desktop/config.json`. A app Swift
+(`~/Applications/LearnLayer.app`) não foi tocada. Não abras as duas ao mesmo tempo: o ⌥-clique responderia duas vezes.
+
 ## Etiquetas dos exames (Mac e Windows)
 **Corrigido no Windows a 2026-11-19** (DECISOES): a numeração por grupo passou a ser decidida no documento todo, o grupo passa de página em página, os passos numerados de um procedimento já não contam como itens, e as partes numeradas em seguida («Parte A» 1–3, «Parte B» 4–6) ficam sem prefixo. Biologia: I.1–I.20, II.1–II.3, III.1–III.5. História: I.1–IV.5. Português: 1–7, II.1–II.7, III.1–III.2. O Mac ainda tem a regra antiga (só olha para uma página). Se quiseres as mesmas etiquetas nas duas apps, porta para o `QuestionDetector.swift` as funções `documentNumbering`, `sectionBefore` e `withoutNumberedLists` de `core/problems/questionDetector.ts`. Para ver o relatório:
 ```
 EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts --silent=false
 ```
+
+### 12. Transcrição rápida no Worker (2026-11-21, pedido teu)
+O `qwen/qwen3.8-flash` não está na lista de modelos dos planos. A lista é `chatModels` em `backend/src/config.ts`, e não em `routing.ts`. Por isso a transcrição rápida sai no Haiku, que é mais lento. A alteração está pronta em `docs/backend-qwen-transcricao.patch`: uma constante nova e o modelo acrescentado aos três planos.
+1. No repositório do backend: aplica as quatro linhas do patch em `backend/src/config.ts`.
+2. `cd backend && npm test` (os testes de `config`/`routing` devem passar).
+3. `npx wrangler deploy` (para o Worker de teste: `npx wrangler deploy --env test`, se for esse o nome do ambiente no teu `wrangler.toml`).
+Eu não o publiquei: a cópia do backend nesta pasta (`referencia-mac/`) é só de leitura e o deploy pede a tua conta da Cloudflare.

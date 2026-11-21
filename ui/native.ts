@@ -174,6 +174,17 @@ export async function onNavigate(handler: (route: string) => void): Promise<() =
   return listen<string>("navigate", (event) => handler(event.payload));
 }
 
+/** The notch the pill sits in, in points, on a Mac (`real` false: a Mac screen without one). None on Windows. */
+export interface PillNotch {
+  width: number;
+  height: number;
+  real: boolean;
+}
+
+export async function pillNotch(): Promise<PillNotch | null> {
+  return isTauri ? ((await invoke<PillNotch | null>("pill_notch")) ?? null) : null;
+}
+
 export async function resizePill(width: number, height: number): Promise<void> {
   if (isTauri) await invoke<void>("pill_resize", { width, height });
 }
@@ -398,8 +409,26 @@ export async function setTalkKey(choice: TalkKeyChoice): Promise<void> {
 /** Opens Windows Settings at the microphone's privacy page (the only system page the app opens). */
 export async function openMicrophoneSettings(): Promise<void> {
   if (!isTauri) return;
+  if ((await appConfig()).platform === "macos") return requestPermission("microphone");
   const { openUrl } = await import("@tauri-apps/plugin-opener");
   await openUrl("ms-settings:privacy-microphone");
+}
+
+/** What a Mac has allowed (Settings › Permissions, the onboarding); null where nothing is asked first (Windows). */
+export interface SystemPermissions {
+  accessibility: boolean;
+  screenRecording: boolean;
+}
+
+export async function systemPermissions(): Promise<SystemPermissions | null> {
+  if (!isTauri) return null;
+  return invoke<SystemPermissions | null>("permissions_state").catch(() => null);
+}
+
+/** The system's request for a permission, then its page in System Settings (a Mac); nothing on Windows. */
+export async function requestPermission(which: "accessibility" | "screenRecording" | "microphone"): Promise<void> {
+  if (!isTauri) return;
+  await invoke<void>("permission_request", { which }).catch(() => {});
 }
 
 // MARK: Start with Windows and updates (src-tauri/src/updates.rs)

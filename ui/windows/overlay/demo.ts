@@ -76,10 +76,12 @@ export async function demoClick(): Promise<{ read: NativeClickRead; picture: Win
     bgra[at + 3] = 255;
   }
   const frame = { x: 0, y: 0, width: width * scale, height: height * scale };
+  // `&question=1`: the click lands on the first question (words only) instead of the second (with its circuit).
+  const first = new URLSearchParams(window.location.search).get("question") === "1";
   return {
     read: {
       id: 1,
-      point: { x: 300 * scale, y: 330 * scale },
+      point: { x: 300 * scale, y: (first ? 110 : 330) * scale },
       monitor: { x: 0, y: 0, width: window.innerWidth * scale, height: window.innerHeight * scale },
       scale,
       appName: "Demo",

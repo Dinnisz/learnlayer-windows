@@ -1,0 +1,10 @@
+{
+  "Ctrl + Win": "Control + Option",
+  "Lets Alt-click read the question under the pointer in other apps.": "Lets ⌥-click read the question under the pointer in other apps.",
+  "Windows asks the first time you hold the talk key. If you said no, allow it in Settings › Privacy & security › Microphone.": "macOS asks the first time you hold the talk key. If you said no, allow it in System Settings › Privacy & Security › Microphone.",
+  "The Alt-click hook": "⌥-click",
+  "Windows removed it; LearnLayer puts it back by itself.": "macOS turned it off; LearnLayer turns it back on by itself.",
+  "Text is read through Windows UI Automation; never from password fields, secure exam browsers or banking apps.": "Text is read through macOS Accessibility; never from password fields, secure exam browsers or banking apps.",
+  "Start with Windows": "Open at login",
+  "Opens LearnLayer in the background when you sign in to Windows.": "Opens LearnLayer in the background when you log in to your Mac."
+}

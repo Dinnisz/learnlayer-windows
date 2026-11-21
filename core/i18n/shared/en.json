@@ -1,0 +1,38 @@
+{
+  "%lld questions": {
+    "value": "%#@questions@",
+    "substitutions": {
+      "questions": {
+        "argNum": 1,
+        "plural": {
+          "one": "%arg question",
+          "other": "%arg questions"
+        }
+      }
+    }
+  },
+  "%lld documents": {
+    "value": "%#@documents@",
+    "substitutions": {
+      "documents": {
+        "argNum": 1,
+        "plural": {
+          "one": "%arg document",
+          "other": "%arg documents"
+        }
+      }
+    }
+  },
+  "%lld questions asked": {
+    "value": "%#@questions@",
+    "substitutions": {
+      "questions": {
+        "argNum": 1,
+        "plural": {
+          "one": "%arg question asked",
+          "other": "%arg questions asked"
+        }
+      }
+    }
+  }
+}

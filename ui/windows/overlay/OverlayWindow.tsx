@@ -36,6 +36,7 @@ import { PassageStage, type PassageSource } from "../../stage/PassageStage";
 import { normalizeText } from "@core/problems/textNormalizer";
 import { CaptureArea, questionFromArea, type FrozenScreen } from "./CaptureArea";
 import { demoClick } from "./demo";
+import { sampleQuestion } from "../../onboarding/OnboardingCard";
 
 interface Notice {
   key: string;
@@ -105,6 +106,7 @@ type OverlaySource = StageSource | PassageSource;
 
 /** What a click opens: the stage's source, or nothing (with the app's name for the log). */
 async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<OverlaySource | null> {
+  const started = performance.now();
   const scale = read.scale || 1;
   const point = { x: read.point.x / scale, y: read.point.y / scale };
   // Global points to this window's own (the stage covers the clicked monitor): where the question flies from.
@@ -144,9 +146,14 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
         read.appName,
       )
     : null;
-  const picture = await sources.picture(read);
+  // The window's picture and the PDF behind it are fetched at once: neither needs the other.
+  const pictureAndPDF = await Promise.all([
+    sources.picture(read).then((value) => ({ value, at: performance.now() })),
+    pdfPages(read, sources.pdf).then((value) => ({ value, at: performance.now() })),
+  ]);
+  const picture = pictureAndPDF[0].value;
+  const pdf = pictureAndPDF[1].value;
   const frame = read.window ? points(read.window, scale) : null;
-  const pdf = await pdfPages(read, sources.pdf);
   const clickRead: ClickRead = {
     point,
     appName: read.appName,
@@ -165,6 +172,7 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
     pdf: pdf ? { pages: pdf.pages } : null,
   };
   const outcome = readClick(clickRead);
+  const decided = performance.now();
   // Development builds: what was read and decided, to see why a click opened what it did. Never in a release build.
   if (import.meta.env.DEV) {
     void dataFiles.write(
@@ -177,6 +185,12 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
           found: found ? { method: found.method, frame: found.frame, text: found.text.slice(0, 300) } : null,
           window: clickRead.window ? { frame: clickRead.window.frame, lines: clickRead.window.lines } : null,
           pdf: Boolean(clickRead.pdf),
+          // Milliseconds from the reading's arrival here: the picture, the PDF (fetched together) and the decision.
+          timings: {
+            picture: Math.round(pictureAndPDF[0].at - started),
+            pdf: Math.round(pictureAndPDF[1].at - started),
+            decided: Math.round(decided - started),
+          },
           outcome:
             outcome.kind === "screen"
               ? { kind: outcome.kind, region: outcome.region?.frame ?? null, sendsPicture: outcome.sendsPicture }
@@ -227,13 +241,16 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
         : null,
     figureBoxes: region?.figureBoxes ?? [],
     from: region ? onStage(region.frame) : null,
-    draft: outcome.transcribes ? draftText(region?.text ?? "", region?.lines ?? []) : null,
+    draft: outcome.transcribes ? draftText(region?.text ?? "", region?.lines ?? [], outcome.found.text) : null,
     transcribes: outcome.transcribes && images.length > 0,
     ocrText: region?.text ?? "",
     session: () =>
       new QuestionSession({ question, images, isPicture: outcome.isPicture && images.length > 0 }, sessionServices()),
   };
 }
+
+// The stage's window loads once, hidden, at launch: the PDF worker starts then, not on the first Alt-click.
+ReaderDocument.warm();
 
 export function OverlayWindow() {
   const t = useT();
@@ -379,7 +396,46 @@ export function OverlayWindow() {
       );
       return;
     }
-    const demo = demoKind === "anywhere";
+    // `?demo=sample`: an Alt-click on the onboarding's sample question, read as text from a browser page: the
+    // question typeset, and with mocks its sample solution (the data each step uses, underlined in the question).
+    if (demoKind === "sample") {
+      void Promise.resolve().then(() =>
+        open(
+          {
+            id: 1,
+            point: { x: 260, y: 170 },
+            monitor: { x: 0, y: 0, width: 1280, height: 800 },
+            scale: 1,
+            appName: "msedge.exe",
+            refused: null,
+            found: {
+              longText: null,
+              block: {
+                index: 0,
+                nodes: [
+                  {
+                    text: sampleQuestion,
+                    frame: { x: 120, y: 160, width: 560, height: 22 },
+                    kind: "text",
+                    hasImage: false,
+                  },
+                ],
+              },
+              focus: "",
+            },
+            selection: null,
+            window: null,
+            lines: [],
+            pdfPath: null,
+          },
+          { picture: async () => null, pdf: async () => new ArrayBuffer(0) },
+        ),
+      );
+      return;
+    }
+    // `?demo=typeset`: the same click, solved by a mock that reads the question back (typeset, with a focus on
+    // each step), as a model's transcription would.
+    const demo = demoKind === "anywhere" || demoKind === "typeset";
     if (demo) {
       void demoClick().then(({ read, picture }) =>
         open(read, { picture: async () => picture, pdf: async () => new ArrayBuffer(0) }),

@@ -133,6 +133,20 @@ export class InkMap {
     return Math.abs(this.pixels[y * this.width + x]! - this.background) > 40;
   }
 
+  /** The page runs on past the picture's bottom edge: text or a drawing in its last `rows` rows across `x`, not a
+   * canvas or a bar that inks the whole row. */
+  reachesBottom(x: [number, number], rows: number): boolean {
+    const from = Math.max(0, Math.floor(x[0]));
+    const to = Math.min(this.width - 1, Math.floor(x[1]));
+    if (from >= to) return false;
+    for (let y = Math.max(0, this.height - Math.ceil(rows)); y < this.height; y += 1) {
+      let inked = 0;
+      for (let column = from; column <= to; column += 1) if (this.isInk(column, y)) inked += 1;
+      if (inked > 0 && inked < 0.9 * (to - from + 1)) return true;
+    }
+    return false;
+  }
+
   private rowHasInk(y: number, x: [number, number]): boolean {
     const from = Math.max(0, Math.floor(x[0]));
     const to = Math.min(this.width - 1, Math.floor(x[1]));
@@ -355,8 +369,14 @@ export const QuestionLocator = {
     );
     const span: [number, number] = [left, pageRight];
 
-    // A footer (page number) is never part of it.
-    const footerLines = lines.filter((line) => QuestionBand.isFooter(line.text) && minY(line.rect) > p.y);
+    // A footer (page number) is never part of it. Only a line with no text under it is one: a number alone higher up
+    // is a fraction's denominator ("π/6" read as "6") or a table's cell (a Windows reading; see DECISOES).
+    const footerLines = lines.filter(
+      (line) =>
+        QuestionBand.isFooter(line.text) &&
+        minY(line.rect) > p.y &&
+        !lines.some((other) => !QuestionBand.isFooter(other.text) && minY(other.rect) > maxY(line.rect) + lineHeight),
+    );
     const footerTop =
       band?.footer ?? (footerLines.length ? Math.min(...footerLines.map((line) => minY(line.rect))) : null);
 
@@ -366,8 +386,18 @@ export const QuestionLocator = {
       : ink.blockTop(Math.min(p.y, knownLocal ? minY(knownLocal) : p.y), 2.5 * lineHeight, span);
 
     let bottom: number;
+    // A labelled question whose page runs on past the window's bottom edge, with no next label nor footer in sight: it
+    // goes on out of sight, and is taken down to the edge (a Windows reading; see DECISOES).
+    const runsOffWindow =
+      band !== null && band.end === null && band.footer === null && ink.reachesBottom(span, 2 * lineHeight);
     if (band?.end !== null && band?.end !== undefined) {
       bottom = band.end - lineHeight * 0.3;
+    } else if (band && band.footer !== null) {
+      // The last question of a page, with the page's footer read: it runs to the footer, whatever gaps its figures
+      // leave (its own crop shrinks to its last ink below). A Windows reading; see DECISOES.
+      bottom = band.footer - lineHeight * 0.3;
+    } else if (runsOffWindow) {
+      bottom = size.height;
     } else {
       const from = Math.max(p.y, knownLocal ? maxY(knownLocal) : p.y);
       // The last question of a page runs to its last ink: a wide gap (a figure's rows) does not end it.
@@ -381,7 +411,12 @@ export const QuestionLocator = {
 
     // A span that is most of the page or a sliver: look at the text's own blocks around the click instead, bridging
     // the figures in between.
-    if (QuestionBand.isSuspect(top, bottom, size.height, lineHeight)) {
+    // Between its own label and the next one, read both, a span is the question's however much of the window it
+    // takes (a group's statement with its figure, in a window that shows less than a page): only too thin is doubted
+    // (a Windows reading; see DECISOES).
+    const labelledBothEnds = band !== null && (band.end !== null || band.footer !== null || runsOffWindow);
+    const tooThin = bottom - top < lineHeight * 1.6;
+    if (labelledBothEnds ? tooThin : QuestionBand.isSuspect(top, bottom, size.height, lineHeight)) {
       const columnBox = { x: left - lineHeight, y: 0, width: pageRight - left + lineHeight, height: size.height };
       const wide = ink.figures(columnBox, textRects);
       const block = QuestionBand.segment(lines, p, size.height, wide);

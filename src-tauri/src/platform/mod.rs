@@ -1,6 +1,6 @@
 //! Everything that depends on the operating system lives under this module, behind `Platform`.
 //! The rest of the native side (session, API, config, tray) and the whole interface never name an OS.
-//! Only Windows exists today; a Mac port adds `platform/macos/` and one line in `current()`.
+//! Windows is complete; `platform/macos/` runs the Swift app's own native code (⌥-click, Vision, the notch).
 
 use std::path::PathBuf;
 
@@ -8,6 +8,8 @@ use tauri::AppHandle;
 
 use crate::session::SecretStore;
 
+#[cfg(target_os = "macos")]
+pub mod macos;
 #[cfg(windows)]
 pub mod windows;
 
@@ -48,6 +50,19 @@ pub trait Platform: Send + Sync + 'static {
     fn set_talk_key(&self, key: &str);
     /// Development only: the OpenRouter key kept by the system for direct calls (CLAUDE.md §5.5). Never in release.
     fn local_openrouter_key(&self) -> Option<String>;
+    /// The notch the pill lives in (`{width, height, real}` in points), on a Mac; None where the pill is the whole
+    /// shape (Windows).
+    fn pill_notch(&self) -> Option<serde_json::Value> {
+        None
+    }
+    /// What the system has allowed, for Settings › Permissions and the onboarding (`{accessibility, screenRecording}`
+    /// on a Mac). None where nothing has to be asked first (Windows).
+    fn permissions(&self) -> Option<serde_json::Value> {
+        None
+    }
+    /// Asks for one permission ("accessibility", "screenRecording", "microphone") and opens its page in the system
+    /// settings. Nothing where nothing has to be asked.
+    fn request_permission(&self, _which: &str) {}
 }
 
 #[cfg(windows)]
@@ -55,8 +70,20 @@ pub fn current() -> &'static dyn Platform {
     &windows::WindowsPlatform
 }
 
-#[cfg(not(windows))]
-compile_error!("Only Windows is implemented. Add platform/<os>/ with a `Platform` and return it from `current()`.");
+#[cfg(target_os = "macos")]
+pub fn current() -> &'static dyn Platform {
+    &macos::MacPlatform
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+compile_error!(
+    "Only Windows and macOS are implemented. Add platform/<os>/ with a `Platform` and return it from `current()`."
+);
+
+#[tauri::command]
+pub fn pill_notch() -> Option<serde_json::Value> {
+    current().pill_notch()
+}
 
 #[tauri::command]
 pub fn pill_resize(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
@@ -121,4 +148,14 @@ pub fn local_openrouter_key() -> Option<String> {
 #[tauri::command]
 pub fn talk_key_set(key: String) {
     current().set_talk_key(&key);
+}
+
+#[tauri::command]
+pub fn permissions_state() -> Option<serde_json::Value> {
+    current().permissions()
+}
+
+#[tauri::command]
+pub fn permission_request(which: String) {
+    current().request_permission(&which);
 }

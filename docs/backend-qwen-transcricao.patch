@@ -1,0 +1,21 @@
+Allow the fast transcription model (qwen/qwen3.8-flash) on every plan, so the app's fast reading of a clicked
+question runs on the model it asks for instead of falling back to Haiku. Apply in the backend repository (the
+Worker), then deploy. Nothing else changes: the model is only used when the app asks for it by name, without the
+X-LearnLayer-Area / Route headers.
+
+--- a/backend/src/config.ts
++++ b/backend/src/config.ts
+@@
+ export const DEEPSEEK = "deepseek/deepseek-v4.1-flash";
++/** The fast reading of a clicked question's picture (FastTranscription): the app asks it by name. */
++export const QWEN_FAST = "qwen/qwen3.8-flash";
+ export const SPEECH_TURBO = "elevenlabs/eleven-v4-turbo";
+@@ free
+-        chatModels: [HAIKU, GEMINI, DEEPSEEK],
++        chatModels: [HAIKU, GEMINI, DEEPSEEK, QWEN_FAST],
+@@ plus
+-        chatModels: [HAIKU, GEMINI, DEEPSEEK, SONNET],
++        chatModels: [HAIKU, GEMINI, DEEPSEEK, SONNET, QWEN_FAST],
+@@ pro
+-        chatModels: [HAIKU, GEMINI, DEEPSEEK, SONNET],
++        chatModels: [HAIKU, GEMINI, DEEPSEEK, SONNET, QWEN_FAST],

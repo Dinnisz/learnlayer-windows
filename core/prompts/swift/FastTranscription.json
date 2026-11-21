@@ -1,4 +1,14 @@
 {
+  "fastLog#0": [
+    {
+      "text": "si.learnlayer.LearnLayer"
+    }
+  ],
+  "fastLog#1": [
+    {
+      "text": "QuestionReading"
+    }
+  ],
   "model#0": [
     {
       "text": "qwen/qwen3.8-flash"
@@ -20,6 +30,11 @@
     },
     {
       "expr": "error.localizedDescription"
+    }
+  ],
+  "id#0": [
+    {
+      "text": "not asked again: its reading was set aside twice"
     }
   ],
   "errorDescription#0": [
@@ -87,6 +102,16 @@
   "latex#3": [
     {
       "text": "$"
+    }
+  ],
+  "withLatexEscapesRepaired#0": [
+    {
+      "text": "\\\\\\\\$1"
+    }
+  ],
+  "latexEscape#0": [
+    {
+      "text": "(?<!\\\\)\\\\((?:f(?:rac|orall)|b(?:eta|inom|ar|egin|oxed|igg?[lr]?|mod)|n(?:eq|abla|ot|eg|leq|geq)|r(?:ight|ho|angle|ceil|floor|m)|t(?:imes|heta|ext(?:bf|rm)?|an|anh|au|o|op|frac|ilde|riangle))(?![A-Za-z]))"
     }
   ],
   "rest#0": [

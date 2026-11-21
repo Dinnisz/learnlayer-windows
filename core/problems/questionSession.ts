@@ -23,16 +23,20 @@ import { ignoresMissingFigure, partLabelled, type Part, type ProblemSolution } f
 import type { FastTranscriptionReader } from "./fastTranscription";
 import type { ExamQuestion } from "./questionDetector";
 import { decodeBlocks, Transcriptions, type QuestionTranscription } from "./questionTranscription";
+import { keepingSpelling } from "./printedSpelling";
+import { PDFQuestionReading } from "../anywhere/pdfQuestionRead";
+import { SolutionLanguageCheck, tutorLanguageOf } from "./solutionLanguageCheck";
 import { QuestionText } from "./textChecks";
 import { RouteDecision, type RouteOutcome } from "./routeDecision";
 import { realigned, signTableProblems } from "./signTable";
 import { noteStage, solveClock, SolutionReveal, SolveKind, SolveProgress, type SolveClock } from "./solutionReveal";
 import type { SolutionProvider } from "./solutionProvider";
-import { typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
+import { DifferentialEquation, typedFunction, typedNumber, Variant, type ProblemVariant } from "./problemVariant";
+import { differentialEquation, normalizedAnswer, typedExpression } from "./typedAnswer";
 import { StatementQuotes, stepMarks, stepQuotes } from "./statementQuotes";
 import { CircuitCheck, circuitOf, CircuitSpecs } from "../illustrations/circuit";
 import type { PremadeFigure } from "../illustrations/premadeFigure";
-import { checkableSolid, SolidCheck, solidOf } from "../illustrations/solid";
+import { SolidCheck, solidOf } from "../illustrations/solid";
 import { ComplexFigures, decodeComplexFigure } from "../illustrations/complexFigure";
 import {
   figureTopicOf,
@@ -104,6 +108,13 @@ export type SolutionFigure =
   | { kind: "table"; table: SignTable }
   | { kind: "drawing"; scene: Illustration }
   | { kind: "space"; figure: SpaceFigure };
+/** What the figure box beside the steps can show (`QuestionSession.FigureTab`). */
+export type FigureTab = "figure" | "graph";
+
+/** A drawing that is one of the app's own solids or circuits (`Figure3DSpec(premade:)`), not a flat sketch. */
+export function isFigure3D(illustration: Illustration): boolean {
+  return circuitOf(illustration) !== null || solidOf(illustration) !== null;
+}
 export type IllustrationState = "loading" | "ready" | "empty" | "failed";
 
 export interface SessionInit {
@@ -188,21 +199,62 @@ export const QuestionSessionRules = {
   refersToText(text: string): boolean {
     const folded = foldDiacritics(text);
     const pattern = new RegExp(
-      "\\b(sujeito poetico|eu (poetico|lirico)|poema|poesia|estrofes?|versos?|excertos?|fragmentos?|narrador|cronista|autora?|" +
+      "\\b(sujeito poetico|eu (poetico|lirico)|poema|poesia|estrofes?|estancias?|versos?|excertos?|fragmentos?|passagem|" +
+        "(texto|estancias?|versos?|excertos?|passagem|fragmentos?) (transcrit|apresentad|acima)[oa]s?|cantigas?|sonetos?|narrador|cronista|autora?|" +
         "(d?o|no|deste|neste|desse|nesse) texto|textos? [ab12]\\b|(linhas?|ll?\\.|vv?\\.) ?\\d|" +
-        "the (text|passage|poem|extract|excerpt|speaker|narrator)|lines? \\d)",
+        "the (text|passage|poem|extract|excerpt|speaker|narrator)|stanzas?|lines? \\d)",
     );
     return pattern.test(folded);
   },
 
-  /** The passage to send with a question that refers to a text; null when it is empty or already in the question. */
+  /**
+   * The passage to send with a question that refers to a text; null when it is empty or already in the question. At
+   * most `PDFQuestionReading.supportLimit` characters, the nearest.
+   */
   supportPassage(support: string | null | undefined, question: string): string | null {
     const passage = (support ?? "").trim();
     if (passage === "" || !QuestionSessionRules.refersToText(question)) return null;
     const characters = Array.from(passage);
-    const tail = characters.slice(-12_000).join("");
+    const tail = characters.slice(-PDFQuestionReading.supportLimit).join("");
     if (question.includes(Array.from(tail).slice(0, 200).join(""))) return null;
     return tail;
+  },
+
+  /** A poem's numbers are verses («v. 14»), prose's lines («l. 12»): the answer cites them as the exam does. */
+  supportHeading(verse: boolean): string {
+    return (
+      "\n\nTexto de apoio (the source text printed before the question, with the exam's " +
+      (verse
+        ? 'verse numbers: it is a poem, so cite verses as "v. 14" or "vv. 11-12", never "linha"; '
+        : 'line numbers: cite lines as "l. 12" or "ll. 3-5"; ') +
+      "the question is about it, so answer from it and quote it):\n"
+    );
+  },
+
+  /**
+   * Whether a support text is a poem: named so («poema», «estrofes», «versos»), or its numbered lines are short
+   * verses (a prose excerpt's run the width of the page, ~80 characters and more).
+   */
+  isVerse(support: string, question: string): boolean {
+    const folded = foldDiacritics(question + "\n" + Array.from(support).slice(0, 400).join(""));
+    if (/\b(poema|poemas|estrofes?|versos?|soneto|quadra|poem|stanzas?|verses?|sonnet)\b/.test(folded)) return true;
+    const numbered = QuestionSessionRules.passageLinesOfSupport(support)
+      .filter((line) => line.number !== null)
+      .map((line) => Array.from(line.text).length)
+      .sort((a, b) => a - b);
+    if (numbered.length < 4) return false;
+    return numbered[Math.floor(numbered.length / 2)]! <= 55;
+  },
+
+  /** «5\tNum trem de praça…» back to a numbered line. */
+  passageLinesOfSupport(support: string): PassageLine[] {
+    return support.split("\n").map((line) => {
+      const tab = line.indexOf("\t");
+      const number = tab >= 0 ? line.slice(0, tab) : "";
+      return /^[+-]?\d+$/.test(number)
+        ? { number: Number(number), text: line.slice(tab + 1) }
+        : { number: null, text: line };
+    });
   },
 
   /** The part answering `label`: "3(iii)" also matches a part the model called "(iii)" or "iii". */
@@ -383,6 +435,10 @@ export class QuestionSession {
   illustration: Illustration | null = null;
   illustrationState: IllustrationState | null = null;
   showsIllustration = false;
+  /** The student hid the drawing beside the steps with "Hide Drawing". */
+  hidesDrawing = false;
+  /** The figure box's tab the student (or "Draw It" / "Show the graph") picked last. */
+  private chosenFigureTab: FigureTab | null = null;
   private illustrationController: AbortController | null = null;
   /** Haiku's call on whether a graph or a diagram would make this clearer; null until asked. */
   visualAid: VisualAid | null = null;
@@ -394,6 +450,8 @@ export class QuestionSession {
   private solvesClickedPartOnly = false;
   private hasStartedSolve = false;
   private defersConfirmation = false;
+  /** The shown answer mixes languages (`SolutionLanguageCheck`). */
+  private languageMismatch = false;
   private hasStartedStreaming = false;
   private lastParse = -Infinity;
   private controller: AbortController | null = null;
@@ -418,10 +476,15 @@ export class QuestionSession {
     this.isPicture = init.isPicture ?? false;
     this.supportText = init.supportText ?? null;
     this.timing = init.timing ?? null;
+    // A reading question's quotes are looked for in the poem or excerpt it is sent with, then in its own words.
+    const support = QuestionSessionRules.supportPassage(this.supportText, init.question.groupText);
     this.passageLines =
       init.passageLines && init.passageLines.length > 0
         ? init.passageLines
-        : init.question.groupText.split("\n").map((text) => ({ number: null, text }));
+        : [
+            ...(support ? QuestionSessionRules.passageLinesOfSupport(support) : []),
+            ...init.question.groupText.split("\n").map((text) => ({ number: null, text })),
+          ];
     this.services = services;
     this.subjectHint = services.subject ?? null;
     // `sendsMaterial` is kept by the Mac for the evaluation log only.
@@ -483,8 +546,11 @@ export class QuestionSession {
    */
   get requestText(): string {
     let text = this.question.groupText;
-    const support = QuestionSessionRules.supportPassage(this.supportText, this.question.groupText);
-    if (support) text += "\n\nTexto de apoio (printed before the question):\n" + support;
+    // A comparison already gets every printed line below.
+    const printsSource =
+      RouteDecision.comparesTwoTexts(this.question.groupText) && this.passageLines.some((line) => line.number !== null);
+    const support = this.supportSection;
+    if (!printsSource && support !== null) text += support;
     if (this.timing) text += `\n\nFor ${this.question.label}: ` + TimingDiagrams.description(this.timing);
     if (this.transcript) text += "\n\nTranscript of the recording, as given by the student:\n" + this.transcript;
     if (RouteDecision.comparesTwoTexts(this.question.groupText) && this.passageLines.length > 0) {
@@ -500,6 +566,20 @@ export class QuestionSession {
       solveLabels.length !== partLabels.length || solveLabels.some((label, index) => label !== partLabels[index]);
     if (this.solvesClickedPartOnly || differ) text += QuestionSessionRules.onlyPartNote(this.question.label);
     return text;
+  }
+
+  /** The source text a reading question is about, as it is sent: null when the question needs none. */
+  get supportSection(): string | null {
+    const passage = QuestionSessionRules.supportPassage(this.supportText, this.question.groupText);
+    if (passage === null) return null;
+    return (
+      QuestionSessionRules.supportHeading(QuestionSessionRules.isVerse(passage, this.question.groupText)) + passage
+    );
+  }
+
+  /** The exercise as a follow-up question gets it: with the poem or excerpt it reads. */
+  get exerciseWithSource(): string {
+    return this.question.groupText + (this.supportSection ?? "");
   }
 
   /** A listening item whose recording and transcript are not in the question. */
@@ -589,8 +669,13 @@ export class QuestionSession {
     if (listener && this.pendingTranscription !== undefined) this.settleTranscription(this.pendingTranscription);
   }
 
-  private settleTranscription(found: QuestionTranscription | null): void {
+  private settleTranscription(raw: QuestionTranscription | null): void {
     if (this.transcriptionSettled) return;
+    // The page's own spelling: a reading that writes «polinômio» for the printed «polinómio» is put right. A solve's
+    // own transcription (or one streamed) is not checked by the fast reading: its lookalike label («1)» for part l)
+    // is put right here too.
+    const part = this.fastTranscriptionPart;
+    const found = raw && Transcriptions.withLookalikeLabel(keepingSpelling(raw, this.question.groupText), part);
     const listener = this.transcriptionListener;
     if (!listener) {
       if (this.pendingTranscription === undefined) this.pendingTranscription = found;
@@ -626,12 +711,15 @@ export class QuestionSession {
     this.fastController = controller;
     const part = this.fastTranscriptionPart;
     // The app's check is read when a reading comes: it may be set after the question opened.
-    const found = await fast.read(this.images, (reading) => {
+    // Every reading is checked and shown with the part's label set right («1)» read for «l)»).
+    const relabel = (reading: QuestionTranscription) => Transcriptions.withLookalikeLabel(reading, part);
+    const found = await fast.read(this.images, (raw) => {
+      const reading = relabel(raw);
       const reason = Transcriptions.rejection(reading, part, null);
       return reason ?? this.rejectsFastTranscription(reading);
     });
     if (controller.signal.aborted) return;
-    if (found && this.offerFastTranscription(found)) return;
+    if (found && this.offerFastTranscription(relabel(found))) return;
     this.onFastTranscriptionMissed?.();
   }
 
@@ -662,7 +750,8 @@ export class QuestionSession {
   /** A hint needs no verified answer; every other choice does. */
   private confirmIfAnswerWanted(): void {
     if (this.isConfirmed) return;
-    if (this.defersConfirmation && (this.mode === null || this.mode === "hint")) return;
+    // An answer in two languages is on screen from the start (even a hint shows it): replaced at once.
+    if (!this.languageMismatch && this.defersConfirmation && (this.mode === null || this.mode === "hint")) return;
     void this.confirm();
   }
 
@@ -880,6 +969,14 @@ export class QuestionSession {
     ) {
       this.isConfirmed = false;
     }
+    // Written partly in another language than the tutor's (titles in Portuguese under English notes): the stronger
+    // model writes it again, in one language. Only with the tutor's language known (Settings, `services.language`).
+    const tutor = this.services.language?.();
+    this.languageMismatch =
+      tutor !== undefined &&
+      !this.solvedByStrongerModel &&
+      SolutionLanguageCheck.mismatch(solution, tutorLanguageOf(tutor));
+    if (this.languageMismatch) this.isConfirmed = false;
     // A maths or physics answer from a cheaper model whose only checks restate its own formula was never tested.
     if (
       AnswerAudit.needsStrongerModel(
@@ -924,7 +1021,7 @@ export class QuestionSession {
       this.illustrationController?.abort();
       this.illustration = null;
       this.illustrationState = null;
-      if (this.showsIllustration || this.mode === "solution") this.fetchIllustration();
+      if (this.showsIllustration) this.fetchIllustration();
     }
     // A curve the solver returned is part of the answer, shown with it.
     const side = this.sideGraph;
@@ -940,6 +1037,8 @@ export class QuestionSession {
     this.solveClock = { ...this.solveClock, ready: true };
     this.state = { kind: "ready" };
     if (this.mode !== null) this.considerVisual();
+    // «Resolução» chosen before the solver answered had nothing to draw from: the figure is asked for now.
+    this.fetchFigureBesideSteps();
     this.changed();
   }
 
@@ -1128,22 +1227,7 @@ export class QuestionSession {
       this.sawSolution = true;
       this.selectedStep = null;
       if (this.canDrawTiming) this.showsTiming = true;
-      // The figure beside the steps, when a template or the solver asked for one. A sign table, the continuity
-      // graph, or a complex figure that checked out already shows the point; a returned curve covers a function.
-      const part = this.part;
-      const topic = this.figureTopic;
-      const graph = this.solutionGraph;
-      const graphCoversFunction =
-        graph !== null && Graphs.isDrawable(graph) && (topic === null || topic === "function");
-      const drawsClosedForm = part !== null && this.localCurve(part) !== null;
-      if (
-        this.canDraw &&
-        part?.signTable == null &&
-        part?.continuity == null &&
-        !this.builtInFigureReady &&
-        (wants3D(this.figureTopicText) || (!graphCoversFunction && !drawsClosedForm))
-      )
-        this.fetchIllustration();
+      this.fetchFigureBesideSteps();
     }
     if (mode === "hint" || mode === "tryIt" || mode === "solution") this.considerVisual();
     this.changed();
@@ -1227,28 +1311,123 @@ export class QuestionSession {
     return value;
   }
 
+  /**
+   * The figure beside the steps, when a template or the solver asked for one (`fetchFigureBesideSteps`). Asked when
+   * the solution is opened and again when it arrives: on a first opening the solution is still on its way when
+   * «Resolução» is chosen, so there is no part (nor `canDraw`) to ask with yet.
+   */
+  fetchFigureBesideSteps(): void {
+    if (this.mode !== "solution" || !this.wantsFigureBesideSteps) return;
+    this.fetchIllustration();
+  }
+
+  /**
+   * The solution asks for a drawing beside its steps (a 3D solid, a circuit, a sketch). A sign table, the continuity
+   * graph, or a complex or space figure that checked out already shows the point; a returned curve covers a function.
+   */
+  get wantsFigureBesideSteps(): boolean {
+    const part = this.part;
+    if (!part || this.illustration) return false;
+    const topic = this.figureTopic;
+    const graph = this.solutionGraph;
+    const graphCoversFunction = graph !== null && Graphs.isDrawable(graph) && (topic === null || topic === "function");
+    const drawsClosedForm = this.localCurve(part) !== null;
+    // A volume of revolution or a circuit still asks: its 3D figure wins over the curve.
+    return (
+      this.canDraw &&
+      part.signTable == null &&
+      part.continuity == null &&
+      !this.builtInFigureReady &&
+      (wants3D(this.figureTopicText) || (!graphCoversFunction && !drawsClosedForm))
+    );
+  }
+
   /** The sign table (only when every sign checks out), the continuity graph, or the drawing; null for steps alone. */
   get solutionFigure(): SolutionFigure | null {
     const part = this.part;
-    if (!part) return null;
+    const found = part ? this.figureBesideSteps(part) : null;
+    if (!found) return null;
+    // "Hide Drawing" hides the drawing beside the steps too (it is the same one).
+    if (found.isDrawing && this.hidesDrawing) return null;
+    return found.figure;
+  }
+
+  /** The drawing is the figure beside the steps (a 3D solid, the solver's sketch): shown there once, never twice. */
+  get drawingIsBesideSteps(): boolean {
+    const part = this.part;
+    return part ? (this.figureBesideSteps(part)?.isDrawing ?? false) : false;
+  }
+
+  /** The "Draw It" panel: only for a drawing that is not already the figure beside the steps. */
+  get showsIllustrationPanel(): boolean {
+    return this.showsIllustration && !this.drawingIsBesideSteps;
+  }
+
+  /** Whether the drawing is on screen, wherever it is: what "Draw It" / "Hide Drawing" says. */
+  get drawingVisible(): boolean {
+    return this.drawingIsBesideSteps ? !this.hidesDrawing : this.showsIllustration;
+  }
+
+  private figureBesideSteps(part: Part): { figure: SolutionFigure; isDrawing: boolean } | null {
     // Complex numbers and space geometry use the app's own figure when its numbers check out.
     if (this.figureTopic === "complex") {
       const drawing = this.complexDrawing(part);
-      if (drawing) return { kind: "drawing", scene: drawing };
+      if (drawing) return { figure: { kind: "drawing", scene: drawing }, isDrawing: false };
     }
     if (this.figureTopic === "space") {
       const space = this.spaceFigure(part);
-      if (space) return { kind: "space", figure: space };
+      if (space) return { figure: { kind: "space", figure: space }, isDrawing: false };
     }
     if (part.signTable && signTableProblems(part.signTable).length === 0)
-      return { kind: "table", table: part.signTable };
+      return { figure: { kind: "table", table: part.signTable }, isDrawing: false };
     const continuity = this.continuityDrawing(part);
-    if (continuity) return { kind: "drawing", scene: continuity };
+    if (continuity) return { figure: { kind: "drawing", scene: continuity }, isDrawing: false };
+    const illustration = this.illustrationState === "ready" ? this.illustration : null;
+    // A 3D solid or circuit replaces the plot of the curve.
+    if (illustration && isFigure3D(illustration))
+      return { figure: { kind: "drawing", scene: this.gatedDrawing(illustration, part) }, isDrawing: true };
     const local = this.localCurve(part);
-    if (local) return { kind: "drawing", scene: local };
-    if (this.canDraw && this.illustration && this.illustrationState === "ready")
-      return { kind: "drawing", scene: this.gatedDrawing(this.illustration, part) };
+    if (local) return { figure: { kind: "drawing", scene: local }, isDrawing: false };
+    if (this.canDraw && illustration)
+      return { figure: { kind: "drawing", scene: this.gatedDrawing(illustration, part) }, isDrawing: true };
     return null;
+  }
+
+  // MARK: The figure box (a 3D solid and the graph, one at a time)
+
+  /** What the figure box beside the steps can show, the figure (a solid) first. */
+  get figureTabs(): FigureTab[] {
+    const tabs: FigureTab[] = [];
+    if (this.solutionFigure !== null || this.expectsFigure) tabs.push("figure");
+    if (this.showsGraph && this.sideGraph !== null) tabs.push("graph");
+    return tabs;
+  }
+
+  /** The tab on show: the one picked while it is there, else the figure. */
+  get activeFigureTab(): FigureTab | null {
+    const tabs = this.figureTabs;
+    if (this.chosenFigureTab !== null && tabs.includes(this.chosenFigureTab)) return this.chosenFigureTab;
+    return tabs[0] ?? null;
+  }
+
+  selectFigureTab(tab: FigureTab): void {
+    this.chosenFigureTab = tab;
+    this.changed();
+  }
+
+  /** The figure beside the steps is a 3D one (a solid, a circuit, a space figure), or is being drawn as one. */
+  get figureIs3D(): boolean {
+    const figure = this.solutionFigure;
+    if (figure === null)
+      return this.canDraw && this.illustrationState === "loading" && wants3D(this.question.groupText);
+    if (figure.kind === "drawing") return isFigure3D(figure.scene);
+    return figure.kind === "space";
+  }
+
+  /** The figure and the graph share one box of a fixed size: always for a 3D figure, and whenever there are both. */
+  get figureIsBoxed(): boolean {
+    const tabs = this.figureTabs;
+    return tabs.length > 1 || (tabs.includes("figure") && this.figureIs3D);
   }
 
   /** A figure is coming (the drawing is on its way), or a passage with its quotes: the layout keeps its column. */
@@ -1390,6 +1569,8 @@ ${part.label}`,
 
   toggleGraph(): void {
     this.showsGraph = !this.showsGraph;
+    if (this.showsGraph) this.chosenFigureTab = "graph";
+    else if (this.chosenFigureTab === "graph") this.chosenFigureTab = null;
     this.changed();
   }
 
@@ -1410,10 +1591,21 @@ ${part.label}`,
     this.changed();
   }
 
-  /** Asked for once, on the first "Draw It"; saved after that. */
+  /**
+   * Asked for once, on the first "Draw It"; saved after that. One drawing, shown or hidden: the one beside the steps
+   * when it is there, else the panel.
+   */
   toggleIllustration(): void {
-    this.showsIllustration = !this.showsIllustration;
-    if (this.showsIllustration) this.fetchIllustration();
+    if (this.drawingVisible) {
+      this.showsIllustration = false;
+      this.hidesDrawing = true;
+      this.changed();
+      return;
+    }
+    this.hidesDrawing = false;
+    this.showsIllustration = true;
+    this.chosenFigureTab = "figure";
+    this.fetchIllustration();
     this.changed();
   }
 
@@ -1445,9 +1637,8 @@ ${part.label}`,
         // A circuit is checked against the answer: the resistance between its terminals must be the one the solution
         // gives (or the same in kΩ), else it is not shown.
         const premade = drawn.premade as PremadeFigure | null | undefined;
-        // A solid whose volume is not the answer's is not shown.
-        const solid = checkableSolid(premade);
-        if (solid && SolidCheck.agrees(solid, part.answer.text) === false) {
+        // A solid whose volume is not the answer's is not shown (a fixed one too, when the answer is its volume).
+        if (SolidCheck.agreesFigure(premade, part.answer.text) === false) {
           this.illustrationState = "failed";
           return;
         }
@@ -1933,10 +2124,20 @@ ${part.label}`,
 
   check(attempt: string): void {
     this.lastAttempt = attempt;
+    // A differential equation: any function that satisfies it is right.
+    const equation = differentialEquation(this.part?.equation);
+    if (equation) {
+      const candidate = typedFunction(normalizedAnswer(attempt));
+      const solves = candidate ? DifferentialEquation.solves(equation, candidate) : null;
+      this.attemptResult = solves === null ? "unreadable" : solves ? "matches" : "differs";
+      if (solves && !this.sawSolution) this.solvedAlone = true;
+      this.changed();
+      return;
+    }
     const expression = this.part?.answer.expression;
     const expected = expression ? tryParseExpression(expression) : null;
     if (!expected) return;
-    const given = tryParseExpression(attempt);
+    const given = typedExpression(attempt, variables(expected));
     if (!given) {
       this.attemptResult = "unreadable";
       this.changed();

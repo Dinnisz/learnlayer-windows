@@ -338,8 +338,11 @@ describe("Windows path", () => {
 
   it("plays no clip that names a Mac key", () => {
     expect(onboardingClip("welcome", "pt", "windows")).toBe("clips/onboarding/onboarding_welcome_pt.m4a");
+    // Not recorded for Windows yet (pt): no voice, never the Mac's line about its keys.
     expect(onboardingClip("talk", "pt", "windows")).toBeNull();
-    expect(onboardingClip("tryIt", "en", "windows")).toBeNull();
+    // Recorded with the Windows keys (en, 2026-11-19): that recording, never the Mac's.
+    expect(onboardingClip("tryIt", "en", "windows")).toBe("clips/onboarding/onboarding_tryIt_windows_en.m4a");
+    expect(onboardingClip("tryIt", "en", "windows")).not.toBe("clips/onboarding/onboarding_tryIt_en.m4a");
     expect(onboardingClip("talk", "en", mac)).toBe("clips/onboarding/onboarding_talk_en.m4a");
   });
 

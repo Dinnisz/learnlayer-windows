@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { BuiltSolid, GenericPiece } from "@core/illustrations/solidBuilder";
 import { GenericSolidBuilder } from "@core/illustrations/solidBuilder";
+import { Figure3DFraming } from "@core/illustrations/figure3DFraming";
 import type { GenericSolid } from "@core/illustrations/solid";
 import { solidPartOpacity, sweepOpacity, sweepSeconds, type StepFigureHooks } from "@core/illustrations/figureSteps";
 import "./figures.css";
@@ -141,11 +142,26 @@ export function SolidView({
     light.position.set(3, 5, 6);
     sceneRoot.add(light);
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
-    camera.position.set(0, 1.6, 9);
-    camera.lookAt(0, 0, 0);
     // A three-quarter view, as the Mac opens it.
     let yaw = -0.6;
     let pitch = 0.35;
+    // The camera looks down a little (1.6 up, 9 back) and backs off only as far as needed for all of the figure, its
+    // axes included, to stay in frame at any turn (Figure3DFraming @ 5701363); it moves when the student tilts it.
+    // The figure's own points (not the corners of a box around it, which stand well off a round solid).
+    const corners = Figure3DFraming.sample([
+      ...built.pieces.flatMap((part) => [...(part.mesh?.positions ?? []), ...part.line]),
+      ...built.axes.flatMap((axis) => [axis.start, axis.end]),
+    ]);
+    const look = Math.atan2(1.6, 9);
+    const baseDistance = Math.hypot(1.6, 9);
+    const framed = () => Figure3DFraming.distance(corners, pitch + look, width / height, 35, baseDistance);
+    let distance = framed();
+    let wantedDistance = distance;
+    const placeCamera = () => {
+      camera.position.set(0, distance * Math.sin(look), distance * Math.cos(look));
+      camera.lookAt(0, 0, 0);
+    };
+    placeCamera();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let dragging = false;
     let last = { x: 0, y: 0 };
@@ -189,6 +205,10 @@ export function SolidView({
         paint(object, next);
       }
       figure.rotation.set(pitch, yaw, 0);
+      if (Math.abs(wantedDistance - distance) > 1e-3) {
+        distance = reduced ? wantedDistance : distance + (wantedDistance - distance) * 0.12;
+        placeCamera();
+      }
       renderer.render(sceneRoot, camera);
     };
     const tick = (now: number) => {
@@ -210,6 +230,7 @@ export function SolidView({
       if (!dragging) return;
       yaw += (event.clientX - last.x) * 0.01;
       pitch = Math.max(-1.2, Math.min(1.2, pitch + (event.clientY - last.y) * 0.01));
+      wantedDistance = framed();
       last = { x: event.clientX, y: event.clientY };
     };
     const up = () => {

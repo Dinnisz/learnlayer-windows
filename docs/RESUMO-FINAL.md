@@ -1,10 +1,60 @@
-# Resumo final — LearnLayer para Windows
+# Resumo final — LearnLayer para Mac e Windows
 
 As fases 0 a 8 estão feitas no código.
 
 **Atualização 2026-11-17:** o repositório público [Dinnisz/learnlayer-windows](https://github.com/Dinnisz/learnlayer-windows) compila no CI. Passam o lint, os testes de TypeScript, `cargo fmt`, `clippy` e os 22 testes do Rust. O CI gerou o instalador **`dist/LearnLayer_0.1.0_x64-setup.exe`** (5,9 MB, sem assinatura).
 
 O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado e a app instalada já abre neste PC (janela principal com a introdução e pílula no topo). Para distribuir aos alunos falta a assinatura (ponto 4).
+
+## Atualização de 2026-11-21: Mac e Windows no mesmo código
+
+- O Dinis decidiu que esta app **substitui a app Swift** e que Mac e Windows saem ao mesmo tempo.
+- No ramo `feat/macos-native`, o Mac já tem ⌥-clique em qualquer app, palco, OCR Vision, o PDF aberto no
+  Pré-visualização, a pílula no notch e a tecla Control+Option, com o código nativo da app Swift (`src-tauri/macos-native/`).
+  O Windows não mudou.
+- Teste ao vivo no MacBook do Dinis: `docs/RELATORIO-MAC-2026-11-21.md`. O ⌥-clique, a pista, a resolução e a lição
+  funcionam. Antes de lançar: a resposta certa marcada errada em «Let me try», o microfone (falta uma chave no
+  Info.plist), o servidor na app instalada, e os textos/teclas do Windows nas Definições e no onboarding.
+- Para distribuir no Mac: Developer ID e notarização (`PARA-O-DINIS.md`, ponto 11).
+
+## Atualização de 2026-11-21
+
+- Juntei o trabalho do Mac (`feat/macos-native`) a este ramo e corrigi no código comum o que o teste ao vivo no Mac encontrou. A tabela está no fim de `RELATORIO-MAC-2026-11-21.md`. Os pontos principais:
+  - «Deixa-me tentar» já não dá como errada uma resposta certa com unidades;
+  - um exame em português é explicado em português;
+  - Definições, Permissões e onboarding certos no Mac (Acessibilidade, Gravação de Ecrã, ⌃⌥);
+  - microfone no `Info.plist`;
+  - o recorte da pergunta aparece logo, em vez de um rascunho com matemática errada;
+  - fórmulas largas encolhem até caber;
+  - botão «Mais abaixo»;
+  - unidades direitas;
+  - plurais certos.
+- **Testes:** 2048 de TypeScript passam; lint, typecheck, `cargo fmt`, `clippy` e `cargo test` limpos no Windows. O código só do Mac não pôde ser compilado aqui (o CI está parado pela faturação).
+
+## Atualização de 2026-11-20
+
+- **Referência do Mac atualizada para o `main` em 5701363**, com o trabalho local do Mac que não está no GitHub juntado (ver `PARA-O-DINIS.md`, ponto 0). Tudo o que se aplica ao Windows está portado, com os testes do Mac. Os pontos principais:
+  - prompts novos (resolução v36);
+  - caixa de figura «Figura | Gráfico»;
+  - texto de apoio das perguntas de leitura;
+  - grelhas de alíneas e relações negadas;
+  - auditoria 3D: volumes verificados, sólidos fixos, figuras no espaço e uma câmara que mostra a figura inteira;
+  - números dos eixos fora da curva;
+  - clique na outra página de duas lado a lado, e números de pergunta na margem lidos outra vez pelo OCR;
+  - preço pelo modelo que serviu e cabeçalho `X-LearnLayer-Continuation`;
+  - créditos Plus 120 e Pro 280 por dia;
+  - resolução compacta para janelas curtas.
+- O que fica de fora e porquê: `DECISOES.md`, «O que do porte de 5701363 fica de fora».
+- **Testes:** 2033 de TypeScript e 38 de Rust passam (no fim do dia); lint, typecheck, `cargo fmt` e `clippy` limpos. O CI no GitHub está parado pela faturação da conta; corri tudo nesta máquina.
+- **Por verificar ao vivo:** Ctrl+Win (precisa de carregar nas teclas; ver `PROGRESSO.md`, Falta 1), a pergunta tipografada com uma transcrição real, e os números na margem com um Alt-clique.
+- **Depois, no mesmo dia: o Alt-clique sobre um PDF mostrado como imagem, medido de ponta a ponta.** As páginas dos 9 exames de `exames/` foram desenhadas, lidas pelo OCR do Windows e clicadas em cada pergunta que o texto do PDF tem (`scripts/render-page.mjs`, `scripts/browser-window.mjs`, `scripts/screen-labels.test.ts`). De 89 de 132 perguntas encontradas passou a todas. Isto foi conseguido com várias correções:
+  - o OCR lê os números dentro da etiqueta cinzenta dos itens obrigatórios («✱ 1.1.»), que antes deixava cair;
+  - devolve o ponto final a «2.3» e lê «l.» e «I.» como «1.» onde só pode ser um 1;
+  - um «6» de uma fração já não é tomado por número de página;
+  - um enunciado com figura entre duas etiquetas, ou até ao rodapé lido, já não é cortado por ser alto (o rodapé lido pelo OCR, «Página 4,' 13» ou partido em dois, já é reconhecido).
+  - Nas janelas de browser compostas, as 201 perguntas visíveis são encontradas. Os cliques no meio e na última linha de cada pergunta também a encontram, e nenhum recorte leva outra pergunta.
+  - A Ctrl+Win regista agora cada toque que o gancho vê em `talk-keys.jsonl` (`PARA-O-DINIS.md`, ponto 0a).
+  - A demo `overlay.html?demo=typeset` mostra a pergunta tipografada com o foco de cada passo.
 
 ## Atualização de 2026-11-17
 

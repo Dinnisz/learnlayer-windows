@@ -318,3 +318,139 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Resultado:** Biologia I.1–I.20, II.1–II.3, III.1–III.5; História I.1–IV.5; Português 1–7, II.1–II.7, III.1–III.2; Inglês com B.1–B.6. Os outros exames de `exames/`, os 17 PDFs de `Tools/TestPDFs/` e os PDFs de exemplo do Mac ficam iguais. Testes em `core/problems/examNumbering.test.ts`.
 - **Porquê:** a Tauri vai ser a base única, e a regra antiga dava etiquetas diferentes para itens do mesmo grupo. O Mac deve receber a mesma mudança (PARA-O-DINIS).
 
+
+## 2026-11-19 — Uma pergunta alta deixa o menu no ecrã (teste na app real)
+- **Bug:** no leitor, a 100 % num ecrã de 1440 px, o item 3 de Matemática A (tabela, figura e um texto para completar) era levantado tão alto que as opções 3 e 4 do menu ficavam fora do ecrã. O tamanho da pergunta tinha um piso de 11 pt que passava por cima do limite de altura (45 % do palco).
+- **Correção:** como o Mac (`QuestionStage`, fase de leitura): o tamanho é o menor entre o das letras, o que cabe na largura e o que cabe em 45 % da altura, sem piso. O piso do Mac só existe na fase compacta, para dar lugar ao trabalho por baixo, que o palco do Windows não mede.
+- **Consequência:** uma pergunta muito longa fica pequena (no item 3, cerca de 12 px de letra a 100 %), como no Mac. Captura: `capturas-windows/09-leitor-pergunta-alta-100pc.png`.
+
+## 2026-11-19 — Limites em créditos (custo de API), como no Mac desde o PR #125
+
+- **Dúvida:** a referência do Mac usada no porte (2026-11-04) ainda contava pedidos (8/30, 35/350, 100/1000). O servidor passou a contar o **custo real de API** em janelas de dia, semana e mês (1 crédito = 0,01 $), e os campos `dailyLimit`/`monthlyLimit` de `/v1/me` ficaram só como restos: `dailyLimit` é agora o teto escondido contra abusos (2000), por isso «Pedidos hoje 3 / 2000» já não dizia nada.
+- **Escolha:** `/v1/me` lê também `usage.daily`, `usage.weekly` e `usage.monthly` (`UsageWindow`); `/v1/plans` lê os `*CreditLimit`. «Plano e uso» mostra uma só barra, a janela mais perto de acabar (`nearestWindow`, como `PlanSettingsTab.swift`); «IA e uso» mostra os créditos de hoje, da semana e do mês; o aviso e as mensagens de `402` nomeiam a janela (`quota_daily`, `quota_weekly`, `quota_monthly`). `PlanDefaults` passa a créditos (Grátis 10/dia, 30/mês; Plus 120/dia, 250/semana, 700/mês; Pro 280/dia, 560/semana, 1600/mês; em 2026-11-20 subiram de 70 e 160 por dia para os valores do Mac em 5701363 e do `config.ts` do backend). Os textos novos estão em `core/i18n/windows/added.*.json` até o catálogo ser gerado outra vez a partir do Mac.
+- **Porquê:** é o que o servidor impõe; um servidor antigo sem janelas continua a funcionar com os campos de pedidos.
+
+## 2026-11-20 — Layout do palco pelas contas do Mac
+
+- **Dúvida:** o `COMO-FUNCIONA-MAC.md` (enviado pelo Dinis) descreve uma caixa de figura com separadores («3D»/«Figure» | «Graph», `figureIsBoxed`, `FigureBoxSize`) que não existe na cópia de referência do Swift (`QuestionOverlay.swift` só tem `SideColumnItem.order`: fórmulas → figura → gráfico → ilustração). E o palco do Windows não tem uma coluna lateral fora da coluna da pergunta.
+- **Escolha:** manda o Swift da referência: sem caixa com separadores; a ordem da coluna direita já era a do `SideColumnItem.order`, e o gráfico passa a 260 pt como no Swift. As colunas da resolução seguem `ExplanationLayout.make` (porte com os testes). Sem figura, a coluna lateral do palco (≥ 1000 pt, `min(440, 34 %)`) é feita dentro do painel da resolução: o trabalho à esquerda (até 720) e as fórmulas encostadas à direita. A resposta curta encabeça a coluna das palavras (`answerIsAbove`).
+- **Porquê:** a regra do projeto é que o código Swift manda; a coluna lateral dentro do painel dá o mesmo resultado à vista sem refazer a geometria do palco. Fica em `docs/PROGRESSO.md` para quando a referência tiver a caixa.
+
+## 2026-11-20 — Referência do Mac atualizada para 5701363, com o trabalho local que não está no GitHub
+
+- **Dúvida:** `referencia-mac/` era de ~5/11 (o ficheiro mais próximo no histórico do `Dinnisz/LearnLayer` é de 8eb69fd) e 25 ficheiros tinham alterações que não existem em nenhum ramo do GitHub (por exemplo `TextHelp` v5 e `VoiceTutorPrompt` v24, quando o `main` tem v4 e v23, e a resposta a dúvidas com a resolução no ecrã). O `main` tem duas semanas de trabalho a mais (caixa de figura, prompt v36, texto de apoio, grelhas, relações negadas…).
+- **Escolha:** a referência é o `main` em 5701363; nos 25 ficheiros, junção a três vias (cópia local, versão de origem no histórico, `main`). Onde a junção apagava código do `main` porque a cópia local era só mais antiga (`TextNormalizer`, `VectorFigure`, `TranscriptionRenderer`, `IllustrationProvider`, `SolutionProvider`, `refersToText`), fica o `main`. Ficam do trabalho local: `TextHelp` v5, `VoiceTutorPrompt` v24, `StepRequest`, `SelectionAsk` e `FollowUpAnswer`. A cópia antiga está em `referencia-mac-2026-11-05/` (fora do git); o commit está em `referencia-mac/REFERENCE_COMMIT`.
+- **Porquê:** o Swift manda, e o `main` é o que o Mac publica; o trabalho local é mais recente nesses ficheiros e não tem versão no GitHub para comparar. O Dinis deve enviar esse trabalho para o GitHub (PARA-O-DINIS).
+
+## 2026-11-20 — Corte entre linhas de uma grelha e verificações de relações
+
+- **Dúvida:** `PDFQuestionRead.gridRowBand` corta entre duas linhas de uma grelha de fórmulas pela linha de píxeis com menos tinta (`inkCut`), desenhando a página. O `core/` não tem imagem da página. As verificações `lostRelation` e `isMinorRelationShortfall` aplicam-se no Mac à transcrição de uma pergunta do PDF, que o Windows ainda não tem (o leitor mostra o recorte do PDF).
+- **Escolha:** o corte fica a meio, que é o recurso do próprio Mac quando não consegue desenhar. As verificações estão portadas com os testes do Mac e ficam prontas para o caminho do PDF com transcrição.
+- **Porquê:** os testes do Mac para as grelhas passam com o meio; desenhar a página no `core/` puxaria o pdf.js para o núcleo.
+
+## 2026-11-20 — Teclas do menu por cima de outra app (`ChoiceKeys`)
+
+- **Dúvida:** o Mac passou a escolher a opção do menu com as teclas 1–9 mesmo com o foco noutra app (`ChoiceKeys`, com um monitor global de teclas), porque o painel do palco do Mac não toma o teclado.
+- **Escolha:** não se porta. No Windows o palco toma o teclado quando abre (`overlay.rs`, `set_interactive` chama `set_focus`) e devolve-o ao fechar; as teclas 1–4 e o Enter chegam à página do palco, e o Esc é intercetado pelo hook seja qual for o foco.
+- **Porquê:** intercetar algarismos globalmente roubaria teclas à app de baixo sem necessidade; se o Windows recusar o foco (bloqueio do primeiro plano), o rato no palco continua a funcionar e o Esc fecha.
+
+## 2026-11-20 — Câmara do 3D no Windows
+
+- **Dúvida:** o Mac põe a câmara a 10 unidades, de frente, e afasta-a só quanto preciso para a figura caber em qualquer volta (`Figure3DFraming`, vista com proporção 1,25). O Windows tem a câmara a (0, 1,6, 9), um pouco acima, e figuras escaladas para 4 unidades.
+- **Escolha:** a mesma conta (24 voltas de 15°, 8 % de folga, campo de 35°), sobre os pontos da própria figura (até 2000) em vez dos cantos da caixa de cada peça (num sólido redondo esses cantos ficam muito fora dele e a figura saía pequena; visto no browser), com a distância de base do Windows (√(1,6² + 9²)), a inclinação da câmara somada à da figura e a proporção da própria vista; recalculada quando o aluno inclina a figura.
+- **Porquê:** a vista do Windows tem a proporção que a coluna lhe dá, não a do palco do Mac; com a base do Windows nada muda numa figura que já cabia.
+
+## 2026-11-20 — O que do porte de 5701363 fica de fora
+
+- **Dúvida:** parte das mudanças do Mac em 5701363 depende de peças que o Windows não tem.
+- **Escolha:** ficam de fora, com a razão: `hasLostScripts`, `hasRootIndex` e `textIsFlattened` (o Windows mostra sempre o recorte do PDF no caminho do Alt-clique num PDF, e o modelo lê as imagens; não há pergunta tipografada a partir do PDF para estas verificações protegerem); `FormulaReader`, `FormulaConfidence`, `FormulaCleanup`, `LocalQuestionReader` e o avanço da leitura local (Pix2Text e Vision do Mac); `VectorFigure` (figuras redesenhadas a partir dos traços do PDF); a leitura antecipada ao trazer um PDF para a frente (o Windows não recebe aviso da janela da frente; depois do primeiro clique o PDF fica em memória, `lastPDF`); o `UsageLog` (o servidor guarda o gasto); `StageScale` nas fontes (o palco do Windows faz zoom à coluna inteira); `ChoiceKeys` (ver acima).
+- **Porquê:** portá-las sem as peças de que dependem seria código sem efeito; quando o Windows tiver um caminho de transcrição do PDF, as verificações de relações já portadas (`lostRelation`, `isMinorRelationShortfall`) são o ponto de partida.
+
+## 2026-11-20 — Números de item numa etiqueta cinzenta (OCR do Windows)
+
+- **Dúvida:** nas provas de 2026 os itens obrigatórios têm o número numa etiqueta cinzenta com asterisco («✱ 1.1.»). Medido em 9 páginas de 8 provas (`scripts/render-page.mjs` e o teste `ocr_on_a_saved_page`, que só corre quando pedido), o OCR do Windows deixa cair o número com a etiqueta, e o texto da linha começa logo em «O átomo…». A releitura da margem do Mac (`withGutterLabels`) não ajuda: só se ativa com um número sozinho numa linha e só aceita «1.», não «1.1.». Sem a etiqueta, um clique no 1.1 é tomado pelo enunciado do 1, com o 1.1 lá dentro (`core/anywhere/pillLabels.test.ts`, com as linhas reais da página).
+- **Escolha:** antes do OCR, as manchas claras e lisas do tamanho de uma etiqueta (faixas de pelo menos 12 píxeis da mesma cor clara, juntas com as das linhas vizinhas, até 80 × 400 píxeis) passam a branco por dentro, só nos píxeis claros (`ocr::without_fills`). Um fundo de página ou um painel tingido maior do que isso fica como está.
+- **Porquê:** o Vision do Mac lê estas etiquetas; o OCR do Windows não. Clarear a página toda também recupera os números, mas estraga o resto (vírgulas lidas como pontos, «oito» lido «cito», notas de rodapé cinzentas perdidas); clarear só dentro das etiquetas recupera «3.», «6.», «7.», «1.1.», «4.1.», «1.2.», «1.4.», «2.1.», «✱ 6.», «✱ 1.», «✱ 2.» e deixa o resto do texto igual, salvo uma linha em que o motor agrupou a matemática de outra maneira e perdeu «x = 3» (o rascunho local não é de confiança na matemática; o modelo lê a imagem). Custa cerca de 6 ms por página de 1,1 MP em release.
+- **Depois, no mesmo dia:** um relatório de ponta a ponta (`scripts/screen-labels.test.ts`: 71 páginas de 9 provas desenhadas com `scripts/render-page.mjs`, lidas pelo OCR do Windows no teste `ocr_on_a_saved_page` com `LEARNLAYER_OCR_JSON=1`, e um clique em cada pergunta que o detetor encontra no texto do PDF) começou em 89 de 132 contando só a etiqueta exata, ou cerca de 105 descontando o grupo («I.1» no PDF é «1.» no ecrã, que não sabe o grupo). Acabou em 132 de 132 com quatro acertos no OCR: (1) uma etiqueta curta («✱ 2.») que o motor larga mesmo em branco é lida outra vez com as primeiras palavras da sua linha, porque sozinha numa imagem o motor não lê nada (`with_fill_labels`); (2) «✱ 2.3» e «. Num recipiente…» na mesma linha devolvem o ponto ao número (`with_label_dots`); (3) uma etiqueta com gradiente ou atravessada por texto denso («5.(AE2018)») é seguida linha a linha pela cor da linha anterior, atravessando até 24 linhas sem faixa; o fundo quase branco (≥ 245) é página; (4) «✱ l.» no início de uma linha é «✱ 1.». Nas páginas 10–16 das mesmas provas apareceu um quinto caso: algarismos finos («✱ 7.1.») lidos só como os seus pontos («. . Quando…»); uma etiqueta onde começa uma linha sem número de item também é relida, e o que a primeira leitura fez dela sai (71 de 71 nessas páginas). A 2,0× apareceram mais dois: o «1» da etiqueta lido como «I» maiúsculo («✱ I. Releia…»), que passa a 1 a seguir à marca de uma etiqueta ou por cima das alíneas «1.1.», «1.2.»; e uma linha mal lida que tapava a etiqueta, que agora perde o número mal lido e começa depois da etiqueta (senão ficavam dois números na mesma linha, como numa tabela). Fica de fora um «I.» sem marca nem alíneas por baixo (Inglês, parte B, a 2,0×): pode ser um romano. O contorno da etiqueta é uma mancha à parte: um número já lido nela não se lê duas vezes (dois números na mesma linha seriam tomados por uma tabela). Custo medido: a leitura de uma página passa de 90–175 ms para 100–225 ms.
+
+## 2026-11-20 — Um número sozinho só é rodapé se não tiver texto por baixo
+
+- **Dúvida:** no caminho do ecrã, quando a faixa da pergunta não encontra o rodapé, o `locate` do Mac toma por rodapé qualquer linha que pareça um número de página abaixo do clique. O OCR do Windows lê o denominador de «θ ∈ ]0, π/6[» como uma linha «6»: o item 10 da Matemática A ficava só com a primeira linha (e o mesmo nos itens 2, 8 e 9 da mesma prova).
+- **Escolha:** uma linha destas só é rodapé quando não há texto por baixo dela (`core/anywhere/fractionFooter.test.ts`, com as linhas reais da página).
+- **Porquê:** um rodapé está no fundo da página; um número com texto por baixo é parte da página. O relatório de ponta a ponta passou de 7 recortes que deixavam linhas de fora para 3, e os 3 que restam são o «FIM» (que não é da pergunta) e duas perguntas maiores do que 70 % da página (ver PROGRESSO, reparos ao Mac).
+
+## 2026-11-20 — Letra pequena no ecrã: sem segunda leitura ampliada
+
+- **Dúvida:** com as páginas desenhadas a 1,0× (página com ~600 px de largura, linhas com ~10 px), o relatório de ponta a ponta encontra 92 de 132 perguntas, contra 132 de 132 a 1,5×. Ler outra vez a janela inteira ampliada 2× quando a linha mediana tem menos de 13 px?
+- **Escolha:** não.
+- **Porquê:** medido, sobe só para 100 de 132, com perguntas novas que deixam de ser encontradas: ampliar uma imagem já desenhada pequena não devolve o detalhe, e o OCR passa a custar 4 vezes mais. Num portátil com escala de 125 % e o PDF à largura da janela, a página fica a 1,5× ou mais; a letra tão pequena é um caso raro (duas páginas lado a lado num ecrã pequeno).
+
+## 2026-11-20 — Uma pergunta entre duas etiquetas lidas nunca é «grande demais»
+
+- **Dúvida:** o `locate` do Mac desconfia de uma faixa com mais de 70 % da altura da janela (`QuestionBand.isSuspect`) e procura então um bloco mais pequeno. Numa janela de browser com 1000 px de altura e a página a 1,5×, o enunciado do grupo 4 da Geografia A 2026, com a Figura 4, vai de «4.» a «4.1.» e passa dos 70 %: um clique nele dava só o primeiro parágrafo, sem a figura.
+- **Escolha:** quando a faixa começa numa etiqueta e acaba na etiqueta seguinte, as duas lidas, só se desconfia de uma faixa fina demais (`core/anywhere/longQuestion.test.ts`). Uma faixa que vai até ao fim da página continua a ser posta em causa, como no Mac.
+- **Porquê:** a regra existe para uma etiqueta que falhou ou para tinta que nunca se interrompe; com as duas pontas lidas, o maior risco é apanhar a mais, não cortar. Num relatório com 142 janelas de browser compostas (`scripts/browser-window.mjs`: barra de ferramentas, fundo cinzento, página com scroll de 0 e 300 px), as 201 perguntas visíveis são todas encontradas e o recorte do grupo 4 passa a levar a figura; nas páginas inteiras nada muda.
+
+## 2026-11-20 — O rodapé de um exame lido pelo OCR
+
+- **Dúvida:** o OCR do Windows lê a barra de «Página 4/ 13» como «,'» ou como um 1 («Página 71 15») e às vezes parte o rodapé em duas linhas («Prova 635/1 .a» e «F. • Página 4,' 13»). Sem rodapé, uma pergunta que vai até ao fundo da página (Matemática A, itens 3 e 13) era tomada por suspeita e cortada.
+- **Escolha:** o padrão do rodapé aceita qualquer destes separadores entre os dois números, e uma linha que começa «Prova» seguida do código de 3 algarismos da prova é rodapé. Uma faixa que vai da sua etiqueta até ao rodapé lido é de confiança, como entre duas etiquetas (`core/anywhere/ocrFooter.test.ts`).
+- **Porquê:** com isto os dois itens passam a sair inteiros; o enunciado do grupo 1 de Geografia A também, depois de duas coisas: «Prova» sozinha (o OCR só leu essa palavra da primeira metade do rodapé) também é rodapé, e a última pergunta de uma página com o rodapé lido vai até ele, sem parar no intervalo entre as duas figuras (o recorte encolhe depois até à última tinta). Nas páginas inteiras já não há recortes curtos; ficam dois em janelas cuja página continua abaixo da borda, sem rodapé à vista, onde vale a regra do Mac.
+
+## 2026-11-20 — Uma pergunta que continua abaixo da borda da janela
+
+- **Dúvida:** numa janela que mostra menos do que a página, uma pergunta sem etiqueta seguinte nem rodapé à vista acabava no primeiro intervalo largo (entre duas figuras), mesmo com a página a continuar abaixo da borda.
+- **Escolha:** se a tinta da página chega às últimas duas linhas da janela (texto ou desenho cortados pela borda, não um fundo ou uma barra que pintam a linha toda: `InkMap.reachesBottom`), a pergunta vai até à borda e a faixa é de confiança, como entre duas etiquetas.
+- **Porquê:** o aluno vê o que está na janela; cortar a meio do que se vê deixava de fora uma figura. Com isto, nas 142 janelas compostas já não há recortes que deixem linhas da pergunta de fora (`core/anywhere/longQuestion.test.ts`).
+
+## 2026-11-21 — Mac e Windows no mesmo código (fase 1 do Mac)
+
+- **Dúvida:** o Dinis quer que esta base sirva um dia para Mac e Windows. O ⌥-clique, o OCR e o notch no Mac são refazer o que a app Swift já faz.
+- **Escolha:** fase 1 agora: `src-tauri/src/platform/macos/` com as Chaves (Keychain), a pasta de dados, o nome do Mac e uma pílula simples; o ⌥-clique, a captura de área, o OCR e a tecla de falar respondem que ainda não existem no Mac, e a app continua. `tauri.macos.conf.json` gera um `.app` e um `.dmg`. O CI compila e testa o Rust também em `macos-latest`. A fase 2 (paridade) fica para quando o Dinis decidir se esta app substitui a Swift.
+- **Porquê:** o código já estava preparado (`Platform`, `core/platform.ts`), por isso é pouco código e não mexe no Windows. Para nunca tocar na app Swift instalada no mesmo Mac, esta build usa outra pasta (`~/Library/Application Support/LearnLayer Desktop`), outros itens das Chaves (`LearnLayerDesktop.*`) e outro identificador (`si.learnlayer.LearnLayer.Desktop`). A pílula do Mac não é transparente: a transparência no macOS pede a API privada do Tauri, que obrigaria a mudar as funcionalidades do Tauri também no Windows.
+
+## 2026-11-21 — Esta app substitui a app Swift; Mac e Windows lançados juntos
+
+- **Dúvida:** manter a app Swift no Mac e esta só no Windows, ou uma só app para os dois.
+- **Escolha (do Dinis):** uma só app para os dois, lançada ao mesmo tempo. O Mac é o foco até funcionar tão bem como
+  a Swift.
+- **Porquê:** uma só manutenção e nenhuma diferença entre versões. O código do sistema reaproveita a app Swift
+  (copiado para `src-tauri/macos-native/`), por isso o ⌥-clique, o OCR e o notch comportam-se como antes.
+
+## 2026-11-21 — Fase 2 do Mac: o código nativo da app Swift através do swift-rs
+
+- **Escolha:** um pacote Swift (`src-tauri/macos-native/`) compilado e ligado pelo swift-rs no `build.rs`, só no
+  macOS. Funções `@_cdecl` com tipos C; o texto passa como JSON (`strdup`) e as imagens como BGRA, ambos libertados com
+  `ll_free`. O Rust (`platform/macos/native.rs`) só embrulha. A Acessibilidade devolve o mesmo formato que o UIA do
+  Windows (`longText`/`block`/`focus`), e a decisão de qual é a pergunta continua no TypeScript
+  (`core/anywhere/uiaQuestion.ts`). Assim, os dois sistemas usam a mesma lógica.
+- **Janelas transparentes:** passou a usar-se a funcionalidade `macos-private-api` do Tauri. `macOSPrivateApi: true`
+  está no `tauri.conf.json` comum (commit 0b296b6), porque o `tauri-build` do Windows exige que a configuração
+  coincida com as funcionalidades do Tauri; no Windows não muda nada. Isto substitui a pílula opaca da fase 1.
+- **Pílula no notch:** a janela fica ao nível da barra de menus, centrada no notch (`NotchPill.swift`, porte do
+  `NotchPillController`). Um `WKWebView` só vê o rato na janela principal ativa, por isso uma tracking area sempre
+  ativa envia `ll-pill-hover` à página. `Platform::pill_notch` devolve `None` no Windows, que fica igual.
+- **pdf.js 6 no WebKit:** `Map.getOrInsertComputed`, `Math.sumPrecise` e outros métodos recentes não existem no
+  Safari do macOS 15. São definidos só quando faltam (`ui/reader/engineGaps.ts`), também no worker. Sem isto, o PDF não
+  abria e as fontes do LaTeX caíam para as do sistema.
+- **Permissões:** a app pede a Acessibilidade (o diálogo do sistema) e depois a Gravação de Ecrã, como a app Swift.
+  Um binário de desenvolvimento lançado de um terminal herda as permissões desse terminal; o teste real é com o `.app`.
+
+## 2026-11-21 — Correções do relatório do Mac no código comum
+
+- **Unidades em «Let me try».** Uma resposta com unidade («25 m») era comparada como 25·m. Agora a unidade final só sai quando a resposta esperada não tem esse nome, por isso «2 m» contra `m*g` continua a contar o m. O Swift tem o mesmo defeito; não é paridade, é corrigir a regra «nunca dizer errado a uma resposta certa».
+- **Língua da resposta.** Com «igual ao sistema», a língua da pergunta decide: conto palavras comuns de português e de inglês, e uma diferença de duas vezes basta. Uma escolha explícita nas Definições manda sempre. Porquê: um exame português num computador em inglês era explicado em inglês (I9). A língua entra na chave da cache como antes.
+- **Pergunta do ecrã enquanto o modelo lê.** Mostra-se o recorte da imagem, e não o rascunho do OCR. O rascunho perde expoentes («m/s²» passa a «m/s»), e mostrar matemática errada é proibido. Sem imagem, continua o rascunho ou as barras.
+- **Campo da resposta.** Passa a usar a fonte do palco com algarismos tabulares, em vez da mono do Mac (P6): destoava do resto.
+- **Traduções.** As frases que a app acrescentou ao catálogo (`windows/added.*`) passam a valer nos dois sistemas. O Mac tem a sua tabela (`macos/*`) para as que falam de Windows. Os plurais ficam em `shared/*`.
+
+## 2026-11-21 — Teste visual no PC: o que mudou
+
+- **Scroll só na resolução (pedido do Dinis).** A pergunta fica fixa em cima, e só o trabalho por baixo dela (`.stage-work`) desce, sem barras. O botão redondo «Mais abaixo» avisa quando há mais conteúdo. Como no Mac, quando falta espaço são os passos que fazem scroll.
+- **Fórmulas e figura paradas (pedido do Dinis, feito pela sessão do painel lateral).** A coluna da direita da resolução fica fora do scroll: `FixedSide` deixa um espaço vazio na grelha, para os passos manterem a largura, e desenha as Fórmulas e a figura num `aside.stage-fixed-side` no canto superior direito do palco. Entrou no commit 4f6295b, junto com o scroll.
+- **Clique logo acima de uma etiqueta.** Um Alt-clique no meio espaço entre linhas acima de «2.2.» abria a 2.1. Agora pertence à etiqueta de baixo (`PDFQuestionReading.question`, teste com o exame de Matemática A).
+- **Matemática na pista e na resposta escrita.** Passou a compor-se como nas notas dos passos (`NoteText`). O Mac mostra-a como texto; aqui é melhoria visual.
+- **Sinais ASCII.** «<=», «>=», «!=» e «*» passam a ≤, ≥, ≠ e · nas fórmulas, nas notas e nas etiquetas do anel de foco.
+- **Fórmula com frase no fim.** Na coluna Fórmulas, a frase final («pelo Teorema de …») passa a legenda por baixo, na fonte da interface.
+- **Lição.** A caixa da Resposta fica no sítio, esbatida e vazia, enquanto a lição a calcula: já não há buraco nem salto. A linha que se transforma na seguinte fica encostada à esquerda.
+- **Por fazer.** O primeiro Alt-clique num PDF ainda demora 1 a 4 s, porque o pdf.js lê todas as páginas antes de o palco abrir.

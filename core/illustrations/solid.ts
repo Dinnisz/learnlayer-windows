@@ -285,30 +285,58 @@ export const SolidCheck = {
     }
   },
 
-  /** The values an answer gives ("V = 7π/15 (unidades de volume)", "V = 8π ≈ 25,13", "4\pi"). */
+  /** The values an answer gives ("V = 7π/15 (unidades de volume)", "V = 8π ≈ 25,13", "4\pi", "8π u.v."): each
+   * right-hand side read as a formula, and any decimal after ≈. */
   values(answer: string): number[] {
-    let text = answer;
+    return SolidCheck.readings(answer).map((reading) => reading.value);
+  },
+
+  /** Each value, and whether it is rounded (written after ≈). */
+  readings(answer: string): { value: number; rounded: boolean }[] {
+    // Words in \text{} / \mathrm{} are units ("u.v.", "cm^3"), never part of the value.
+    let text = answer.replace(/\\(?:text|mathrm|textrm|operatorname)\s*\{[^}]*\}/gu, " ");
+    text = text.replace(/\\(?:dfrac|tfrac|cfrac)(?![A-Za-z])/gu, "\\frac");
     const replacements: [string, string][] = [
       ["\\pi", "π"],
       ["\\frac{", "("],
       ["}{", ")/("],
       ["\\,", " "],
+      ["\\;", " "],
+      ["\\ ", " "],
+      ["\\!", ""],
       ["\\cdot", "*"],
+      ["\\times", "*"],
       ["\\approx", "≈"],
+      ["\\left", ""],
+      ["\\right", ""],
       ["{", "("],
       ["}", ")"],
       ["−", "-"],
       ["$", ""],
     ];
     for (const [from, to] of replacements) text = text.split(from).join(to);
-    const found: number[] = [];
-    for (const piece of text.split(/[=≈]/u).slice(1)) {
-      // Without the units or a bracketed remark ("(unidades de volume)", "cubic units.").
+    const pieces: [string, boolean][] = [];
+    let current = "";
+    let rounded = false;
+    let started = false;
+    for (const character of text) {
+      if (character === "=" || character === "≈") {
+        if (started) pieces.push([current, rounded]);
+        current = "";
+        rounded = character === "≈";
+        started = true;
+      } else current += character;
+    }
+    if (started) pieces.push([current, rounded]);
+    const found: { value: number; rounded: boolean }[] = [];
+    for (const [piece, isRounded] of pieces) {
+      // Without the units or a bracketed remark ("(unidades de volume)", "cubic units.", "u.v.", "cm³").
       let formula = piece.replace(/\s*\((?=\s*[A-Za-zÀ-ú≈]).*$/su, "");
       formula = formula.replace(/\s+(?!sqrt|pi\b)[A-Za-zÀ-ú]{2,}.*$/su, "");
+      formula = formula.replace(/\s+[A-Za-z]\.\s*[A-Za-z]\..*$/su, "");
       formula = formula.replace(/^[ .,;]+|[ .,;]+$/gu, "");
       const value = SafeFormula.make(formula.replace(/π/gu, "pi"), [])?.value({});
-      if (value !== undefined && Number.isFinite(value)) found.push(value);
+      if (value !== undefined && Number.isFinite(value)) found.push({ value, rounded: isRounded });
     }
     return found;
   },
@@ -349,12 +377,82 @@ export const SolidCheck = {
   agrees(solid: GenericSolid, answer: string): boolean | null {
     const measured = SolidCheck.volume(solid);
     if (measured === null || measured <= 0) return null;
-    const given = SolidCheck.values(answer).filter((value) => value > 0);
+    return SolidCheck.agreesWithVolume(measured, answer);
+  },
+
+  /** A premade 3D figure against the answer: a generic solid (or a revolution with its own curve) by its volume; a
+   * fixed solid (cone, sphere, torus…) only when the answer is about a volume ("V = …", "volume"); null when there is
+   * nothing to check (an area, a radius, a circuit). The Mac's `agrees(_ spec:answer:)`. */
+  agreesFigure(premade: PremadeFigure | null | undefined, answer: string): boolean | null {
+    const solid = checkableSolid(premade);
+    if (solid) return SolidCheck.agrees(solid, answer);
+    const volumes = fixedVolumes(premade).filter((volume) => Number.isFinite(volume) && volume > 0);
+    const folded = answer.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+    if (volumes.length === 0 || !(/\bV\s*(_\{?\w+\}?)?\s*=/u.test(answer) || folded.includes("volume"))) return null;
+    const verdicts = volumes.map((volume) => SolidCheck.agreesWithVolume(volume, answer));
+    if (verdicts.includes(true)) return true;
+    return verdicts.includes(false) ? false : null;
+  },
+
+  /** true: the answer gives this volume; false: only other values; null: none to check. */
+  agreesWithVolume(measured: number, answer: string): boolean | null {
+    const given = SolidCheck.readings(answer).filter((reading) => reading.value > 0);
     if (given.length === 0) return null;
-    // The decimal after ≈ is rounded: 2 % for it.
-    return given.some((value) => Math.abs(value - measured) <= 0.02 * measured);
+    // The decimal after ≈ is rounded: 2 % for it, 0.5 % otherwise.
+    return given.some((reading) => Math.abs(reading.value - measured) <= (reading.rounded ? 0.02 : 0.005) * measured);
   },
 };
+
+/** The volumes a fixed template's solid has, with the sizes its params give (`Figure3DSpec.volumes`): a cut sphere
+ * has two, the cap and the rest. */
+export function fixedVolumes(premade: PremadeFigure | null | undefined): number[] {
+  if (!premade) return [];
+  const p = premade.params;
+  const positive = (key: string, fallback: number) => {
+    const value = asNumber(p[key]);
+    return value !== null && value > 0 ? value : fallback;
+  };
+  switch (premade.type) {
+    case "solid_cone": {
+      const r = positive("r", 1.5);
+      return [(Math.PI * r * r * positive("h", 3)) / 3];
+    }
+    case "solid_cylinder": {
+      const r = positive("r", 1.2);
+      return [Math.PI * r * r * positive("h", 3)];
+    }
+    case "solid_sphere": {
+      const r = positive("r", 2);
+      return [(4 * Math.PI * r ** 3) / 3];
+    }
+    case "solid_paraboloid": {
+      const r = positive("r", 2);
+      return [(Math.PI * r * r * positive("h", 3)) / 2];
+    }
+    case "solid_torus": {
+      const big = positive("R", 2);
+      const given = positive("r", 0.7);
+      const small = given < big ? given : (0.7 * big) / 2;
+      return [2 * Math.PI * Math.PI * big * small * small];
+    }
+    case "solid_sphere_plane_cut": {
+      const r = positive("r", 2);
+      const given = asNumber(p["h"]);
+      const h = given !== null && Math.abs(given) < r ? given : Math.min(1, r * 0.5);
+      const cap = (Math.PI * (r - h) * (r - h) * (2 * r + h)) / 3;
+      return [cap, (4 * Math.PI * r ** 3) / 3 - cap];
+    }
+    case "solid_of_revolution":
+    case "solid_of_revolution_sqrt":
+    case "solid_washer_x_x2": {
+      const solid = fixedSolid(premade);
+      const volume = solid ? SolidCheck.volume(solid) : null;
+      return volume !== null ? [volume] : [];
+    }
+    default:
+      return [];
+  }
+}
 
 /** The solid an illustration carries (premade `solid3d`), or null; the 3D view draws it from its built pieces. */
 export function solidOf(illustration: {
@@ -366,8 +464,8 @@ export function solidOf(illustration: {
 
 // Port of the fixed templates of Figure3DSpec (LearnLayer/Explanation/Figure3D.swift @ ref 2026-11-04), as generic
 // solids the 3D view draws: the cone, the cylinder and the paraboloid upright (turned about Oy), the sphere and the
-// revolutions about Ox, the torus as a parametric surface, the cut sphere with its plane. Their volumes are not checked
-// (they are pictures of a kind of solid, with sizes the model may leave out), as on the Mac.
+// revolutions about Ox, the torus as a parametric surface, the cut sphere with its plane. Their volumes are checked
+// against an answer about a volume (`fixedVolumes`, `SolidCheck.agreesFigure`), as on the Mac @ 5701363.
 
 const fixedIds = [
   "solid_cone",
@@ -467,11 +565,15 @@ export function fixedSolid(premade: PremadeFigure | null | undefined): GenericSo
   return params ? GenericSolids.fromParams(params) : null;
 }
 
-/** A revolution by fixed id with its own curve: checked like a generic solid (its axis, second curve, volume). */
+/** A revolution by fixed id with its own curve: checked like a generic solid (its axis, second curve, volume). The √x
+ * template too: asked for another curve, it draws that curve, never √x under another label (@ 5701363). */
 export function checkableSolid(premade: PremadeFigure | null | undefined): GenericSolid | null {
   if (!premade) return null;
   if (premade.type === GenericSolids.premadeType) return GenericSolids.fromParams(premade.params);
-  if (["solid_of_revolution", "solid_washer_x_x2"].includes(premade.type) && premade.params["f"] !== undefined) {
+  if (
+    ["solid_of_revolution", "solid_of_revolution_sqrt", "solid_washer_x_x2"].includes(premade.type) &&
+    premade.params["f"] !== undefined
+  ) {
     const params: Record<string, Value> = { ...premade.params, kind: "revolution" };
     if (premade.type === "solid_washer_x_x2") params["g"] = params["g"] ?? "x^2";
     params["a"] = params["a"] ?? 0;

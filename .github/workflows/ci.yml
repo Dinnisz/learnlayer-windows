@@ -49,6 +49,40 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
+  # The same native side on macOS (stage 1 of the Mac port: platform/macos/). The TypeScript is the same
+  # on both systems and already checked above, so only the Rust and an unsigned .app are built here.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Build the app bundle
+        run: npx tauri build --bundles app
+
   # The unsigned installer, kept as a build artifact (signing and updates need Dinis's keys: scripts/build-installer.ps1).
   installer:
     needs: test

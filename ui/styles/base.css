@@ -170,3 +170,13 @@ input {
 .code-block code {
   font: inherit;
 }
+
+/* No scrollbars anywhere: content scrolls with the wheel, the touchpad, or by dragging it (ui/dragScroll.ts), with
+   nothing drawn for it (the Mac's scroll views without indicators). */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}

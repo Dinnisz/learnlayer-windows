@@ -3,12 +3,13 @@
 // and plan flows of phase 1 against a scripted API.
 
 import { describe, expect, it } from "vitest";
-import { BackendClient, type AuthTokens, type Fetch } from "../ai/backendClient";
+import { BackendClient, credits, nearestWindow, type AuthTokens, type Fetch } from "../ai/backendClient";
 import {
   AccountModel,
   consentToAsk,
   planKey,
   PlanDefaults,
+  usageBanner,
   type Preferences,
   type SessionGateway,
 } from "./accountModel";
@@ -231,7 +232,7 @@ describe("AccountModel plan and usage", () => {
     const { model, session, preferences } = setup({ ...signedInRoutes, "GET /v1/me": [200, meJSON("plus", 30)] });
     await session.save({ ...JSON.parse(tokensJSON()), accessExpiresAt: new Date() });
     await model.refresh();
-    expect(model.state.banner).toBe("You’ve used this month’s allowance.");
+    expect(model.state.banner).toBe("You’ve used this month’s credits. Upgrade to keep going.");
     expect(preferences.get(planKey)).toBe("paid");
   });
 
@@ -360,21 +361,76 @@ describe("AccountModel sign-out, devices and delete", () => {
 
 describe("PlanDefaults (SettingsTests)", () => {
   it("match the production plans", () => {
-    expect(PlanDefaults.freeDailyRequests).toBeGreaterThan(0);
-    expect(PlanDefaults.freeDailyRequests).toBeLessThanOrEqual(PlanDefaults.freeMonthlyRequests);
-    expect(PlanDefaults.paidDailyRequests).toBeLessThanOrEqual(PlanDefaults.paidMonthlyRequests);
-    expect(PlanDefaults.freeMonthlyRequests).toBeLessThan(PlanDefaults.paidMonthlyRequests);
+    expect(PlanDefaults.freeDailyCredits).toBeGreaterThan(0);
+    expect(PlanDefaults.freeDailyCredits).toBeLessThanOrEqual(PlanDefaults.freeMonthlyCredits);
+    expect(PlanDefaults.paidDailyCredits).toBeLessThanOrEqual(PlanDefaults.paidWeeklyCredits);
+    expect(PlanDefaults.paidWeeklyCredits).toBeLessThanOrEqual(PlanDefaults.paidMonthlyCredits);
+    expect(PlanDefaults.freeMonthlyCredits).toBeLessThan(PlanDefaults.paidMonthlyCredits);
     expect(PlanDefaults.paidMonthlyCents).toBe(2_000);
-    expect(PlanDefaults.yearlyPriceCents).toBe(19_000);
-    expect(PlanDefaults.freeMonthlyRequests).toBe(30);
-    expect(PlanDefaults.paidMonthlyRequests).toBe(350);
+    expect(PlanDefaults.yearlyPriceCents).toBe(19_200);
+    expect(PlanDefaults.freeMonthlyCredits).toBe(30);
+    expect(PlanDefaults.paidMonthlyCredits).toBe(700);
     expect(PlanDefaults.proMonthlyCents).toBe(5_000);
-    expect(PlanDefaults.freeDailyRequests).toBe(8);
-    expect(PlanDefaults.paidDailyRequests).toBe(35);
-    expect(PlanDefaults.proDailyRequests).toBe(100);
+    expect(PlanDefaults.freeDailyCredits).toBe(10);
+    expect(PlanDefaults.paidDailyCredits).toBe(120);
+    expect(PlanDefaults.proDailyCredits).toBe(280);
     expect(PlanDefaults.proYearlyCents).toBe(48_000);
-    expect(PlanDefaults.proDailyRequests).toBeLessThanOrEqual(PlanDefaults.proMonthlyRequests);
-    expect(PlanDefaults.paidMonthlyRequests).toBeLessThan(PlanDefaults.proMonthlyRequests);
+    expect(PlanDefaults.proWeeklyCredits).toBe(560);
+    expect(PlanDefaults.proMonthlyCredits).toBe(1_600);
+    expect(PlanDefaults.proDailyCredits).toBeLessThanOrEqual(PlanDefaults.proMonthlyCredits);
+    expect(PlanDefaults.paidMonthlyCredits).toBeLessThan(PlanDefaults.proMonthlyCredits);
+    expect(credits(1)).toBe(1);
+    expect(credits(10_000)).toBe(1);
+    expect(credits(10_001)).toBe(2);
+  });
+});
+
+describe("usageBanner", () => {
+  const window = (used: number, limit: number | null) => ({
+    usedUsdMicros: used,
+    limitUsdMicros: limit,
+    resetsAt: new Date("2026-11-20T00:00:00Z"),
+  });
+  const legacy = {
+    dailyRequests: 1,
+    dailyLimit: 2000,
+    monthlyRequests: 5,
+    monthlyLimit: 700,
+    monthlyCostUsdMicros: 0,
+    monthlyCostLimitUsdMicros: 7_000_000,
+    resetsDailyAt: new Date(),
+    resetsMonthlyAt: new Date(),
+  };
+
+  it("names the window that ran out", () => {
+    const day = {
+      ...legacy,
+      daily: window(700_000, 700_000),
+      weekly: window(700_000, 2_500_000),
+      monthly: window(700_000, 7_000_000),
+    };
+    expect(usageBanner(day)).toBe("You’ve used today’s credits. They reset at midnight UTC.");
+    const week = {
+      ...legacy,
+      daily: window(0, 700_000),
+      weekly: window(2_500_000, 2_500_000),
+      monthly: window(2_500_000, 7_000_000),
+    };
+    expect(usageBanner(week)).toBe("You’ve used this week’s credits. They reset on Monday at 00:00 UTC.");
+    const month = { ...legacy, daily: window(0, 100_000), weekly: window(0, null), monthly: window(300_000, 300_000) };
+    expect(usageBanner(month)).toBe("You’ve used this month’s credits. Upgrade to keep going.");
+  });
+
+  it("says nothing while every window has room, and picks the fullest", () => {
+    const usage = {
+      ...legacy,
+      daily: window(600_000, 700_000),
+      weekly: window(600_000, 2_500_000),
+      monthly: window(600_000, 7_000_000),
+    };
+    expect(usageBanner(usage)).toBeNull();
+    expect(nearestWindow(usage)?.name).toBe("day");
+    expect(nearestWindow({ ...legacy, weekly: window(1, null) })).toBeNull();
   });
 });
 

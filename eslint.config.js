@@ -7,6 +7,7 @@ export default tseslint.config(
   {
     ignores: [
       "referencia-mac/**",
+      "referencia-mac-*/**",
       "exames/**",
       "node_modules/**",
       "dist/**",

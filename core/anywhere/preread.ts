@@ -55,8 +55,9 @@ export const PrereadPlan = {
     return new Set(keywordPatterns.filter(([, pattern]) => pattern.test(folded)).map(([name]) => name));
   },
 
-  /** The pages to read, in order: those in view, then outward from them, one step after then one before; the whole
-   * document for "document", up to `neighbours` steps for "window". With none in view, the first page stands in. */
+  /** The pages to read, in order: those in view, then the ones after them, then the ones before (the student works
+   * forward); the whole document for "document", up to `neighbours` steps for "window". With none in view, the first
+   * page stands in (`PrereadPlan.order` @ 5701363). */
   order(pageCount: number, visible: readonly number[], scope: PrereadScope): number[] {
     if (pageCount <= 0) return [];
     const seen = new Set<number>();
@@ -68,12 +69,12 @@ export const PrereadPlan = {
     const low = Math.min(...out);
     const high = Math.max(...out);
     const reach = scope === "document" ? pageCount : PrereadPlan.neighbours;
-    for (let step = 1; step <= Math.max(reach, 1); step += 1) {
-      for (const page of [high + step, low - step]) {
-        if (page >= 0 && page < pageCount && !seen.has(page)) {
-          seen.add(page);
-          out.push(page);
-        }
+    const steps = Array.from({ length: Math.max(reach, 1) }, (_, index) => index + 1);
+    // The questions after the clicked one come first: the student works forward.
+    for (const page of [...steps.map((step) => high + step), ...steps.map((step) => low - step)]) {
+      if (page >= 0 && page < pageCount && !seen.has(page)) {
+        seen.add(page);
+        out.push(page);
       }
     }
     return out;
@@ -114,6 +115,56 @@ export type ReadItem = (
 
 /** What each PDF has spent reading ahead in this launch: a PDF read again goes on from what it already spent. */
 const spends = new Map<string, { calls: number; cost: number }>();
+
+/** Where `PrereadMemory` keeps its list: the app's settings (localStorage), memory in tests. */
+export interface PrereadStore {
+  get(key: string): string | null;
+  set(key: string, value: string): void;
+}
+
+/**
+ * The PDFs the student has clicked a question in: opening one reads nothing ahead until its first click; one clicked
+ * before is read again when it opens (`PrereadMemory` @ 5701363). Paths are compared as Windows does, case aside.
+ */
+export const PrereadMemory = {
+  key: "PrereadClickedDocuments",
+  /** The most recent PDFs remembered. */
+  limit: 300,
+
+  paths(store: PrereadStore): string[] {
+    try {
+      const value: unknown = JSON.parse(store.get(PrereadMemory.key) ?? "[]");
+      return Array.isArray(value) ? value.filter((path): path is string => typeof path === "string") : [];
+    } catch {
+      return [];
+    }
+  },
+
+  wasClicked(store: PrereadStore, path: string): boolean {
+    return PrereadMemory.paths(store).includes(normalizedPath(path));
+  },
+
+  markClicked(store: PrereadStore, path: string): void {
+    const own = normalizedPath(path);
+    let paths = PrereadMemory.paths(store);
+    if (paths[paths.length - 1] === own) return;
+    paths = paths.filter((other) => other !== own);
+    paths.push(own);
+    if (paths.length > PrereadMemory.limit) paths = paths.slice(paths.length - PrereadMemory.limit);
+    store.set(PrereadMemory.key, JSON.stringify(paths));
+  },
+};
+
+/** A file's path as one string per file: forward slashes, no "." steps, lower case (Windows paths ignore case). */
+function normalizedPath(path: string): string {
+  const parts: string[] = [];
+  for (const part of path.replace(/\\/g, "/").split("/")) {
+    if (part === "." || (part === "" && parts.length > 0)) continue;
+    if (part === ".." && parts.length > 1) parts.pop();
+    else parts.push(part);
+  }
+  return parts.join("/").toLowerCase();
+}
 
 export class DocumentPreread {
   /** Questions read at once. */

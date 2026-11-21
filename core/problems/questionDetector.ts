@@ -63,7 +63,12 @@ const patterns: [Kind, RegExp][] = [
   ["top", QuestionLabels.topPattern],
   ["top", QuestionLabels.midLineOrdinalExpression],
   // (a)   a)   (i)   (ii)   (iv) as well, kept only when they run as a roman sequence.
-  ["sub", new RegExp("^[ \\t]*(\\(?([a-h]|" + romanSubPattern + ")\\))\\s+", "gm")],
+  // j) … q): a letter past h is kept only after the letter before it (`inLetterSequence`).
+  ["sub", new RegExp("^[ \\t]*(\\(?([a-z]|" + romanSubPattern + ")\\))\\s+", "gm")],
+  // (f)x+cos x   (i)ex: a part in a grid of formulas, its formula set right against the label.
+  ["sub", /^[ \t]*(\(([a-z])\))(?=[\p{L}\d(|√])/gmu],
+  // g)3 √x−1   i)3 √x2: a TeX grid's label with a root's index glued on. Kept only inside a run of letters.
+  ["sub", /^[ \t]*(([a-z])\))(?=[\d√(|])/gm],
 ];
 
 const headingPattern =
@@ -72,7 +77,7 @@ const headingPattern =
 const scoresPattern = /COTAÇÕES|Cotação \(em pontos\)|Cotações/;
 /** Page footers ("Prova 715.V1/1.ª F. • Página 5/ 15"), left out of a question's text. */
 const footerPattern = /^.*Prova \d{3}.*Página \d+ ?\/ ?\d+.*$/gm;
-const subSiblingPattern = new RegExp("^[ \\t]*(\\(?(?:[a-h]|" + romanSubPattern + ")\\))\\s+", "gm");
+const subSiblingPattern = new RegExp("^[ \\t]*(\\(?(?:[a-z]|" + romanSubPattern + ")\\))(?:\\s+|(?=[\\d√(|]))", "gm");
 
 interface Mark {
   kind: Kind;
@@ -123,8 +128,147 @@ export function inRomanSequence(numbers: readonly string[]): boolean[] {
   const values = numbers.map(romanSubValue);
   return values.map((value, index) => {
     if (value === null) return true;
+    // "(i)" after "(h)" is the ninth letter, not the first roman number; "v)" after "u)", "x)" after "w)" too.
+    const before = numbers.slice(0, index);
+    if (value === 1 && before.includes("h")) return true;
+    if (value === 5 && before.includes("u")) return true;
+    if (value === 10 && before.includes("w")) return true;
     if (value === 1) return values.slice(index + 1).includes(2);
     return values.slice(0, index).includes(value - 1);
+  });
+}
+
+/**
+ * Whether each part letter belongs to a run "a)", "b)", …: a–h always (as before), a letter past h only when the
+ * letter before it is on the page before it ("j)" after "i)"), and a label glued to its formula ("g)3 √x") only when
+ * the letter before it is there too (or it is "a)" with "b)" after it). Roman numbers are left to `inRomanSequence`;
+ * "i)" after "h)", "v)" after "u)", "x)" after "w)" are letters (`QuestionDetector.inLetterSequence` @ 5701363).
+ */
+export function inLetterSequence(numbers: readonly string[], glued: readonly boolean[]): boolean[] {
+  return numbers.map((number, index) => {
+    if (!/^[a-z]$/.test(number)) return true;
+    const before = numbers.slice(0, index);
+    const previous = number === "a" ? null : String.fromCharCode(number.charCodeAt(0) - 1);
+    const follows = previous !== null ? before.includes(previous) : numbers.slice(index + 1).includes("b");
+    const isGlued = index < glued.length && glued[index]!;
+    // "i", "v", "x": roman numbers unless the letter before is there.
+    if (romanSubValue(number) !== null) return isGlued ? follows : true;
+    if (isGlued) return follows;
+    return number <= "h" || follows;
+  });
+}
+
+/**
+ * A grid of parts set across both columns under one statement («1. Resolva…» over a)–h) and i)–q)): read column by
+ * column, the right column's parts come after the next question («2.») in the left one and were taken for its parts.
+ * A part level with a part of the left column, whose letter comes after it, is a part of that one's question
+ * (`QuestionDetector.withGridOwners` @ 5701363).
+ */
+function withGridOwners(labelled: readonly Labelled[], layout: ColumnLayout, page: PageText): Labelled[] {
+  const boxes = labelled.map((item) =>
+    selectionBounds(page, item.mark.labelStart, item.mark.labelEnd - item.mark.labelStart),
+  );
+  const out = [...labelled];
+  const topOf = (label: string) => label.split("(")[0]!;
+  // The question the last right-column part was given, and that part's letter: the next letter follows it.
+  let previous: { top: string; group: string; number: string } | null = null;
+  labelled.forEach((item, index) => {
+    const box = boxes[index];
+    if (item.mark.kind !== "sub" || !box || Columns.column(layout, Rects.midX(box)) !== 1) {
+      if (item.mark.kind !== "sub") previous = null;
+      return;
+    }
+    const level = labelled.findIndex((other, at) => {
+      const rect = boxes[at];
+      if (other.mark.kind !== "sub" || !rect || Columns.column(layout, Rects.midX(rect)) !== 0) return false;
+      return (
+        Math.abs(Rects.midY(rect) - Rects.midY(box)) < Math.max(4, Math.min(rect.height, box.height) * 0.6) &&
+        other.mark.number < item.mark.number
+      );
+    });
+    let owner: { top: string; group: string } | null = null;
+    if (level >= 0) owner = { top: topOf(labelled[level]!.label), group: labelled[level]!.group };
+    else if (
+      previous !== null &&
+      item.mark.number.length === 1 &&
+      item.mark.number.charCodeAt(0) === previous.number.charCodeAt(0) + 1
+    )
+      // Under the left column's last row: the letter after the part above it.
+      owner = { top: previous.top, group: previous.group };
+    if (owner && owner.group !== item.group)
+      out[index] = { mark: item.mark, label: `${owner.top}(${item.mark.number})`, group: owner.group };
+    const kept = out[index]!;
+    previous = { top: topOf(kept.label), group: kept.group, number: item.mark.number };
+  });
+  return out;
+}
+
+/** "2.", "1.2." or "(b)" after a space in the middle of a stored line, followed by a space. */
+const midLineLabel = /(?<=\S[ \t\u00A0])(\d{1,2}(?:\.\d{1,2})?\.|\([a-h]\))(?=[ \t\u00A0])/g;
+
+/** The label is printed below the glyph stored before it, or back at the left of the line: a line of its own. */
+export function startsVisualLine(label: Rect, previous: Rect): boolean {
+  const lineHeight = Math.max(Math.min(label.height, previous.height), 4);
+  const below = Rects.midY(label) < Rects.midY(previous) - lineHeight * 0.6;
+  const backLeft =
+    Rects.minX(label) < Rects.minX(previous) - 40 &&
+    Math.abs(Rects.midY(label) - Rects.midY(previous)) > lineHeight * 0.3;
+  return below || backLeft;
+}
+
+/**
+ * A label the text layer stores after other words on the same line ("…dx. 2. Let F", "1.1. 1.2. Determine") that the
+ * page prints at the start of a line of its own: the space before it becomes a line break, so the label patterns,
+ * which look at line starts, find it. The text keeps its length, so every range still holds. `breaks`: where a line
+ * break was put in (`QuestionDetector.withVisualLineBreaks` @ 5701363).
+ */
+export function withVisualLineBreaks(raw: string, page: PageText): { text: string; breaks: Set<number> } {
+  const breaks = new Set<number>();
+  const units = raw.split("");
+  for (const match of raw.matchAll(midLineLabel)) {
+    const start = match.index;
+    const space = start - 1;
+    if (space <= 0) continue;
+    let previous = space - 1;
+    while (previous > 0 && /[ \t\u00A0]/.test(raw[previous]!)) previous -= 1;
+    const labelBox = selectionBounds(page, start, match[1]!.length);
+    const before = selectionBounds(page, previous, 1);
+    if (!labelBox || !before || labelBox.width <= 0 || before.width <= 0) continue;
+    if (startsVisualLine(labelBox, before)) {
+      units[space] = "\n";
+      breaks.add(space);
+    }
+  }
+  return breaks.size === 0 ? { text: raw, breaks } : { text: units.join(""), breaks };
+}
+
+/** The text of the characters whose boxes touch `rect` (PDFKit's `selection(for:)` of a small rectangle). */
+function textTouching(page: PageText, rect: Rect): string {
+  let text = "";
+  page.boxes.forEach((box, index) => {
+    const overlaps =
+      box !== null &&
+      box.x < rect.x + rect.width &&
+      rect.x < box.x + box.width &&
+      box.y < rect.y + rect.height &&
+      rect.y < box.y + box.height;
+    if (overlaps) text += page.text[index]!;
+  });
+  return text;
+}
+
+/**
+ * A number the text layer stores at the start of a line that the page prints after other words on its line: «3.» of
+ * «x0 = 2/3.», a fraction's denominator and its full stop (CDI sheet 1, question 3). Not a question: kept, it hid the
+ * real «3.» as a repeat, and question 3's parts were labelled 2(a)… (`withoutMidLineNumbers` @ 5701363).
+ */
+function withoutMidLineNumbers(marks: readonly Mark[], page: PageText): Mark[] {
+  return marks.filter((mark) => {
+    if (mark.kind !== "top") return true;
+    const box = selectionBounds(page, mark.labelStart, mark.labelEnd - mark.labelStart);
+    if (!box || box.width <= 0) return true;
+    const before = { x: box.x - 14, y: box.y + box.height * 0.2, width: 13, height: box.height * 0.6 };
+    return textTouching(page, before).trim() === "";
   });
 }
 
@@ -254,8 +398,10 @@ function detect(
   carried: { label: string; text: string } | null,
   carriedSection: string | null,
 ): ExamQuestion[] {
-  const text = questionText(page);
-  let marks = candidateMarks(text);
+  // Labels the page prints on lines of their own though the text layer stores them after other words.
+  const visual = withVisualLineBreaks(questionText(page), page);
+  const text = visual.text;
+  let marks = candidateMarks(text, visual.breaks);
   const headings = matchesOf(headingPattern, text).map((match) => {
     const exec = new RegExp(headingPattern.source, "u").exec(text.slice(match.index, match.end));
     return { location: match.index, name: exec?.[1] ?? exec?.[2] ?? null };
@@ -284,6 +430,7 @@ function detect(
     )
     .map((mark) => mark.location);
   marks = withoutNumberedLists(marks, restarting ? sectionOf : () => null);
+  marks = withoutMidLineNumbers(marks, page);
   marks = withoutRepeatedLabels(marks, text, restarting ? sectionOf : () => null);
   // A group that numbers on from the one before keeps plain numbers.
   const prefixOf = (location: number) => {
@@ -401,8 +548,11 @@ function questionText(page: PageText): string {
   return scores ? page.text.slice(0, scores.index) : page.text;
 }
 
-/** Every printed label that may start a question, in text order, without the options and stray roman numerals. */
-function candidateMarks(text: string): Mark[] {
+/**
+ * Every printed label that may start a question, in text order, without the options and stray roman numerals.
+ * `separated`: where `withVisualLineBreaks` put a line break in before a label.
+ */
+function candidateMarks(text: string, separated: ReadonlySet<number> = new Set()): Mark[] {
   let marks: Mark[] = [];
   for (const [kind, pattern] of patterns) {
     for (const match of matchesOf(pattern, text)) {
@@ -426,9 +576,18 @@ function candidateMarks(text: string): Mark[] {
   }, []);
   const subs = marks.map((mark, index) => (mark.kind === "sub" ? index : -1)).filter((index) => index >= 0);
   const romanKept = inRomanSequence(subs.map((index) => marks[index]!.number));
-  const strayRoman = new Set(subs.filter((_, position) => !romanKept[position]));
+  // A label glued to what follows it ("g)3 √x"): not bracketed on the left, and no space after it.
+  const glued = subs.map((index) => {
+    const mark = marks[index]!;
+    return !labelOf(text, mark).startsWith("(") && mark.labelEnd < text.length && !/\s/u.test(text[mark.labelEnd]!);
+  });
+  const letterKept = inLetterSequence(
+    subs.map((index) => marks[index]!.number),
+    glued,
+  );
+  const strayRoman = new Set(subs.filter((_, position) => !romanKept[position] || !letterKept[position]));
   marks = marks.filter((_, index) => !strayRoman.has(index));
-  return withoutOptions(marks, text);
+  return withoutOptions(marks, text, separated);
 }
 
 /** Labels, and which group, of the questions marked on the page. */
@@ -515,7 +674,11 @@ function labelledQuestions(
     }
   }
 
-  if (columns) return withGroups(columnQuestions(labelled, columns, page, pageIndex, carried), carried);
+  if (columns)
+    return withGroups(
+      columnQuestions(withGridOwners(labelled, columns, page), columns, page, pageIndex, carried),
+      carried,
+    );
 
   const questions: ExamQuestion[] = [];
   labelled.forEach((item, index) => {
@@ -938,7 +1101,7 @@ function operators(glyphs: readonly Glyph[], page: PageText): { x: number; y: nu
  * Option lists aren't questions. On a page numbered "1.", "2.1." or "I.1)", a "(1)" is an option, and a short "(a)"
  * is a row to match or a gap to fill; a header row "(a) (b) (c) (d)" is never a part.
  */
-function withoutOptions(marks: readonly Mark[], text: string): Mark[] {
+function withoutOptions(marks: readonly Mark[], text: string, separated: ReadonlySet<number> = new Set()): Mark[] {
   const numbered = marks.some((mark) => {
     switch (mark.kind) {
       case "roman":
@@ -961,7 +1124,11 @@ function withoutOptions(marks: readonly Mark[], text: string): Mark[] {
     const owner = [...kept].reverse().find((other) => other.kind !== "sub");
     const instructions = owner ? text.slice(owner.location, mark.location) : "";
     if (mark.kind === "top" && numbered && labelOf(text, mark).startsWith("(")) return;
-    if (mark.kind === "sub" && !QuestionLabels.isSubItem(body, instructions, numbered)) return;
+    // A part label right before a label the page prints on a line of its own ("(a)⏎(b)⏎Figure 1 … Find the maximum
+    // height …") has its words stored further on: still a part.
+    const beforeSeparated =
+      separated.has(mark.labelEnd + (body.startsWith(" ") ? 1 : 0)) || separated.has(mark.labelEnd);
+    if (mark.kind === "sub" && !beforeSeparated && !QuestionLabels.isSubItem(body, instructions, numbered)) return;
     kept.push(mark);
   });
   return kept;

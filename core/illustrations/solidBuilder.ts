@@ -433,9 +433,11 @@ function sections(f: SafeFormula, g: SafeFormula, a: number, b: number, shape: S
   /** The section's outline, t ∈ [0, 1], as (across from g, height) for width w. */
   const outline = (w: number, t: number): [number, number] => {
     if (shape === "square") {
-      if (t < 1 / 3) return [0, 3 * t * w];
-      if (t < 2 / 3) return [(3 * t - 1) * w, w];
-      return [w, (3 - 3 * t) * w];
+      // Standing up from the base whichever side g lies (height |w|, as the other shapes).
+      const side = Math.abs(w);
+      if (t < 1 / 3) return [0, 3 * t * side];
+      if (t < 2 / 3) return [(3 * t - 1) * w, side];
+      return [w, (3 - 3 * t) * side];
     }
     if (shape === "semicircle") {
       const angle = Math.PI * (1 - t);

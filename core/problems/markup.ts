@@ -48,3 +48,15 @@ export function markup(source: string): Markup {
   }
   return { text, bold, hasTable };
 }
+
+/**
+ * Where the letters of a leading part label are in `text` («l)», «(b)», «iv)»), as [start, end) in UTF-16 units; null
+ * when there is none. They are set in italic: upright, the text face's «l)» is read as «1)», and «I)» passes for «l)»;
+ * in italic each letter has a shape of its own. A digit («1)») is not a part's label
+ * (`RenderedQuestion.partLabelLetters` @ 5701363).
+ */
+export function partLabelLetters(text: string): [number, number] | null {
+  const match = /^\s*\(?([a-z]|[ivx]{1,4})\)(?=\s|\uFFFC|$)/d.exec(text);
+  const range = (match as (RegExpExecArray & { indices?: [number, number][] }) | null)?.indices?.[1];
+  return range ? [range[0], range[1]] : null;
+}

@@ -2,7 +2,7 @@
 // a web page's question laid out as siblings widened from its number to the next one.
 
 import { describe, expect, it } from "vitest";
-import { questionInBlock, questionInLongText, screenQuestionFromUIA, type UIANode } from "./uiaQuestion";
+import { joinedLines, questionInBlock, questionInLongText, screenQuestionFromUIA, type UIANode } from "./uiaQuestion";
 
 const frame = { x: 0, y: 0, width: 600, height: 400 };
 const node = (text: string, y: number, kind: UIANode["kind"] = "text", hasImage = false): UIANode => ({
@@ -65,6 +65,49 @@ describe("UI Automation's question", () => {
     const found = questionInBlock({ index: 0, nodes })!;
     expect(found.text).toContain("B. Porto");
     expect(found.text).not.toContain("parágrafo seguinte");
+  });
+
+  it("keeps a line cut around an inline element on one line, a raised piece as its exponent", () => {
+    // quiz.html, Pergunta 3, as Chrome gives it: «Considere a função f(x) = x² e», the <sup>−x</sup> raised and
+    // smaller, then «.» back on the line; the next paragraphs below.
+    const text = joinedLines([
+      { text: "Pergunta 3", frame: { x: 660, y: 498, width: 72, height: 18 } },
+      { text: "Considere a função f(x) = x² e", frame: { x: 660, y: 530, width: 200, height: 18 } },
+      { text: "−x", frame: { x: 860, y: 526, width: 12, height: 12 } },
+      { text: ".", frame: { x: 872, y: 530, width: 4, height: 18 } },
+      { text: "a) Determine os extremos de f.", frame: { x: 660, y: 560, width: 200, height: 18 } },
+    ]);
+    expect(text).toBe("Pergunta 3\nConsidere a função f(x) = x² e⁻ˣ.\na) Determine os extremos de f.");
+  });
+
+  it("keeps primes on their letter and spaces between the pieces of a typeset formula", () => {
+    const text = joinedLines([
+      { text: "y", frame: { x: 100, y: 200, width: 8, height: 18 } },
+      { text: "‴", frame: { x: 108, y: 196, width: 6, height: 10 } },
+      { text: "+", frame: { x: 120, y: 200, width: 10, height: 18 } },
+      { text: "2y", frame: { x: 136, y: 200, width: 16, height: 18 } },
+      { text: "= 0", frame: { x: 160, y: 200, width: 24, height: 18 } },
+    ]);
+    expect(text).toBe("y‴ + 2y = 0");
+    // quiz.html, Pergunta 1: the words, then KaTeX's formula as one piece right after them (the words' box takes in
+    // the space), its primes spelt apart.
+    expect(
+      joinedLines([
+        {
+          text: "Determine uma solução particular não nula da equação",
+          frame: { x: 660, y: 240, width: 360, height: 20 },
+        },
+        { text: "y ‴ + 2 y ″ + 10 y ′ = 0", frame: { x: 1020, y: 240, width: 140, height: 20 } },
+        { text: ".", frame: { x: 1160, y: 240, width: 4, height: 20 } },
+      ]),
+    ).toBe("Determine uma solução particular não nula da equação y‴ + 2 y″ + 10 y′ = 0.");
+    // A raised piece no superscript letter can write goes after a caret.
+    expect(
+      joinedLines([
+        { text: "e", frame: { x: 0, y: 10, width: 8, height: 18 } },
+        { text: "πq", frame: { x: 8, y: 6, width: 12, height: 10 } },
+      ]),
+    ).toBe("e^(πq)");
   });
 
   it("returns the question as the Mac's reader does, with how it was read", () => {

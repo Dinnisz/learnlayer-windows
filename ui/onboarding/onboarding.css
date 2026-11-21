@@ -605,3 +605,48 @@
     background: Highlight;
   }
 }
+
+/* The Mac's permissions screen: one row per permission, its purpose under its name, the state or «Open» on the right. */
+.onboarding-permission {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(440px, 100%);
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 8%);
+}
+
+.onboarding-permission div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.onboarding-permission strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.onboarding-permission small {
+  font-size: 12px;
+  color: rgb(255 255 255 / 60%);
+}
+
+.onboarding-secondary {
+  flex: none;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.onboarding-secondary:hover {
+  background: rgb(255 255 255 / 22%);
+}

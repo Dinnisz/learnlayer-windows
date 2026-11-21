@@ -3,10 +3,11 @@
 // never as an error.
 
 import katex from "katex";
-import { memo, useMemo } from "react";
+import { memo, useLayoutEffect, useMemo, useRef } from "react";
 import { latexToUnicode, normalized } from "@core/math/latexText";
 import { CodeText } from "@core/code/codeText";
 import { NoteMath } from "@core/math/noteMath";
+import { latexOperators, readableOperators } from "@core/math/operators";
 import { CodeBlockView } from "./CodeBlockView";
 
 const macros: Record<string, string> = {
@@ -22,7 +23,7 @@ const macros: Record<string, string> = {
 /** HTML for `latex`, or null when KaTeX can't read it. */
 export function typeset(latex: string, display = false): string | null {
   try {
-    return katex.renderToString(normalized(latex), {
+    return katex.renderToString(normalized(latexOperators(latex)), {
       displayMode: display,
       throwOnError: true,
       macros: { ...macros },
@@ -40,7 +41,7 @@ export function typeset(latex: string, display = false): string | null {
  */
 export function typesetInlineDisplay(latex: string): string | null {
   try {
-    return katex.renderToString("\\displaystyle " + normalized(latex), {
+    return katex.renderToString("\\displaystyle " + normalized(latexOperators(latex)), {
       displayMode: false,
       throwOnError: true,
       macros: { ...macros },
@@ -80,9 +81,36 @@ export const MathView = memo(function MathView({
   className?: string;
 }) {
   const html = useMemo(() => typeset(latex, display), [latex, display]);
+  const holder = useRef<HTMLSpanElement>(null);
+  // A displayed formula wider than its column is set smaller until it fits (Mac report I10: a long line of a solution
+  // was cut at the right edge, with nothing to show more was there), measured again when the column changes width.
+  useLayoutEffect(() => {
+    const element = holder.current;
+    const column = element?.parentElement;
+    if (!display || html === null || !element || !column) return;
+    const fit = () => {
+      element.style.removeProperty("font-size");
+      const formula = element.querySelector<HTMLElement>(".katex-display > .katex") ?? element;
+      const scale = fitScale(formula.scrollWidth, column.clientWidth);
+      if (scale < 1) element.style.setProperty("font-size", `${scale}em`);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(column);
+    return () => observer.disconnect();
+  }, [display, html]);
   if (html === null) return <span className={className}>{latexToUnicode(latex)}</span>;
-  return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <span ref={holder} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 });
+
+/** The smallest share of its size a displayed formula is set at to fit its column; past that, it scrolls sideways. */
+export const smallestFit = 0.72;
+
+/** How much a formula `natural` wide is shrunk to fit `available`: 1 when it fits, never below `smallestFit`. */
+export function fitScale(natural: number, available: number): number {
+  if (natural <= 0 || available <= 0 || natural <= available + 0.5) return 1;
+  return Math.max(smallestFit, available / natural);
+}
 
 /**
  * Text with inline maths between `$…$` or `\(…\)`, and programs kept line for line in their own block (the Mac's
@@ -151,7 +179,7 @@ const NoteWords = memo(function NoteWords({ text }: { text: string }) {
   if (!pieces.some((piece) => piece.isMath)) {
     // "$…$" maths as Unicode, never the marks themselves.
     const line = NoteMath.plainText(text);
-    return <span>{/\|\^\{|_\{/.test(line) ? latexToUnicode(line) : line}</span>;
+    return <span>{/\|\^\{|_\{/.test(line) ? latexToUnicode(line) : readableOperators(line)}</span>;
   }
   return (
     <span>
@@ -159,7 +187,7 @@ const NoteWords = memo(function NoteWords({ text }: { text: string }) {
         piece.isMath ? (
           <MathView key={index} latex={piece.isLatex ? piece.text : NoteMath.latex(piece.text)} />
         ) : (
-          <span key={index}>{piece.text}</span>
+          <span key={index}>{readableOperators(piece.text)}</span>
         ),
       )}
     </span>

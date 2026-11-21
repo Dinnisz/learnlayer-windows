@@ -55,6 +55,34 @@ const optionPattern = /^\s*\(?[A-Ha-h][.)]\s/u;
 export const Transcriptions = {
   isFigure: (block: TranscriptionBlock) => block.type === "figure",
 
+  /**
+   * The text or formula block a step's focus falls in, by index (`RenderedQuestion.focus` @ 5701363): the first one
+   * whose band of the picture holds the focus's centre. Null when the centre is on a figure (`figures`, the figure
+   * boxes as drawn: the figure has its own mark) or on no block with a box, so no mark is better than a wrong one.
+   */
+  focusedBlock(
+    focus: { x: number; y: number; w: number; h: number },
+    blocks: readonly TranscriptionBlock[],
+    figures: readonly Rect[],
+  ): number | null {
+    const centre = { x: focus.x + focus.w / 2, y: focus.y + focus.h / 2 };
+    if (![centre.x, centre.y].every(Number.isFinite)) return null;
+    const onFigure = figures.some(
+      (box) =>
+        centre.x >= box.x - 0.01 &&
+        centre.x <= box.x + box.width + 0.01 &&
+        centre.y >= box.y - 0.01 &&
+        centre.y <= box.y + box.height + 0.01,
+    );
+    if (onFigure) return null;
+    const index = blocks.findIndex((block) => {
+      if (block.type === "figure") return false;
+      const box = Transcriptions.rect(block);
+      return box !== null && centre.y >= box.y && centre.y <= box.y + box.height;
+    });
+    return index >= 0 ? index : null;
+  },
+
   /** The box as a rectangle in the unit square, kept inside it; null when it is not one. */
   rect(block: TranscriptionBlock): Rect | null {
     const box = block.box;
@@ -70,6 +98,11 @@ export const Transcriptions = {
   /** What is worth showing: at least one block with something in it. */
   isUsable(transcription: QuestionTranscription): boolean {
     return transcription.blocks.some((block) => block.type === "figure" || (block.text ?? "").trim() !== "");
+  },
+
+  /** A formula block left empty: the reader saw a formula there and wrote none (a Windows rule; see DECISOES). */
+  dropsFormula(transcription: QuestionTranscription): boolean {
+    return transcription.blocks.some((block) => block.type === "formula" && (block.text ?? "").trim() === "");
   },
 
   /** The text the highlights are looked up in: prose with the `$` marks dropped and formulas as their LaTeX. */
@@ -106,6 +139,61 @@ export const Transcriptions = {
     return found;
   },
 
+  /**
+   * This reading of a part's own picture with `label` («l)», «(b)»), the label the PDF prints, at the start of its
+   * first line: what the reader put there in its place («1)», «I)», «|)» for «l)», «9)» for «q)») is replaced, and
+   * with nothing read there the label is put in front. Unchanged when it already carries that label alone
+   * (`QuestionTranscription.withPartLabel` @ 5701363).
+   */
+  withPartLabel(transcription: QuestionTranscription, label: string): QuestionTranscription {
+    const bare = label.replace(/^[()[\] ]+|[()[\] ]+$/g, "");
+    const labels = Transcriptions.partLabels(transcription);
+    if (!bare || (labels.size === 1 && labels.has(bare))) return transcription;
+    const index = transcription.blocks.findIndex(
+      (block) => block.type !== "figure" && (block.text ?? "").trim() !== "",
+    );
+    const text = index >= 0 ? transcription.blocks[index]!.text : null;
+    if (text === null || text === undefined) return transcription;
+    const match = /^(\s*)(\$\s*)?[([]?[0-9A-Za-z|]{1,4}[)\]](?:\s+|(?=\$)|$)/.exec(text);
+    const blocks = [...transcription.blocks];
+    blocks[index] = {
+      ...blocks[index]!,
+      text: match
+        ? `${label} ${match[2] !== undefined ? "$" : ""}${text.slice(match[0].length)}`
+        : `${label} ${text.trim()}`,
+    };
+    return { blocks };
+  },
+
+  /** The letters a reader takes a part's letter for, in a label («1)», «I)» or «|)» for «l)», «9)» for «q)»). */
+  labelLookalikes: { l: "1I|", i: "1l|", q: "9", g: "9", o: "0", s: "5", z: "2", b: "6" } as Readonly<
+    Record<string, string>
+  >,
+
+  /**
+   * This reading with the clicked part's letter in its label where the reader wrote a lookalike («1) \ln…» for part
+   * l): only when it carries no part label and exactly one line opens with such a label. Unchanged otherwise
+   * (`QuestionTranscription.withLookalikeLabel` @ 5701363).
+   */
+  withLookalikeLabel(transcription: QuestionTranscription, part: string | null): QuestionTranscription {
+    const letters = part !== null ? Transcriptions.labelLookalikes[part] : undefined;
+    if (part === null || letters === undefined || Transcriptions.partLabels(transcription).size > 0)
+      return transcription;
+    const escaped = letters.replace(/[\\\]^|-]/g, (character) => `\\${character}`);
+    const pattern = new RegExp(`^(\\s*(?:\\$\\s*)?\\(?)([${escaped}])(\\))(?=\\s|\\$|$)`, "gm");
+    const hits = transcription.blocks.flatMap((block, index) =>
+      Array.from((block.text ?? "").matchAll(pattern), () => index),
+    );
+    if (hits.length !== 1) return transcription;
+    const index = hits[0]!;
+    const blocks = [...transcription.blocks];
+    blocks[index] = {
+      ...blocks[index]!,
+      text: (blocks[index]!.text ?? "").replace(pattern, (_, open: string, __, close: string) => open + part + close),
+    };
+    return { blocks };
+  },
+
   /** A reading of the clicked part `part` ("ii"): it carries that part's label and no other. */
   isOf(transcription: QuestionTranscription, part: string | null): boolean {
     if (part === null) return true;
@@ -117,6 +205,9 @@ export const Transcriptions = {
    * must keep (null: no such check). */
   rejection(transcription: QuestionTranscription, part: string | null, reading: string | null): string | null {
     if (!Transcriptions.isUsable(transcription)) return "isUsable";
+    // A formula block with nothing in it is a formula the reader saw and could not write: shown, the question would
+    // lose its data (live test 2026-11-21: «f(x) = {4 − e^{3−x}… se x ≤ 3; …}» gone from MatA 2.2). The crop stays.
+    if (Transcriptions.dropsFormula(transcription)) return "dropsFormula";
     if (!Transcriptions.isOf(transcription, part)) {
       const labels = [...Transcriptions.partLabels(transcription)].sort().join(", ");
       return `isOf(part: ${part ?? "-"}), labels [${labels}]`;

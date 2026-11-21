@@ -15,7 +15,7 @@ import { IllustrationPrompt } from "./illustrationPrompt";
 import { compileTemplate, compilingTemplate, decodeTemplate, type IllustrationTemplate } from "./illustrationTemplate";
 import { CircuitCheck, circuitOf, CircuitSolver, CircuitSpecs } from "./circuit";
 import { applyingPremadeFigure, decodePremade, PremadeFigures } from "./premadeFigure";
-import { checkableSolid, SolidCheck, solidOf } from "./solid";
+import { checkableSolid, fixedVolumes, GenericSolids, SolidCheck, solidOf } from "./solid";
 import { formatG } from "../math/printf";
 import { plottingAuxiliarySum } from "./auxiliarySum";
 
@@ -195,11 +195,35 @@ export class IllustrationProvider {
           if (!decoded) throw new IllustrationFailure();
           return decoded;
         });
-        // A solid must have the volume the answer gives.
-        const solidReply = checkableSolid(decodePremade(reply.premade));
-        if (solidReply && SolidCheck.agrees(solidReply, part.answer.text) === false) {
+        // A volume the question asks to see in 3D: the 2D revolution animation becomes the generic solid.
+        const asked3D = wants3D(topicText);
+        const animated = decodePremade(reply.premade);
+        if (asked3D && animated?.type === "revolutionVolume")
+          reply.premade = { type: GenericSolids.premadeType, params: { ...animated.params, kind: "revolution" } };
+        // A question that wants its solid or circuit in 3D gets a 3D figure or none: a 2D stand-in (a sphere for a
+        // solid of sections, a flat curve) would show another object.
+        const asPremade = decodePremade(reply.premade);
+        if (asked3D && !(asPremade && (solidOf({ premade: asPremade }) || CircuitSpecs.fromPremade(asPremade)))) {
           if (attempt !== 0) throw new IllustrationFailure();
-          const measured = SolidCheck.volume(solidReply);
+          note =
+            'This question\x27s figure must be 3D: reply with premade "solid3d" (the solid from its equations) ' +
+            'or "circuit" (its netlist), "elements": [], "template": null.';
+          continue;
+        }
+        // Turned about another axis than the statement names: about that one, when the volume then agrees.
+        const turnedFrom = checkableSolid(decodePremade(reply.premade));
+        if (turnedFrom && SolidCheck.agrees(turnedFrom, part.answer.text) === false) {
+          const fixed = SolidCheck.repaired(turnedFrom, groupText, part.answer.text);
+          const premade = fixed ? GenericSolids.premade(fixed) : null;
+          if (premade) reply.premade = premade;
+        }
+        // A solid must have the volume the answer gives (the right axis, both curves, the interval); a fixed one
+        // (cone, sphere, torus…) too, when the answer is its volume.
+        const replyPremade = decodePremade(reply.premade);
+        if (SolidCheck.agreesFigure(replyPremade, part.answer.text) === false) {
+          if (attempt !== 0) throw new IllustrationFailure();
+          const solidReply = checkableSolid(replyPremade);
+          const measured = solidReply ? SolidCheck.volume(solidReply) : (fixedVolumes(replyPremade)[0] ?? null);
           note =
             `Your solid's volume is ${measured !== null ? formatG(measured, 4) : "?"}, but the answer is ${part.answer.text}: ` +
             `the figure is not the question's solid. Check the axis of rotation ("axis" and "k" for a line y = k or x = k), the ` +
