@@ -20,6 +20,10 @@ describe("the study menu of a clicked function or equation", () => {
 
   it("does not parse prose", () => {
     expect(ParsedStandaloneMath.parse("Determine o valor de x.")).toBeNull();
+    // Half an equation and a statement about whole numbers have no function to graph (Mac report I8).
+    expect(ParsedStandaloneMath.parse("= n(n+1)/4, n ∈ ℕ")).toBeNull();
+    expect(ParsedStandaloneMath.parse("∑ k = n(n+1)/2")).toBeNull();
+    expect(ParsedStandaloneMath.parse("x^2 = 4")).not.toBeNull();
   });
 
   it("the menu has Solve for equations and not for pure functions", () => {

@@ -27,6 +27,9 @@ export const ParsedStandaloneMath = {
   parse(text: string): ParsedStandaloneMath | null {
     const raw = text.trim();
     if (raw === "") return null;
+    // Half an equation (the left side was on another line, «= n(n+1)/4») or a statement about whole numbers (a sum,
+    // n ∈ ℕ, an induction) has no function to graph: the function menu would make no sense (Mac report I8).
+    if (/^[=≠<>≤≥]/.test(raw) || /[∑Σ∏∈ℕℤ]|\\(?:sum|prod|in|mathbb)\b/.test(raw)) return null;
     const spec = FunctionGraph.spec([{ text: raw, step: null }]);
     if (spec)
       return { functionName: spec.name, variable: spec.variable, expression: spec.expression, isEquation: false, raw };
