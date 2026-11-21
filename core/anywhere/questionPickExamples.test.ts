@@ -4,6 +4,7 @@
 // fonts itself), `textIsFlattened` (Windows decides the picture in `clickReading`), and the window picture's margin
 // numbers (`QuestionLocator` reads a screenshot with Vision).
 
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { PageText } from "../pdf/page";
 import { questionsOn } from "../problems/questionDetector";
@@ -36,7 +37,8 @@ function read(label: string, on: PageText): PDFQuestionRead {
 
 const labelsOn = (on: PageText) => new Set(questionsOn(on).map((question) => question.label));
 
-describe("the question a click picks", () => {
+// The PDFs live in `referencia-mac/`, which is not in git: the CI has none of them.
+describe.runIf(existsSync("referencia-mac/Tools/TestPDFs"))("the question a click picks", () => {
   it("takes four questions stored on one line for four questions", async () => {
     const sameLine = await page("same-line-labels");
     const labels = labelsOn(sameLine);

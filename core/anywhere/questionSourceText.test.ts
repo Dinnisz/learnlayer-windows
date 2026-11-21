@@ -3,6 +3,7 @@
 // spread, questions 4–6 on the right (Tools/TestPDFs). The two cases that read a screenshot of Preview with Vision
 // (a click on a spread) are not ported: Windows reads the window with its own OCR, and node has none.
 
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { PageText } from "../pdf/page";
 import { ProblemPrompt } from "../prompts/problemPrompt";
@@ -32,7 +33,8 @@ const session = (made: PDFQuestionRead) =>
     { provider: {} as SolutionProvider, config: () => "cheapFirst", subject: "" },
   );
 
-describe("the source text of a reading question", () => {
+// The PDF lives in `referencia-mac/`, which is not in git: the CI has none of it.
+describe.runIf(existsSync(testPDF("port639-parte-b.pdf")))("the source text of a reading question", () => {
   it("goes with question 4: the stanzas on the page before, numbered as the exam numbers them, with their notes", async () => {
     const made = await read("4");
     const support = made.supportText!;
