@@ -408,3 +408,30 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** o Dinis quer que esta base sirva um dia para Mac e Windows. O ⌥-clique, o OCR e o notch no Mac são refazer o que a app Swift já faz.
 - **Escolha:** fase 1 agora: `src-tauri/src/platform/macos/` com as Chaves (Keychain), a pasta de dados, o nome do Mac e uma pílula simples; o ⌥-clique, a captura de área, o OCR e a tecla de falar respondem que ainda não existem no Mac, e a app continua. `tauri.macos.conf.json` gera um `.app` e um `.dmg`. O CI compila e testa o Rust também em `macos-latest`. A fase 2 (paridade) fica para quando o Dinis decidir se esta app substitui a Swift.
 - **Porquê:** o código já estava preparado (`Platform`, `core/platform.ts`), por isso é pouco código e não mexe no Windows. Para nunca tocar na app Swift instalada no mesmo Mac, esta build usa outra pasta (`~/Library/Application Support/LearnLayer Desktop`), outros itens das Chaves (`LearnLayerDesktop.*`) e outro identificador (`si.learnlayer.LearnLayer.Desktop`). A pílula do Mac não é transparente: a transparência no macOS pede a API privada do Tauri, que obrigaria a mudar as funcionalidades do Tauri também no Windows.
+
+## 2026-11-21 — Esta app substitui a app Swift; Mac e Windows lançados juntos
+
+- **Dúvida:** manter a app Swift no Mac e esta só no Windows, ou uma só app para os dois.
+- **Escolha (do Dinis):** uma só app para os dois, lançada ao mesmo tempo. O Mac é o foco até funcionar tão bem como
+  a Swift.
+- **Porquê:** uma só manutenção e nenhuma diferença entre versões. O código do sistema reaproveita a app Swift
+  (copiado para `src-tauri/macos-native/`), por isso o ⌥-clique, o OCR e o notch comportam-se como antes.
+
+## 2026-11-21 — Fase 2 do Mac: o código nativo da app Swift através do swift-rs
+
+- **Escolha:** um pacote Swift (`src-tauri/macos-native/`) compilado e ligado pelo swift-rs no `build.rs`, só no
+  macOS. Funções `@_cdecl` com tipos C; o texto passa como JSON (`strdup`) e as imagens como BGRA, ambos libertados com
+  `ll_free`. O Rust (`platform/macos/native.rs`) só embrulha. A Acessibilidade devolve o mesmo formato que o UIA do
+  Windows (`longText`/`block`/`focus`), e a decisão de qual é a pergunta continua no TypeScript
+  (`core/anywhere/uiaQuestion.ts`). Assim, os dois sistemas usam a mesma lógica.
+- **Janelas transparentes:** passou a usar-se a funcionalidade `macos-private-api` do Tauri. `macOSPrivateApi: true`
+  está no `tauri.conf.json` comum (commit 0b296b6), porque o `tauri-build` do Windows exige que a configuração
+  coincida com as funcionalidades do Tauri; no Windows não muda nada. Isto substitui a pílula opaca da fase 1.
+- **Pílula no notch:** a janela fica ao nível da barra de menus, centrada no notch (`NotchPill.swift`, porte do
+  `NotchPillController`). Um `WKWebView` só vê o rato na janela principal ativa, por isso uma tracking area sempre
+  ativa envia `ll-pill-hover` à página. `Platform::pill_notch` devolve `None` no Windows, que fica igual.
+- **pdf.js 6 no WebKit:** `Map.getOrInsertComputed`, `Math.sumPrecise` e outros métodos recentes não existem no
+  Safari do macOS 15. São definidos só quando faltam (`ui/reader/engineGaps.ts`), também no worker. Sem isto, o PDF não
+  abria e as fontes do LaTeX caíam para as do sistema.
+- **Permissões:** a app pede a Acessibilidade (o diálogo do sistema) e depois a Gravação de Ecrã, como a app Swift.
+  Um binário de desenvolvimento lançado de um terminal herda as permissões desse terminal; o teste real é com o `.app`.

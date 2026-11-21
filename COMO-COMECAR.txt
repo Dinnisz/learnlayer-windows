@@ -4,3 +4,6 @@
 O Claude lê o CLAUDE.md e trabalha sozinho até ao fim. O progresso fica em docs/PROGRESSO.md
 e o que precisa de ti (entrar na conta, chaves, assinatura) fica em docs/PARA-O-DINIS.md.
 Se a sessão parar, abre outra vez e escreve: continua
+
+Mac e Windows (desde 2026-11-21): a mesma app serve os dois sistemas e substitui a app Swift.
+No Mac, lê primeiro docs/PROGRESSO.md («Mac e Windows») e docs/RELATORIO-MAC-2026-11-21.md.

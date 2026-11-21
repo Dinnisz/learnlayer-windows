@@ -133,12 +133,28 @@ Depois, num Windows limpo:
 2. Segue a introdução até à pergunta de exemplo resolvida.
 3. Liga «Abrir com o Windows» e reinicia: só devem aparecer a pílula e o ícone na área de notificação.
 
-### 11. Correr esta app no Mac (fase 1)
-1. Instala o Rust: `curl https://sh.rustup.rs -sSf | sh` (fica em `~/.cargo`).
-2. Na pasta do repositório: `npm ci` e `npm run tauri dev`.
-3. Abre a janela principal, a conta, os documentos, o leitor de PDF e o palco. O ⌥-clique, a captura de área e o OCR ainda não existem no Mac (fase 2).
-4. Esta build guarda tudo à parte da app Swift: `~/Library/Application Support/LearnLayer Desktop` e os itens `LearnLayerDesktop.*` nas Chaves. Para a chave da OpenRouter em debug: `security add-generic-password -s LearnLayerDesktop.OpenRouter -a openrouter -w <a chave>`.
-5. O link `learnlayer://` no Mac abre a app Swift, se estiver instalada; para entrar na conta nesta build usa o código por e-mail.
+### 11. Mac: permissões, assinatura e notarização (2026-11-21)
+**Permissões (cada Mac, uma vez):** ao abrir, a app pede a Acessibilidade e depois a Gravação de Ecrã.
+1. Definições do Sistema › Privacidade e Segurança › Acessibilidade: arrasta a app para a lista e liga-a.
+2. Privacidade e Segurança › Gravação de Ecrã e Áudio do Sistema: o mesmo. O macOS pede para «Sair e reabrir».
+3. No macOS 15 aparece, uma vez por mês, «… is requesting to bypass the system private window picker»: «Permitir».
+4. O microfone só vai funcionar depois de corrigido o ponto M1 do relatório (`docs/RELATORIO-MAC-2026-11-21.md`).
+
+**Para distribuir aos alunos (só tu podes):**
+1. Inscrição no Apple Developer Program (99 USD/ano), se ainda não tiveres.
+2. Em developer.apple.com › Certificates, cria um certificado **Developer ID Application** e instala-o no Porta-chaves.
+3. Cria uma palavra-passe específica da app em appleid.apple.com (para a notarização) e diz-me o Team ID.
+   A palavra-passe nunca vai para o repositório: fica nos segredos do GitHub (`APPLE_ID`, `APPLE_PASSWORD`,
+   `APPLE_TEAM_ID`, `APPLE_SIGNING_IDENTITY`, `APPLE_CERTIFICATE` em base64 e `APPLE_CERTIFICATE_PASSWORD`). O Tauri assina e notariza o `.app` e
+   o `.dmg` com estes segredos.
+4. O identificador da app será `si.learnlayer.LearnLayer.Desktop` até decidires se fica com o da app Swift
+   (`si.learnlayer.LearnLayer`). Com o mesmo identificador e a mesma equipa, as permissões e as Chaves passam da Swift
+   para esta app; com outro, os alunos dão as permissões outra vez.
+5. Atualizações: o Sparkle da app Swift não serve. Será o atualizador do Tauri, com o URL do ponto 5.
+
+**Para testar no teu Mac (já feito a 2026-11-21):** `~/Applications/LearnLayer Desktop.app`, assinada com «LearnLayer
+Local Signing», com o servidor de teste em `~/Library/Application Support/LearnLayer Desktop/config.json`. A app Swift
+(`~/Applications/LearnLayer.app`) não foi tocada. Não abras as duas ao mesmo tempo: o ⌥-clique responderia duas vezes.
 
 ## Etiquetas dos exames (Mac e Windows)
 **Corrigido no Windows a 2026-11-19** (DECISOES): a numeração por grupo passou a ser decidida no documento todo, o grupo passa de página em página, os passos numerados de um procedimento já não contam como itens, e as partes numeradas em seguida («Parte A» 1–3, «Parte B» 4–6) ficam sem prefixo. Biologia: I.1–I.20, II.1–II.3, III.1–III.5. História: I.1–IV.5. Português: 1–7, II.1–II.7, III.1–III.2. O Mac ainda tem a regra antiga (só olha para uma página). Se quiseres as mesmas etiquetas nas duas apps, porta para o `QuestionDetector.swift` as funções `documentNumbering`, `sectionBefore` e `withoutNumberedLists` de `core/problems/questionDetector.ts`. Para ver o relatório:
