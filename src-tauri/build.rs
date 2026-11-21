@@ -11,4 +11,18 @@ fn main() {
         println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
         println!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest.display());
     }
+    link_mac_native();
 }
+
+/// The Swift package in macos-native/ (⌥-click, Accessibility, pictures, Vision, the notch), on macOS only.
+#[cfg(target_os = "macos")]
+fn link_mac_native() {
+    println!("cargo:rerun-if-changed=macos-native/Sources");
+    println!("cargo:rerun-if-changed=macos-native/Package.swift");
+    swift_rs::SwiftLinker::new("13.0")
+        .with_package("LearnLayerNative", "./macos-native/")
+        .link();
+}
+
+#[cfg(not(target_os = "macos"))]
+fn link_mac_native() {}
