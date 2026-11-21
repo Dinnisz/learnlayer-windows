@@ -447,6 +447,7 @@ Cada entrada: data, dúvida, escolha, porquê.
 ## 2026-11-21 — Teste visual no PC: o que mudou
 
 - **Scroll só na resolução (pedido do Dinis).** A pergunta fica fixa em cima, e só o trabalho por baixo dela (`.stage-work`) desce, sem barras. O botão redondo «Mais abaixo» avisa quando há mais conteúdo. Como no Mac, quando falta espaço são os passos que fazem scroll.
+- **Fórmulas e figura paradas (pedido do Dinis, feito pela sessão do painel lateral).** A coluna da direita da resolução fica fora do scroll: `FixedSide` deixa um espaço vazio na grelha, para os passos manterem a largura, e desenha as Fórmulas e a figura num `aside.stage-fixed-side` no canto superior direito do palco. Entrou no commit 4f6295b, junto com o scroll.
 - **Clique logo acima de uma etiqueta.** Um Alt-clique no meio espaço entre linhas acima de «2.2.» abria a 2.1. Agora pertence à etiqueta de baixo (`PDFQuestionReading.question`, teste com o exame de Matemática A).
 - **Matemática na pista e na resposta escrita.** Passou a compor-se como nas notas dos passos (`NoteText`). O Mac mostra-a como texto; aqui é melhoria visual.
 - **Sinais ASCII.** «<=», «>=», «!=» e «*» passam a ≤, ≥, ≠ e · nas fórmulas, nas notas e nas etiquetas do anel de foco.
