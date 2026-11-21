@@ -55,6 +55,14 @@ pub trait Platform: Send + Sync + 'static {
     fn pill_notch(&self) -> Option<serde_json::Value> {
         None
     }
+    /// What the system has allowed, for Settings › Permissions and the onboarding (`{accessibility, screenRecording}`
+    /// on a Mac). None where nothing has to be asked first (Windows).
+    fn permissions(&self) -> Option<serde_json::Value> {
+        None
+    }
+    /// Asks for one permission ("accessibility", "screenRecording", "microphone") and opens its page in the system
+    /// settings. Nothing where nothing has to be asked.
+    fn request_permission(&self, _which: &str) {}
 }
 
 #[cfg(windows)]
@@ -140,4 +148,14 @@ pub fn local_openrouter_key() -> Option<String> {
 #[tauri::command]
 pub fn talk_key_set(key: String) {
     current().set_talk_key(&key);
+}
+
+#[tauri::command]
+pub fn permissions_state() -> Option<serde_json::Value> {
+    current().permissions()
+}
+
+#[tauri::command]
+pub fn permission_request(which: String) {
+    current().request_permission(&which);
 }

@@ -6,97 +6,7 @@
 // comma becomes a point, «×10^» an exponent and a superscript a power, and «name =» before the answer is ignored.
 
 import { tryParseExpression, variables, type Expression } from "../math/expression";
-
-/** Base units and the few non-SI ones exams use. A prefix (k, c, m, µ…) may come before most of them. */
-const units = new Set([
-  "m",
-  "g",
-  "s",
-  "N",
-  "J",
-  "W",
-  "V",
-  "A",
-  "Ω",
-  "ohm",
-  "ohms",
-  "Hz",
-  "Pa",
-  "K",
-  "C",
-  "mol",
-  "L",
-  "l",
-  "h",
-  "min",
-  "rad",
-  "sr",
-  "T",
-  "F",
-  "H",
-  "Wb",
-  "S",
-  "eV",
-  "cal",
-  "atm",
-  "bar",
-  "M",
-  "u",
-  "Da",
-  "lx",
-  "cd",
-  "Bq",
-  "Gy",
-  "Sv",
-  "dB",
-  "°",
-  "º",
-  "°C",
-  "ºC",
-  "%",
-  "‰",
-  "€",
-  "km",
-  "kg",
-  "cm",
-  "mm",
-  "dm",
-  "ms",
-  "kJ",
-  "kW",
-  "kWh",
-  "Wh",
-  "mL",
-  "ml",
-  "dL",
-  "cL",
-  "kPa",
-  "hPa",
-  "MPa",
-  "mA",
-  "kV",
-  "kΩ",
-  "MΩ",
-  "µs",
-  "µm",
-  "nm",
-  "mmol",
-  "kcal",
-  "rpm",
-  "graus",
-  "metros",
-  "segundos",
-  "s⁻¹",
-]);
-const prefixes = ["k", "c", "m", "µ", "μ", "u", "n", "M", "G", "d", "p", "h"];
-
-function isUnitWord(word: string): boolean {
-  if (units.has(word)) return true;
-  for (const prefix of prefixes) {
-    if (word.length > prefix.length && word.startsWith(prefix) && units.has(word.slice(prefix.length))) return true;
-  }
-  return false;
-}
+import { isUnitWord } from "../math/units";
 
 const superscripts: Record<string, string> = {
   "⁰": "0",
@@ -134,7 +44,7 @@ export function splitUnit(text: string): [string, string] | null {
   const match = /^(.*?[\d)π])\s*([^\d\s()+*.^/-][^+]*)$/u.exec(text);
   if (!match) return null;
   const [, value, tail] = match;
-  const words = tail!.split(/(?:\^\(?-?\d+\)?|[\s*/^.\-]|\d)+/u).filter((word) => word.length > 0);
+  const words = tail!.split(/(?:\^\(?-?\d+\)?|[\s*/^.-]|\d)+/u).filter((word) => word.length > 0);
   if (words.length === 0 || !words.every(isUnitWord)) return null;
   return [value!.trim(), tail!.trim()];
 }

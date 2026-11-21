@@ -124,7 +124,8 @@
 }
 
 .stage-try.stage-variant-answer input {
-  font: 18px var(--font-mono);
+  font: 18px var(--font-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .stage-try.stage-variant-answer.matches input {
@@ -787,11 +788,13 @@
   resize: vertical;
 }
 
-/* The answer field: monospaced 17 pt over a 1-pt white line at 40 %. */
+/* The answer field: 17 pt in the stage's own font (figures of one width) over a 1-pt white line at 40 %. The Mac
+   used a monospaced font, which looked out of place beside the rest of the stage (Mac report P6). */
 .stage-try input {
   padding-bottom: 4px;
   border-bottom: 1px solid rgb(255 255 255 / 40%);
-  font: 17px var(--font-mono);
+  font: 17px var(--font-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .stage-try input:focus,

@@ -227,6 +227,8 @@ pub fn run() {
             platform::anywhere_capture_text,
             platform::local_openrouter_key,
             platform::talk_key_set,
+            platform::permissions_state,
+            platform::permission_request,
             tray::set_tray_labels,
             data_files::data_file_read,
             data_files::data_file_write,
@@ -264,6 +266,13 @@ pub fn run() {
                 }
             }
         })
-        .run(context)
-        .expect("error while running LearnLayer");
+        .build(context)
+        .expect("error while building LearnLayer")
+        .run(|_app, _event| {
+            // The Dock icon (or opening the app) while it runs: the window comes back, as in the Swift app.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                show_main_window(_app, None);
+            }
+        });
 }

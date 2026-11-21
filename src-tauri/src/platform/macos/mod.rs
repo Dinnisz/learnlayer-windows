@@ -115,6 +115,39 @@ impl super::Platform for MacPlatform {
         native::notch_metrics()
     }
 
+    /// Accessibility (⌥-click, the talk key) and Screen Recording (the window picture), as the Swift app's
+    /// `PermissionMonitor` reads them; never prompts.
+    fn permissions(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({
+            "accessibility": native::accessibility_trusted(false),
+            "screenRecording": native::screen_capture_allowed(false),
+        }))
+    }
+
+    /// The system's own request first (once per app), then its page in System Settings, where a refused permission
+    /// is turned on (the Swift app's `PermissionsSettingsTab`).
+    fn request_permission(&self, which: &str) {
+        let pane = match which {
+            "accessibility" => {
+                if native::accessibility_trusted(true) {
+                    return;
+                }
+                "Privacy_Accessibility"
+            }
+            "screenRecording" => {
+                if native::screen_capture_allowed(true) {
+                    return;
+                }
+                "Privacy_ScreenCapture"
+            }
+            "microphone" => "Privacy_Microphone",
+            _ => return,
+        };
+        let _ = Command::new("/usr/bin/open")
+            .arg(format!("x-apple.systempreferences:com.apple.preference.security?{pane}"))
+            .spawn();
+    }
+
     /// `LearnLayerDesktop.OpenRouter` in the login Keychain, for debug builds only (CLAUDE.md §5.5).
     /// `security add-generic-password -s LearnLayerDesktop.OpenRouter -a openrouter -w <key>`
     fn local_openrouter_key(&self) -> Option<String> {

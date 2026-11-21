@@ -49,41 +49,5 @@
   "Offline. Your memory stays on this Mac and syncs later.": "Offline. Your memory stays on this computer and syncs later.",
   "Couldn’t sync. Your memory on this Mac is unchanged.": "Couldn’t sync. Your memory on this computer is unchanged.",
   "After you allow one, restart LearnLayer so macOS applies it.": "After you allow one, restart LearnLayer so Windows applies it.",
-  "Restart LearnLayer so macOS applies it.": "Restart LearnLayer so Windows applies it.",
-  "%lld questions": {
-    "value": "%#@questions@",
-    "substitutions": {
-      "questions": {
-        "argNum": 1,
-        "plural": {
-          "one": "%arg question",
-          "other": "%arg questions"
-        }
-      }
-    }
-  },
-  "%lld documents": {
-    "value": "%#@documents@",
-    "substitutions": {
-      "documents": {
-        "argNum": 1,
-        "plural": {
-          "one": "%arg document",
-          "other": "%arg documents"
-        }
-      }
-    }
-  },
-  "%lld questions asked": {
-    "value": "%#@questions@",
-    "substitutions": {
-      "questions": {
-        "argNum": 1,
-        "plural": {
-          "one": "%arg question asked",
-          "other": "%arg questions asked"
-        }
-      }
-    }
-  }
+  "Restart LearnLayer so macOS applies it.": "Restart LearnLayer so Windows applies it."
 }

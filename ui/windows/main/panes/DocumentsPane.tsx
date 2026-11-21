@@ -34,6 +34,8 @@ export function documentsIn(store: MemoryStore): DocumentSummary[] {
       continue;
     }
     if (name === "") continue;
+    // Questions saved before the fix were named «exam.pdf.pdf».
+    name = name.replace(/(?:\.pdf)+$/i, ".pdf");
     const known = byName.get(name) ?? { name, questions: 0, lastAskedAt: 0 };
     known.questions += 1;
     known.lastAskedAt = Math.max(known.lastAskedAt, node.createdAt);

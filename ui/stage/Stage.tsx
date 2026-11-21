@@ -30,6 +30,7 @@ import { markup, partLabelLetters } from "@core/problems/markup";
 import { FigureLabels } from "@core/voice/figureLabels";
 import { SpeechMarkLayout } from "@core/voice/speechMarkLayout";
 import { ExamNotation } from "@core/math/examNotation";
+import { uprightUnits } from "@core/math/units";
 import { CodeText } from "@core/code/codeText";
 import { MascotGuide } from "@core/voice/mascotGuide";
 import { GuideSpots } from "../lesson/guideSpot";
@@ -197,7 +198,8 @@ async function prepare(
   void memoryStore().then((memory) =>
     memory.record({
       text: question.text,
-      documentName: `${document.name}.pdf`,
+      // The name may already end in .pdf (a Mac open dialog keeps it): never «.pdf.pdf» (Mac report P1).
+      documentName: `${document.name.replace(/\.pdf$/i, "")}.pdf`,
       page: question.pageIndex,
       concepts: [ConceptSlug.make(question.text)],
       kind: "exercise",
@@ -2080,7 +2082,7 @@ function AnswerBox({ part, language }: { part: Part; language: string }) {
         {pieces ? (
           pieces.map((piece, index) =>
             piece.kind === "latex" ? (
-              <MathView key={index} latex={ExamNotation.trigInLatex(piece.line, language)} display />
+              <MathView key={index} latex={uprightUnits(ExamNotation.trigInLatex(piece.line, language))} display />
             ) : (
               <div
                 key={index}
