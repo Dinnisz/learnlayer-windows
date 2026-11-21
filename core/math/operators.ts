@@ -18,7 +18,7 @@ export function latexOperators(latex: string): string {
     .replace(/<=/g, String.raw`\le `)
     .replace(/>=/g, String.raw`\ge `)
     .replace(/!=/g, String.raw`\ne `)
-    .replace(/(^|[^\^_{*])\*(?![*}])/g, String.raw`$1\cdot `);
+    .replace(/(^|[^_^{*])\*(?![*}])/g, String.raw`$1\cdot `);
 }
 
 /** A short label with its ASCII comparison and arrow signs written as maths: «x <= 3» → «x ≤ 3». */
