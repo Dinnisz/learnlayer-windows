@@ -94,4 +94,16 @@ describe("TutorLanguage", () => {
     expect(TutorLanguage.promptName("pt")).toBe("Portuguese (Portugal)");
     expect(TutorLanguage.locale("pt")).toBe("pt-PT");
   });
+
+  it("answers a question in its own language when Settings follows the system (Mac report I9)", () => {
+    const exam = "2. Prove, usando o princípio de indução matemática, que a soma é igual a n(n+1)/4, para todo o n.";
+    const english = "2. A car starts from rest with an acceleration of 2 m/s². What is the distance covered in 5 s?";
+    expect(TutorLanguage.forQuestion("", ["en-US"], exam)).toBe("pt");
+    expect(TutorLanguage.forQuestion(null, ["pt-PT"], english)).toBe("en");
+    // An explicit choice wins, and a question too short to tell keeps the system's.
+    expect(TutorLanguage.forQuestion("en", ["en-US"], exam)).toBe("en");
+    expect(TutorLanguage.forQuestion("pt-PT", ["en-US"], english)).toBe("pt");
+    expect(TutorLanguage.forQuestion("", ["en-US"], "x² + 1 = 0")).toBe("en");
+    expect(TutorLanguage.forQuestion("", ["en-US"], null)).toBe("en");
+  });
 });

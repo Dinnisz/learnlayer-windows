@@ -19,6 +19,30 @@ export const TutorLanguage = {
     const first = (preferred[0] ?? "pt-PT").toLowerCase();
     return first.startsWith("en") ? "en" : "pt";
   },
+  /**
+   * The language to answer `question` in. An explicit choice in Settings wins; when Settings follows the system, a
+   * question written in Portuguese is answered in Portuguese and one in English in English, so a Portuguese exam
+   * on an English Mac or PC isn't explained in English (Mac report I9).
+   */
+  forQuestion(setting: string | null, preferred: readonly string[], question: string | null): TutorLanguage {
+    const chosen = TutorLanguage.resolve(setting, preferred);
+    if (setting === "en" || setting === "pt-PT" || !question) return chosen;
+    return TutorLanguage.written(question) ?? chosen;
+  },
+  /** The language a question is written in, when its common words tell; null when they don't. */
+  written(text: string): TutorLanguage | null {
+    const words = text.toLowerCase().match(/[a-zà-ÿ]+/g) ?? [];
+    let portuguese = 0;
+    let english = 0;
+    for (const word of words) {
+      if (portugueseWords.has(word) || /(?:ção|ções|ões|ã|õ)/.test(word)) portuguese += 1;
+      else if (englishWords.has(word)) english += 1;
+    }
+    if (portuguese + english < 3) return null;
+    if (portuguese >= 2 * english) return "pt";
+    if (english >= 2 * portuguese) return "en";
+    return null;
+  },
   /** Speech recognition and the voice. */
   locale(language: TutorLanguage): string {
     return language === "pt" ? "pt-PT" : "en-US";
@@ -32,6 +56,22 @@ export const TutorLanguage = {
     return name.toLowerCase().startsWith("portug") ? "pt" : "en";
   },
 };
+
+const portugueseWords = new Set(
+  (
+    "de do da dos das que um uma uns umas em no na nos nas ao aos à às o os as é são está estão com para por pelo " +
+    "pela se qual quais seja sejam determine calcule indique apresente justifique escreva considere sabendo " +
+    "valor função ponto reta recta plano velocidade aceleração tempo figura texto onde cada entre sobre como " +
+    "mostre resposta opção opções afirmação verdadeira falsa seguinte"
+  ).split(" "),
+);
+const englishWords = new Set(
+  (
+    "the of and to in is are was what which find show that this with for from its by an on be at as it its " +
+    "calculate determine write explain each given value point line speed time figure text answer option " +
+    "following true false how"
+  ).split(" "),
+);
 
 /**
  * How long a solution asked without streaming may take. Nothing arrives until the whole answer is written, and

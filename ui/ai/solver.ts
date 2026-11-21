@@ -120,8 +120,7 @@ export function solutionProvider(): SolutionProvider {
     hasCredentials: () => !mock,
     config: () => ModelRouting.config(read(ModelRouting.configKey)),
     plan: () => ModelRouting.plan(read(ModelRouting.planKey)),
-    language: () =>
-      TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages)),
+    language: (question) => answerLanguage(question),
     // A question read from the screen (labelled "Q", as the onboarding's sample) has a mock of its own: the exam's parts
     // would never match it.
     // `?demo=typeset`: the circuit question with its reading of the picture and a focus on each step.
@@ -165,8 +164,7 @@ export function textHelpProvider(): TextHelpProvider {
   textHelp = new TextHelpProvider({
     passages: new DiskCache<TextHelp>("passages.json", 200, dataFiles),
     client: () => new ModelClient(environment, { model: AISettings.defaultModel }),
-    language: () =>
-      TutorLanguage.promptName(TutorLanguage.resolve(read(TutorLanguage.settingKey), navigator.languages)),
+    language: (question) => answerLanguage(question),
     mock: mock ? () => decodeTextHelp(mockTextHelp) : undefined,
   });
   return textHelp;
@@ -225,6 +223,13 @@ export function illustrationProvider(): IllustrationProvider {
     mock: usesMock() ? decodeIllustration((mockIllustrations as unknown[])[0]) : null,
   });
   return illustrations;
+}
+
+/** The language to answer `question` in: Settings' choice, or the question's own when Settings follows the system. */
+export function answerLanguage(question?: string): string {
+  return TutorLanguage.promptName(
+    TutorLanguage.forQuestion(read(TutorLanguage.settingKey), navigator.languages, question ?? null),
+  );
 }
 
 /** The language the app writes into drawings and asks the model to write in. */

@@ -39,8 +39,8 @@ export interface SolverServices {
   hasCredentials(): boolean;
   config(): RoutingConfig;
   plan(): Plan;
-  /** `TutorLanguage.promptName` of the language Settings chose. */
-  language(): string;
+  /** `TutorLanguage.promptName` of the language to answer in: Settings' choice, or the question's own (`forQuestion`). */
+  language(question?: string): string;
   /** The figure model from Settings; the strong model when empty. */
   figureModel?(): string;
   /** Development without the API: every solve answers with `MockSolution.json` after half a second (the request
@@ -97,7 +97,7 @@ export class SolutionProvider {
       route,
       promptVersion: ProblemPrompt.version,
       config: this.services.config(),
-      language: TutorLanguage.fromPromptName(this.services.language()),
+      language: TutorLanguage.fromPromptName(this.services.language(groupText)),
       usesMock: this.usesMock,
     });
   }
@@ -270,7 +270,7 @@ export class SolutionProvider {
     avoiding: readonly string[];
   }): Promise<ProblemVariant> {
     const reply = await this.services.client({ model: AISettings.defaultModel }).complete({
-      system: VariantPrompt.system(this.services.language()),
+      system: VariantPrompt.system(this.services.language(request.groupText)),
       user: VariantPrompt.user(request.groupText, request.label, request.asks, request.formula, request.avoiding),
       schemaName: "variant",
       schema: VariantPrompt.schema,
@@ -308,7 +308,7 @@ export class SolutionProvider {
       labels: request.labels,
       figureNote: request.figureNote,
       images: request.images,
-      language: this.services.language(),
+      language: this.services.language(request.groupText),
       transcribing,
       signal: request.signal,
     };

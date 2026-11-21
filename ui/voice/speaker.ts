@@ -48,7 +48,9 @@ export const voiceEnabled = () => readPreference("voiceEnabled") !== "0";
 export const premiumVoiceEnabled = () => readPreference(premiumVoiceKey) !== "0";
 
 /** The tutor's language now (Settings › Language, else the system's). */
-export const tutorLanguage = () => TutorLanguage.resolve(readPreference(TutorLanguage.settingKey), navigator.languages);
+/** With `text`, the language it is written in when Settings follows the system (`TutorLanguage.forQuestion`). */
+export const tutorLanguage = (text?: string | null) =>
+  TutorLanguage.forQuestion(readPreference(TutorLanguage.settingKey), navigator.languages, text ?? null);
 
 export interface SpeakOptions {
   /** How far the speech is, in UTF-16 units of the spoken text (for marks lit on their words). */
@@ -221,7 +223,7 @@ export async function speak(text: string, options: SpeakOptions = {}): Promise<S
   // Settings › General › Voice off: nothing is said, the text is shown for its reading time instead.
   if (readPreference("voiceEnabled") === "0")
     return { engine: "system", notice: null, spoken: SpokenText.forSpeech(text, SpeechPrice.flashModel), silent: true };
-  const language = tutorLanguage();
+  const language = tutorLanguage(text);
   const locale = TutorLanguage.locale(language);
   const premiumWanted = premiumVoiceEnabled();
   const engine =

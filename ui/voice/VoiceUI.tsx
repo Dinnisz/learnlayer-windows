@@ -92,7 +92,7 @@ async function reply(session: QuestionSession, transcript: string, signal: Abort
   session.stopGuide();
   if (index !== null) session.focusStepForVoice(index);
   if (usesMock()) return VoiceTutorReplies.decode(mockReply);
-  const language = tutorLanguage();
+  const language = tutorLanguage(session.statementText);
   // The step asked about, and how the plan read from memory wants the explanation to point (`voiceDirective`).
   const hasFigure = session.solution?.figure != null;
   const plan = questionPlan(session);
@@ -202,7 +202,7 @@ export function useVoiceTutor(session: QuestionSession | null) {
     const controller = new AbortController();
     turn.current = controller;
     update({ phase: "thinking", level: 0 });
-    const language = tutorLanguage();
+    const language = tutorLanguage(session.statementText);
     try {
       const transcript = usesMock()
         ? "Explica-me"

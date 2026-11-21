@@ -156,7 +156,7 @@ function lessonRequest(session: QuestionSession): LessonRequest {
     work,
     solutionTexts: solutionWording(part),
     picture: session.images[0] ?? null,
-    language: tutorLanguage(),
+    language: tutorLanguage(session.statementText),
     needsStrongModel: session.route === "strong",
     // The answer is written on screen: the lesson may reach it, so nothing is held back.
     correctOption: null,
@@ -191,7 +191,7 @@ export function useLessonControl(session: QuestionSession | null) {
   /** Each step on screen said while the mascot is on it and its data is underlined; a second press stops it. */
   const readSteps = useCallback(() => {
     if (!session) return;
-    const english = tutorLanguage().startsWith("en");
+    const english = tutorLanguage(session.statementText).startsWith("en");
     const hasFigure = session.solution?.figure != null;
     // The plan says whether the student learns from figures: then each step starts at the figure.
     const pointer = questionPlan(session)?.pointer ?? false;

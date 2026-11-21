@@ -207,7 +207,7 @@ export class TextHelpProvider {
       passages: DiskCache<TextHelp>;
       client: () => ModelClient;
       /** `TutorLanguage.promptName`. */
-      language: () => string;
+      language: (question?: string) => string;
       /** Development: the Mac's MockTextHelp.json. */
       mock?: () => TextHelp;
       sleep?: (seconds: number) => Promise<void>;
@@ -230,7 +230,7 @@ export class TextHelpProvider {
         return TextHelpMock.keyed(mock(), context);
       }
       const reply = await this.services.client().complete({
-        system: TextHelpPrompt.system(this.services.language()),
+        system: TextHelpPrompt.system(this.services.language(`${context} ${passage}`)),
         user: TextHelpPrompt.user(passage, context),
         images: image ? [image] : [],
         schemaName: "passage",
