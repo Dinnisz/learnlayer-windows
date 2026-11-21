@@ -61,6 +61,9 @@ extern "C" {
     fn ll_window_picture(number: isize, width: *mut isize, height: *mut isize) -> *mut u8;
     fn ll_screen_picture(x: f64, y: f64, w: f64, h: f64, width: *mut isize, height: *mut isize) -> *mut u8;
     fn ll_ocr_lines(bgra: *const u8, width: isize, height: isize) -> *mut c_char;
+    fn ll_notch_metrics() -> *mut c_char;
+    fn ll_configure_pill(window: *mut c_void);
+    fn ll_place_pill(window: *mut c_void, width: f64, height: f64);
 }
 
 /// Takes a string Swift made (or null) and frees it.
@@ -264,4 +267,22 @@ pub fn ocr_lines(picture: &Picture) -> Vec<Line> {
     // SAFETY: `bgra` holds width × height × 4 bytes and outlives the call; the string returned is taken and freed.
     let text = unsafe { ll_ocr_lines(picture.bgra.as_ptr(), picture.width as isize, picture.height as isize) };
     take_json(text).unwrap_or_default()
+}
+
+/// The notch of the main screen (`{width, height, real}` in points), or the gap the pill takes without one.
+pub fn notch_metrics() -> Option<serde_json::Value> {
+    // SAFETY: a call into the Swift package; the string it returns is taken and freed.
+    take_json(unsafe { ll_notch_metrics() })
+}
+
+/// The pill's window at the menu bar's level, on every Space (`NotchPillController.makePanel`).
+pub fn configure_pill(ns_window: *mut c_void) {
+    // SAFETY: an `NSWindow*` Tauri gave for a live window of this app; Swift changes it on the main thread.
+    unsafe { ll_configure_pill(ns_window) }
+}
+
+/// `width` × `height` points, centred on the notch, its top on the screen's top edge.
+pub fn place_pill(ns_window: *mut c_void, width: f64, height: f64) {
+    // SAFETY: an `NSWindow*` Tauri gave for a live window of this app; Swift moves it on the main thread.
+    unsafe { ll_place_pill(ns_window, width, height) }
 }

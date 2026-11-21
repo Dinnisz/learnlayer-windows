@@ -111,6 +111,10 @@ impl super::Platform for MacPlatform {
         anywhere::set_talk_key(key);
     }
 
+    fn pill_notch(&self) -> Option<serde_json::Value> {
+        native::notch_metrics()
+    }
+
     /// `LearnLayerDesktop.OpenRouter` in the login Keychain, for debug builds only (CLAUDE.md §5.5).
     /// `security add-generic-password -s LearnLayerDesktop.OpenRouter -a openrouter -w <key>`
     fn local_openrouter_key(&self) -> Option<String> {

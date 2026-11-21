@@ -1,6 +1,6 @@
 //! Everything that depends on the operating system lives under this module, behind `Platform`.
 //! The rest of the native side (session, API, config, tray) and the whole interface never name an OS.
-//! Windows is complete; `platform/macos/` is stage 1 of the Mac port (the app runs, ⌥-click comes later).
+//! Windows is complete; `platform/macos/` runs the Swift app's own native code (⌥-click, Vision, the notch).
 
 use std::path::PathBuf;
 
@@ -50,6 +50,11 @@ pub trait Platform: Send + Sync + 'static {
     fn set_talk_key(&self, key: &str);
     /// Development only: the OpenRouter key kept by the system for direct calls (CLAUDE.md §5.5). Never in release.
     fn local_openrouter_key(&self) -> Option<String>;
+    /// The notch the pill lives in (`{width, height, real}` in points), on a Mac; None where the pill is the whole
+    /// shape (Windows).
+    fn pill_notch(&self) -> Option<serde_json::Value> {
+        None
+    }
 }
 
 #[cfg(windows)]
@@ -66,6 +71,11 @@ pub fn current() -> &'static dyn Platform {
 compile_error!(
     "Only Windows and macOS are implemented. Add platform/<os>/ with a `Platform` and return it from `current()`."
 );
+
+#[tauri::command]
+pub fn pill_notch() -> Option<serde_json::Value> {
+    current().pill_notch()
+}
 
 #[tauri::command]
 pub fn pill_resize(app: AppHandle, width: f64, height: f64) -> Result<(), String> {

@@ -174,6 +174,17 @@ export async function onNavigate(handler: (route: string) => void): Promise<() =
   return listen<string>("navigate", (event) => handler(event.payload));
 }
 
+/** The notch the pill sits in, in points, on a Mac (`real` false: a Mac screen without one). None on Windows. */
+export interface PillNotch {
+  width: number;
+  height: number;
+  real: boolean;
+}
+
+export async function pillNotch(): Promise<PillNotch | null> {
+  return isTauri ? ((await invoke<PillNotch | null>("pill_notch")) ?? null) : null;
+}
+
 export async function resizePill(width: number, height: number): Promise<void> {
   if (isTauri) await invoke<void>("pill_resize", { width, height });
 }
