@@ -443,3 +443,13 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Pergunta do ecrã enquanto o modelo lê.** Mostra-se o recorte da imagem, e não o rascunho do OCR. O rascunho perde expoentes («m/s²» passa a «m/s»), e mostrar matemática errada é proibido. Sem imagem, continua o rascunho ou as barras.
 - **Campo da resposta.** Passa a usar a fonte do palco com algarismos tabulares, em vez da mono do Mac (P6): destoava do resto.
 - **Traduções.** As frases que a app acrescentou ao catálogo (`windows/added.*`) passam a valer nos dois sistemas. O Mac tem a sua tabela (`macos/*`) para as que falam de Windows. Os plurais ficam em `shared/*`.
+
+## 2026-11-21 — Teste visual no PC: o que mudou
+
+- **Scroll só na resolução (pedido do Dinis).** A pergunta fica fixa em cima, e só o trabalho por baixo dela (`.stage-work`) desce, sem barras. O botão redondo «Mais abaixo» avisa quando há mais conteúdo. Como no Mac, quando falta espaço são os passos que fazem scroll.
+- **Clique logo acima de uma etiqueta.** Um Alt-clique no meio espaço entre linhas acima de «2.2.» abria a 2.1. Agora pertence à etiqueta de baixo (`PDFQuestionReading.question`, teste com o exame de Matemática A).
+- **Matemática na pista e na resposta escrita.** Passou a compor-se como nas notas dos passos (`NoteText`). O Mac mostra-a como texto; aqui é melhoria visual.
+- **Sinais ASCII.** «<=», «>=», «!=» e «*» passam a ≤, ≥, ≠ e · nas fórmulas, nas notas e nas etiquetas do anel de foco.
+- **Fórmula com frase no fim.** Na coluna Fórmulas, a frase final («pelo Teorema de …») passa a legenda por baixo, na fonte da interface.
+- **Lição.** A caixa da Resposta fica no sítio, esbatida e vazia, enquanto a lição a calcula: já não há buraco nem salto. A linha que se transforma na seguinte fica encostada à esquerda.
+- **Por fazer.** O primeiro Alt-clique num PDF ainda demora 1 a 4 s, porque o pdf.js lê todas as páginas antes de o palco abrir.
