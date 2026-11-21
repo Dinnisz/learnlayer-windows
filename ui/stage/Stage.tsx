@@ -2792,6 +2792,7 @@ function ScreenQuestionView({
         found &&
         Transcriptions.isUsable(found) &&
         Transcriptions.agrees(found, source.ocrText) &&
+        !Transcriptions.dropsFormula(found) &&
         untypesetMath(found.blocks) === null;
       // The crop is shown once; after that only a typeset reading replaces what is there.
       setShown((now) =>

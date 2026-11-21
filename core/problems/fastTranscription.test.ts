@@ -339,3 +339,21 @@ describe("FastTranscription", () => {
     expect(FastTranscriptionReader.placeholderGivesWay(1, false)).toBe(false);
   });
 });
+
+describe("a reading that drops a formula", () => {
+  it("is not shown: the crop stays", () => {
+    const dropped = {
+      blocks: [
+        { type: "text", text: "2. Seja $f$ a função, de domínio $R$, definida por", box: null, caption: null },
+        { type: "formula", text: null, box: null, caption: null },
+        { type: "text", text: "2.2. Estude a função f.", box: null, caption: null },
+      ],
+    } as unknown as QuestionTranscription;
+    expect(Transcriptions.dropsFormula(dropped)).toBe(true);
+    expect(Transcriptions.rejection(dropped, null, null)).toBe("dropsFormula");
+    const kept = {
+      blocks: [{ type: "formula", text: "f(x) = x^2", box: null, caption: null }],
+    } as unknown as QuestionTranscription;
+    expect(Transcriptions.rejection(kept, null, null)).toBeNull();
+  });
+});

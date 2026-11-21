@@ -69,9 +69,19 @@ async function usesLocalKey(fastModel: boolean): Promise<string | null> {
   return (fastModel ? fastModelUsesLocalKey(question) : prefersLocalKey(question)) ? key : null;
 }
 
-/** Known once the key has been looked up: whether the fast model can be asked at all. */
+/**
+ * Whether the fast model can be asked at all: with a local key (the Mac's Debug path), or signed in, now that the
+ * Worker lets `qwen/qwen3.8-flash` through on every plan (docs/backend-qwen-transcricao.patch, deployed 2026-11-21).
+ * Before, a signed-in student never had the fast reading, and a picture question waited for the whole solve (~25 s)
+ * to be shown typeset. Looked up at launch and again every minute (a sign-in or sign-out in between).
+ */
 let fastModelAvailable = false;
-void usesLocalKey(true).then((key) => (fastModelAvailable = key !== null));
+const lookUpFastModel = async () => {
+  const key = await usesLocalKey(true);
+  fastModelAvailable = key !== null || (await session.accessToken(false).catch(() => null)) !== null;
+};
+void lookUpFastModel();
+window.setInterval(() => void lookUpFastModel(), 60_000);
 
 const environment: ModelEnvironment = {
   async transport(purpose, local) {

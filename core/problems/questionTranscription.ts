@@ -100,6 +100,11 @@ export const Transcriptions = {
     return transcription.blocks.some((block) => block.type === "figure" || (block.text ?? "").trim() !== "");
   },
 
+  /** A formula block left empty: the reader saw a formula there and wrote none (a Windows rule; see DECISOES). */
+  dropsFormula(transcription: QuestionTranscription): boolean {
+    return transcription.blocks.some((block) => block.type === "formula" && (block.text ?? "").trim() === "");
+  },
+
   /** The text the highlights are looked up in: prose with the `$` marks dropped and formulas as their LaTeX. */
   plainText(transcription: QuestionTranscription): string {
     return transcription.blocks
@@ -200,6 +205,9 @@ export const Transcriptions = {
    * must keep (null: no such check). */
   rejection(transcription: QuestionTranscription, part: string | null, reading: string | null): string | null {
     if (!Transcriptions.isUsable(transcription)) return "isUsable";
+    // A formula block with nothing in it is a formula the reader saw and could not write: shown, the question would
+    // lose its data (live test 2026-11-21: «f(x) = {4 − e^{3−x}… se x ≤ 3; …}» gone from MatA 2.2). The crop stays.
+    if (Transcriptions.dropsFormula(transcription)) return "dropsFormula";
     if (!Transcriptions.isOf(transcription, part)) {
       const labels = [...Transcriptions.partLabels(transcription)].sort().join(", ");
       return `isOf(part: ${part ?? "-"}), labels [${labels}]`;
