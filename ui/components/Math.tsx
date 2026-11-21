@@ -3,7 +3,7 @@
 // never as an error.
 
 import katex from "katex";
-import { memo, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import { memo, useLayoutEffect, useMemo, useRef } from "react";
 import { latexToUnicode, normalized } from "@core/math/latexText";
 import { CodeText } from "@core/code/codeText";
 import { NoteMath } from "@core/math/noteMath";
@@ -81,7 +81,23 @@ export const MathView = memo(function MathView({
 }) {
   const html = useMemo(() => typeset(latex, display), [latex, display]);
   const holder = useRef<HTMLSpanElement>(null);
-  useFitWidth(holder, display && html !== null, html);
+  // A displayed formula wider than its column is set smaller until it fits (Mac report I10: a long line of a solution
+  // was cut at the right edge, with nothing to show more was there), measured again when the column changes width.
+  useLayoutEffect(() => {
+    const element = holder.current;
+    const column = element?.parentElement;
+    if (!display || html === null || !element || !column) return;
+    const fit = () => {
+      element.style.removeProperty("font-size");
+      const formula = element.querySelector<HTMLElement>(".katex-display > .katex") ?? element;
+      const scale = fitScale(formula.scrollWidth, column.clientWidth);
+      if (scale < 1) element.style.setProperty("font-size", `${scale}em`);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(column);
+    return () => observer.disconnect();
+  }, [display, html]);
   if (html === null) return <span className={className}>{latexToUnicode(latex)}</span>;
   return <span ref={holder} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 });
@@ -93,29 +109,6 @@ export const smallestFit = 0.72;
 export function fitScale(natural: number, available: number): number {
   if (natural <= 0 || available <= 0 || natural <= available + 0.5) return 1;
   return Math.max(smallestFit, available / natural);
-}
-
-/**
- * A displayed formula wider than its column is set smaller until it fits (Mac report I10: a long line of a solution
- * was cut at the right edge, with nothing to show more was there). Measured at its own size each time the column
- * changes width.
- */
-function useFitWidth(holder: RefObject<HTMLSpanElement | null>, active: boolean, html: string | null) {
-  useLayoutEffect(() => {
-    const element = holder.current;
-    const column = element?.parentElement;
-    if (!active || !element || !column) return;
-    const fit = () => {
-      element.style.fontSize = "";
-      const formula = element.querySelector<HTMLElement>(".katex-display > .katex") ?? element;
-      const scale = fitScale(formula.scrollWidth, column.clientWidth);
-      if (scale < 1) element.style.fontSize = `${scale}em`;
-    };
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(column);
-    return () => observer.disconnect();
-  }, [holder, active, html]);
 }
 
 /**
