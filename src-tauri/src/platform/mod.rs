@@ -1,6 +1,6 @@
 //! Everything that depends on the operating system lives under this module, behind `Platform`.
 //! The rest of the native side (session, API, config, tray) and the whole interface never name an OS.
-//! Only Windows exists today; a Mac port adds `platform/macos/` and one line in `current()`.
+//! Windows is complete; `platform/macos/` is stage 1 of the Mac port (the app runs, ⌥-click comes later).
 
 use std::path::PathBuf;
 
@@ -8,6 +8,8 @@ use tauri::AppHandle;
 
 use crate::session::SecretStore;
 
+#[cfg(target_os = "macos")]
+pub mod macos;
 #[cfg(windows)]
 pub mod windows;
 
@@ -55,8 +57,15 @@ pub fn current() -> &'static dyn Platform {
     &windows::WindowsPlatform
 }
 
-#[cfg(not(windows))]
-compile_error!("Only Windows is implemented. Add platform/<os>/ with a `Platform` and return it from `current()`.");
+#[cfg(target_os = "macos")]
+pub fn current() -> &'static dyn Platform {
+    &macos::MacPlatform
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+compile_error!(
+    "Only Windows and macOS are implemented. Add platform/<os>/ with a `Platform` and return it from `current()`."
+);
 
 #[tauri::command]
 pub fn pill_resize(app: AppHandle, width: f64, height: f64) -> Result<(), String> {

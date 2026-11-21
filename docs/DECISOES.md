@@ -402,3 +402,9 @@ Cada entrada: data, dúvida, escolha, porquê.
 - **Dúvida:** numa janela que mostra menos do que a página, uma pergunta sem etiqueta seguinte nem rodapé à vista acabava no primeiro intervalo largo (entre duas figuras), mesmo com a página a continuar abaixo da borda.
 - **Escolha:** se a tinta da página chega às últimas duas linhas da janela (texto ou desenho cortados pela borda, não um fundo ou uma barra que pintam a linha toda: `InkMap.reachesBottom`), a pergunta vai até à borda e a faixa é de confiança, como entre duas etiquetas.
 - **Porquê:** o aluno vê o que está na janela; cortar a meio do que se vê deixava de fora uma figura. Com isto, nas 142 janelas compostas já não há recortes que deixem linhas da pergunta de fora (`core/anywhere/longQuestion.test.ts`).
+
+## 2026-11-21 — Mac e Windows no mesmo código (fase 1 do Mac)
+
+- **Dúvida:** o Dinis quer que esta base sirva um dia para Mac e Windows. O ⌥-clique, o OCR e o notch no Mac são refazer o que a app Swift já faz.
+- **Escolha:** fase 1 agora: `src-tauri/src/platform/macos/` com as Chaves (Keychain), a pasta de dados, o nome do Mac e uma pílula simples; o ⌥-clique, a captura de área, o OCR e a tecla de falar respondem que ainda não existem no Mac, e a app continua. `tauri.macos.conf.json` gera um `.app` e um `.dmg`. O CI compila e testa o Rust também em `macos-latest`. A fase 2 (paridade) fica para quando o Dinis decidir se esta app substitui a Swift.
+- **Porquê:** o código já estava preparado (`Platform`, `core/platform.ts`), por isso é pouco código e não mexe no Windows. Para nunca tocar na app Swift instalada no mesmo Mac, esta build usa outra pasta (`~/Library/Application Support/LearnLayer Desktop`), outros itens das Chaves (`LearnLayerDesktop.*`) e outro identificador (`si.learnlayer.LearnLayer.Desktop`). A pílula do Mac não é transparente: a transparência no macOS pede a API privada do Tauri, que obrigaria a mudar as funcionalidades do Tauri também no Windows.
