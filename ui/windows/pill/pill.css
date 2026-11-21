@@ -28,6 +28,19 @@
   border-radius: 18px;
 }
 
+/* A Mac's notch: flush with the screen's top edge, so only the bottom corners are round. */
+.pill-body.in-notch {
+  padding-top: 0;
+}
+
+.pill.notch {
+  border-radius: 0 0 12px 12px;
+}
+
+.pill.notch.open {
+  border-radius: 0 0 18px 18px;
+}
+
 .pill-ears {
   display: flex;
   align-items: center;

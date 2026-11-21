@@ -1,15 +1,16 @@
 //! The macOS implementation of `Platform`. AppKit/Core Graphics code goes in this folder and nowhere else.
 //!
-//! Stage 1 of the Mac port: the app runs natively on a Mac (main window, account, documents, PDF reader,
-//! the stage opened from the pill), so the shared code can be built and tried on both systems.
-//! ⌥-click in other apps, the screen OCR and "Capture an area" are not here yet: they answer that they
-//! are unavailable, and the rest of the app carries on, as it does on Windows when the hooks can't start.
+//! The Mac's native work (⌥-click, Accessibility, window pictures, Vision OCR, the notch, the talk key) is the Swift
+//! app's own code, kept in the Swift package `src-tauri/macos-native/` and called through `native`.
 //!
 //! The Swift app stays the Mac product. To never touch its data, this build keeps its own folder
 //! (`~/Library/Application Support/LearnLayer Desktop`), its own Keychain items (`LearnLayerDesktop.*`)
 //! and its own bundle identifier (`tauri.macos.conf.json`).
 
+pub mod anywhere;
 pub mod keychain;
+mod native;
+pub mod overlay;
 pub mod pill;
 
 use std::path::PathBuf;
@@ -21,7 +22,9 @@ use crate::session::SecretStore;
 
 /// Not `LearnLayer`: that folder belongs to the Swift app.
 const DATA_FOLDER: &str = "LearnLayer Desktop";
-const UNAVAILABLE: &str = "⌥-click is not available in the Mac build yet";
+
+/// The app, for the Settings switch (whose call carries none).
+static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
 
 pub struct MacPlatform;
 
@@ -63,39 +66,54 @@ impl super::Platform for MacPlatform {
         pill::resize(app, width, height)
     }
 
-    fn start_anywhere(&self, _app: &AppHandle, _enabled: bool) -> Result<(), String> {
-        Err(UNAVAILABLE.to_string())
+    fn start_anywhere(&self, app: &AppHandle, enabled: bool) -> Result<(), String> {
+        let _ = APP.set(app.clone());
+        anywhere::start(app, enabled)
     }
 
-    fn set_anywhere_enabled(&self, _enabled: bool) {}
-
-    fn anywhere_picture(&self, _id: u64) -> Option<Vec<u8>> {
-        None
+    fn set_anywhere_enabled(&self, enabled: bool) {
+        if let Some(app) = APP.get() {
+            anywhere::set_enabled(app, enabled);
+        }
     }
 
-    fn anywhere_pdf(&self, _id: u64) -> Option<Vec<u8>> {
-        None
+    fn anywhere_picture(&self, id: u64) -> Option<Vec<u8>> {
+        anywhere::picture(id)
     }
 
-    fn close_overlay(&self, _app: &AppHandle) {}
-
-    fn overlay_interactive(&self, _app: &AppHandle, _interactive: bool) {}
-
-    fn explain_selection(&self, _app: &AppHandle) {
-        eprintln!("Explain selected text: {UNAVAILABLE}");
+    fn anywhere_pdf(&self, id: u64) -> Option<Vec<u8>> {
+        anywhere::pdf(id)
     }
 
-    fn capture_area(&self, _app: &AppHandle) {
-        eprintln!("Capture an area: {UNAVAILABLE}");
+    fn close_overlay(&self, app: &AppHandle) {
+        overlay::close(app);
     }
 
-    /// No OCR yet: no lines.
-    fn capture_text(&self, _id: u64, _x: i32, _y: i32, _width: i32, _height: i32) -> serde_json::Value {
-        serde_json::Value::Array(Vec::new())
+    fn overlay_interactive(&self, app: &AppHandle, interactive: bool) {
+        overlay::set_interactive(app, interactive);
     }
 
-    /// The talk key needs a global key monitor, which comes with ⌥-click.
-    fn set_talk_key(&self, _key: &str) {}
+    fn explain_selection(&self, app: &AppHandle) {
+        anywhere::explain_selection(app);
+    }
+
+    fn capture_area(&self, app: &AppHandle) {
+        anywhere::capture_area(app);
+    }
+
+    fn capture_text(&self, id: u64, x: i32, y: i32, width: i32, height: i32) -> serde_json::Value {
+        serde_json::to_value(anywhere::capture_text(id, x, y, width, height))
+            .unwrap_or_else(|_| serde_json::Value::Array(Vec::new()))
+    }
+
+    /// Control + Option held, as in the Swift app; "none" turns it off.
+    fn set_talk_key(&self, key: &str) {
+        anywhere::set_talk_key(key);
+    }
+
+    fn pill_notch(&self) -> Option<serde_json::Value> {
+        native::notch_metrics()
+    }
 
     /// `LearnLayerDesktop.OpenRouter` in the login Keychain, for debug builds only (CLAUDE.md §5.5).
     /// `security add-generic-password -s LearnLayerDesktop.OpenRouter -a openrouter -w <key>`

@@ -216,6 +216,7 @@ pub fn run() {
             memory_secret_read,
             memory_secret_write,
             platform::pill_resize,
+            platform::pill_notch,
             platform::anywhere_set_enabled,
             platform::anywhere_picture,
             platform::anywhere_pdf,

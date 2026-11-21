@@ -1,8 +1,9 @@
 // A PDF open in the reader: pdf.js for drawing, and each page's text as the pure `PageText` the question detector
 // reads (the Windows stand-in for PDFKit's PDFDocument). The file never leaves the computer (CLAUDE.md, rule 12).
 
+import "./engineGaps";
 import * as pdfjs from "pdfjs-dist";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import workerUrl from "./pdfWorker?worker&url";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist";
 import type { PageText, Rect } from "@core/pdf/page";
 import { pageTextFromRuns, type TextContentItem } from "@core/pdf/pdfjsText";

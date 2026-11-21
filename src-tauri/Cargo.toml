@@ -12,8 +12,12 @@ name = "learnlayer_lib"
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+# The Mac's native side (macos-native/, Swift) is built and linked by build.rs on macOS only.
+[target.'cfg(target_os = "macos")'.build-dependencies]
+swift-rs = { version = "1.0.7", features = ["build"] }
+
 [dependencies]
-tauri = { version = "2.12", features = ["tray-icon"] }
+tauri = { version = "2.12", features = ["macos-private-api", "tray-icon"] }
 tauri-plugin-deep-link = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-http = "2"
@@ -53,6 +57,12 @@ windows = { version = "0.62", features = [
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_UI_WindowsAndMessaging",
 ] }
+window-vibrancy = "0.8"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# A see-through stage and pill need a transparent webview, which on macOS is behind Tauri's private-API switch
+# (`macOSPrivateApi` in tauri.macos.conf.json). The app is not for the Mac App Store, where that would matter.
+tauri = { version = "2.12", features = ["tray-icon", "macos-private-api"] }
 window-vibrancy = "0.8"
 
 [profile.release]

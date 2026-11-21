@@ -1,10 +1,21 @@
-# Resumo final — LearnLayer para Windows
+# Resumo final — LearnLayer para Mac e Windows
 
 As fases 0 a 8 estão feitas no código.
 
 **Atualização 2026-11-17:** o repositório público [Dinnisz/learnlayer-windows](https://github.com/Dinnisz/learnlayer-windows) compila no CI. Passam o lint, os testes de TypeScript, `cargo fmt`, `clippy` e os 22 testes do Rust. O CI gerou o instalador **`dist/LearnLayer_0.1.0_x64-setup.exe`** (5,9 MB, sem assinatura).
 
 O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado e a app instalada já abre neste PC (janela principal com a introdução e pílula no topo). Para distribuir aos alunos falta a assinatura (ponto 4).
+
+## Atualização de 2026-11-21: Mac e Windows no mesmo código
+
+- O Dinis decidiu que esta app **substitui a app Swift** e que Mac e Windows saem ao mesmo tempo.
+- No ramo `feat/macos-native`, o Mac já tem ⌥-clique em qualquer app, palco, OCR Vision, o PDF aberto no
+  Pré-visualização, a pílula no notch e a tecla Control+Option, com o código nativo da app Swift (`src-tauri/macos-native/`).
+  O Windows não mudou.
+- Teste ao vivo no MacBook do Dinis: `docs/RELATORIO-MAC-2026-11-21.md`. O ⌥-clique, a pista, a resolução e a lição
+  funcionam. Antes de lançar: a resposta certa marcada errada em «Let me try», o microfone (falta uma chave no
+  Info.plist), o servidor na app instalada, e os textos/teclas do Windows nas Definições e no onboarding.
+- Para distribuir no Mac: Developer ID e notarização (`PARA-O-DINIS.md`, ponto 11).
 
 ## Atualização de 2026-11-20
 
