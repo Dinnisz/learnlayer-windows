@@ -17,6 +17,20 @@ O que falta depende de ti (`PARA-O-DINIS.md`). O Smart App Control foi desligado
   Info.plist), o servidor na app instalada, e os textos/teclas do Windows nas Definições e no onboarding.
 - Para distribuir no Mac: Developer ID e notarização (`PARA-O-DINIS.md`, ponto 11).
 
+## Atualização de 2026-11-21
+
+- Juntei o trabalho do Mac (`feat/macos-native`) a este ramo e corrigi no código comum o que o teste ao vivo no Mac encontrou. A tabela está no fim de `RELATORIO-MAC-2026-11-21.md`. Os pontos principais:
+  - «Deixa-me tentar» já não dá como errada uma resposta certa com unidades;
+  - um exame em português é explicado em português;
+  - Definições, Permissões e onboarding certos no Mac (Acessibilidade, Gravação de Ecrã, ⌃⌥);
+  - microfone no `Info.plist`;
+  - o recorte da pergunta aparece logo, em vez de um rascunho com matemática errada;
+  - fórmulas largas encolhem até caber;
+  - botão «Mais abaixo»;
+  - unidades direitas;
+  - plurais certos.
+- **Testes:** 2048 de TypeScript passam; lint, typecheck, `cargo fmt`, `clippy` e `cargo test` limpos no Windows. O código só do Mac não pôde ser compilado aqui (o CI está parado pela faturação).
+
 ## Atualização de 2026-11-20
 
 - **Referência do Mac atualizada para o `main` em 5701363**, com o trabalho local do Mac que não está no GitHub juntado (ver `PARA-O-DINIS.md`, ponto 0). Tudo o que se aplica ao Windows está portado, com os testes do Mac. Os pontos principais:

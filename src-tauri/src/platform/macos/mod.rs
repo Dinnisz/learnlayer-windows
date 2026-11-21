@@ -144,7 +144,9 @@ impl super::Platform for MacPlatform {
             _ => return,
         };
         let _ = Command::new("/usr/bin/open")
-            .arg(format!("x-apple.systempreferences:com.apple.preference.security?{pane}"))
+            .arg(format!(
+                "x-apple.systempreferences:com.apple.preference.security?{pane}"
+            ))
             .spawn();
     }
 

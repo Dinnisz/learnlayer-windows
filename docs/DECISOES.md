@@ -435,3 +435,11 @@ Cada entrada: data, dúvida, escolha, porquê.
   abria e as fontes do LaTeX caíam para as do sistema.
 - **Permissões:** a app pede a Acessibilidade (o diálogo do sistema) e depois a Gravação de Ecrã, como a app Swift.
   Um binário de desenvolvimento lançado de um terminal herda as permissões desse terminal; o teste real é com o `.app`.
+
+## 2026-11-21 — Correções do relatório do Mac no código comum
+
+- **Unidades em «Let me try».** Uma resposta com unidade («25 m») era comparada como 25·m. Agora a unidade final só sai quando a resposta esperada não tem esse nome, por isso «2 m» contra `m*g` continua a contar o m. O Swift tem o mesmo defeito; não é paridade, é corrigir a regra «nunca dizer errado a uma resposta certa».
+- **Língua da resposta.** Com «igual ao sistema», a língua da pergunta decide: conto palavras comuns de português e de inglês, e uma diferença de duas vezes basta. Uma escolha explícita nas Definições manda sempre. Porquê: um exame português num computador em inglês era explicado em inglês (I9). A língua entra na chave da cache como antes.
+- **Pergunta do ecrã enquanto o modelo lê.** Mostra-se o recorte da imagem, e não o rascunho do OCR. O rascunho perde expoentes («m/s²» passa a «m/s»), e mostrar matemática errada é proibido. Sem imagem, continua o rascunho ou as barras.
+- **Campo da resposta.** Passa a usar a fonte do palco com algarismos tabulares, em vez da mono do Mac (P6): destoava do resto.
+- **Traduções.** As frases que a app acrescentou ao catálogo (`windows/added.*`) passam a valer nos dois sistemas. O Mac tem a sua tabela (`macos/*`) para as que falam de Windows. Os plurais ficam em `shared/*`.

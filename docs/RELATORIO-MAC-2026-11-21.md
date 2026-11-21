@@ -189,3 +189,34 @@ Gravidade: **bloqueia lançamento** · **importante** · **pequeno**.
   som.
 - Chrome (não instalado).
 - Mais exames do projeto Mac: só o CDI de `~/Downloads` e a página `pergunta.html`.
+
+## Correções feitas depois (2026-11-21, sessão do Windows)
+
+Corrigido no código comum. Os testes passam no Windows; o que é do Mac falta experimentar num Mac.
+
+| Ponto | O que mudou | Onde |
+|---|---|---|
+| M3 | «Let me try» aceita unidades («25 m», «2,5 m/s²»), vírgula decimal, «v = 22» e expoentes em sobrescrito. Uma unidade só sai quando a resposta esperada não usa esse nome. As equações diferenciais aceitam qualquer solução, como no Swift. A «pergunta semelhante» também aceita unidades. | `core/problems/typedAnswer.ts`, `questionSession.ts` |
+| M1 | `src-tauri/Info.plist` com `NSMicrophoneUsageDescription` e `NSSpeechRecognitionUsageDescription`; `Entitlements.plist` com `audio-input` (para a assinatura com hardened runtime). | `tauri.macos.conf.json` |
+| M4 | Tabela de textos do Mac para as frases escritas para o Windows: «Control + Option», «Open at login», «⌥-click», «macOS Accessibility». As frases novas (disciplinas, créditos, menu de estudo) e os plurais passam a valer nos dois sistemas: no Mac em português já não aparecem chaves em inglês. Geral: no Mac só há Control + Option e o botão do microfone, e não aparece a linha do Ctrl + Shift + Espaço. Permissões no Mac: Acessibilidade, Gravação de Ecrã e Microfone, com o estado lido a cada 1,5 s e um botão que pede ou abre as Definições do Sistema. | `core/i18n/macos/`, `core/i18n/shared/`, `GeneralPane.tsx`, `PermissionsPane.tsx`, `Platform::permissions` |
+| M5 | Onboarding no Mac: teclas ⌃ e ⌥ e atalho Control+Option na própria janela; o passo das permissões tem as duas permissões, com estado e botão «Open». | `ui/onboarding/OnboardingCard.tsx` |
+| I5 | `RunEvent::Reopen` mostra a janela principal (ícone da Dock). | `src-tauri/src/lib.rs` |
+| I6, I7 | Enquanto o modelo lê uma pergunta do ecrã, o palco mostra logo o recorte da pergunta, e não barras nem o rascunho do OCR, que perdia expoentes. | `ui/stage/Stage.tsx` (`ScreenQuestionView`) |
+| I8 | Meia equação («= n(n+1)/4, n ∈ ℕ») ou uma afirmação com Σ/∈/ℕ já não abre o menu de função. Juntar as linhas da equação exibida continua por fazer. | `core/explanation/studyAction.ts` |
+| I9 | Com a língua «igual ao sistema», a resposta segue a língua da pergunta: um exame em português é explicado em português num computador em inglês. Isto vale para a resolução, a ajuda, a lição e a voz. Uma escolha explícita nas Definições continua a mandar. | `TutorLanguage.forQuestion` |
+| I10 | As fórmulas largas encolhem até caberem (no mínimo 72 %). Quando a resolução passa do fundo da janela, aparece um botão «Mais abaixo». | `ui/components/Math.tsx`, `ScrollCue` |
+| P1 | Sem «.pdf.pdf»; plurais certos («1 document»). | `Stage.tsx`, `DocumentsPane.tsx`, `core/i18n/shared/` |
+| P5 | As unidades na caixa da resposta aparecem direitas («9 J»). | `core/math/units.ts` |
+| P6 | O campo «Your answer» usa a fonte do palco, com algarismos de largura fixa. | `stage.css` |
+
+Por fazer:
+- I1: a velocidade do palco no Mac.
+- I2: o material do fundo.
+- I3: o painel que não ativa a app.
+- I4: o primeiro clique numa janela inativa.
+- I11: a pista chega no fim, porque o `hint` vem depois dos cartões na ordem do prompt, que não se muda.
+- P2: os Documentos não guardam o caminho do PDF.
+- P3, P4, P7, P8, P9 e P10.
+- M2: falta o script de instalação local no Mac.
+
+Os pontos I1–I4 e M2 são código do Mac (Swift/Rust do macOS) e precisam de um Mac para testar.

@@ -17,7 +17,11 @@
   onboarding. Falta corrigir, por ordem: M3 (resposta certa marcada errada), M1 (`NSMicrophoneUsageDescription`),
   M2 (servidor de teste na app instalada), M4/M5 (textos e teclas do Windows nas Definições e no onboarding, passo das
   permissões vazio), I1 (palco 1,3–2,0 s contra 0,5–1,0 s na Swift), I2 (fundo quase opaco) e o resto da lista.
-- **Próximo passo:** corrigir o relatório, por esta ordem, num ramo `fix/mac-live-test` a partir de
+- **Feito a 2026-11-21 (sessão do Windows, ramo `fix/windows-live-test`, que inclui `feat/macos-native`):** do
+  relatório, já estão corrigidos M1, M3, M4, M5, I5, I6, I7, I8 (em parte), I9, I10, P1, P5 e P6. A tabela está no
+  fim de `docs/RELATORIO-MAC-2026-11-21.md`. Falta experimentá-los num Mac. Continuam por fazer I1–I4, I11, M2, P2–P4
+  e P7–P10.
+- **Próximo passo:** corrigir o resto do relatório, por esta ordem, num ramo `fix/mac-live-test` a partir de
   `feat/macos-native`. Depois: assinatura Developer ID e notarização (`PARA-O-DINIS.md`, ponto 11), DMG e
   atualizações (o Sparkle da app Swift não serve; usar o atualizador do Tauri).
 - **Instalar no Mac para testar:** `npx tauri build --debug --bundles app`, copiar
