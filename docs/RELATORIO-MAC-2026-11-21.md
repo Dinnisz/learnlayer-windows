@@ -220,3 +220,13 @@ Por fazer:
 - M2: falta o script de instalação local no Mac.
 
 Os pontos I1–I4 e M2 são código do Mac (Swift/Rust do macOS) e precisam de um Mac para testar.
+
+**I2 (também no Windows):** por cima de outra app, o palco pintava um cinzento a 62 % com desfoque por cima do acrílico e do véu, e a página de trás desaparecia. Passou a pôr só um véu preto a 38 %, sem desfoque próprio. A página vê-se escurecida e desfocada (`ui/windows/overlay/overlay.css`). No Mac aplica-se a mesma folha de estilos; falta ver o resultado com o material do Mac.
+
+**Verificado ao vivo no Windows (2026-11-21):**
+- Alt-clique numa página web no Brave: o palco lê a pergunta com «m/s²» certo.
+- «Deixa-me tentar» com «25 m» dá «Está certo.», e com «21 m» dá «Ainda não».
+- A resolução vem em português, com «25 m» direito e o sublinhado azul no enunciado.
+- O fundo novo deixa ver a página.
+- O Esc fecha tudo.
+- Capturas em `docs/capturas-windows/2026-11-21-*.png`.

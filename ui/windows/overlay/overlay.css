@@ -24,6 +24,14 @@ body.overlay-body {
   }
 }
 
+/* Over another app the stage adds only a light black veil, no grey and no blur of its own: the acrylic and the tint
+   above already dim and blur the page. With the stage's own 62 % grey and blur on top, the three layers hid the page altogether (Mac report I2; the
+   same on Windows, live test 2026-11-21). The page stays visible, darkened and softened, as on the Mac. */
+.overlay-open .stage {
+  background: rgb(0 0 0 / 38%);
+  backdrop-filter: none;
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .overlay-open {
     background: rgb(0 0 0 / 85%);
