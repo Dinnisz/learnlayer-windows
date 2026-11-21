@@ -43,18 +43,37 @@ export class ReaderDocument {
 
   /** Opens `data` (the bytes of a PDF). Throws when it isn't one. */
   static async open(data: ArrayBuffer, name: string): Promise<ReaderDocument> {
-    const task = pdfjs.getDocument({ data: new Uint8Array(data) });
+    const task = pdfjs.getDocument({ data: new Uint8Array(data), worker: ReaderDocument.sharedWorker() });
     const document = await task.promise;
-    const sizes: PageSize[] = [];
-    for (let index = 0; index < document.numPages; index += 1) {
-      const page = await document.getPage(index + 1);
-      const [x0 = 0, y0 = 0, x1 = 595, y1 = 842] = page.view;
-      sizes.push({ mediaBox: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } });
-    }
+    // Every page's size at once: one round trip to the worker each, all in flight together, not one after another
+    // (an Alt-click on a 16-page exam waited on these before anything could be read).
+    const sizes: PageSize[] = await Promise.all(
+      Array.from({ length: document.numPages }, async (_, index) => {
+        const page = await document.getPage(index + 1);
+        const [x0 = 0, y0 = 0, x1 = 595, y1 = 842] = page.view;
+        return { mediaBox: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } };
+      }),
+    );
     const opened = new ReaderDocument(task, document, name, sizes);
     // Read every page's text in the background, in order: a question at the top of a page needs the page before.
     void opened.readAll();
     return opened;
+  }
+
+  private static worker: pdfjs.PDFWorker | null = null;
+
+  /**
+   * One pdf.js worker for every document of the window, started early (`warm`): the first Alt-click on a PDF no
+   * longer waits for the worker's script to load and start.
+   */
+  static sharedWorker(): pdfjs.PDFWorker {
+    ReaderDocument.worker ??= new pdfjs.PDFWorker();
+    return ReaderDocument.worker;
+  }
+
+  /** Starts the worker now, while nothing waits on it (the stage's window does this when it loads). */
+  static warm(): void {
+    void ReaderDocument.sharedWorker().promise.catch(() => {});
   }
 
   private page(index: number): Promise<PDFPageProxy> {

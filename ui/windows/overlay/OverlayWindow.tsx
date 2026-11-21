@@ -249,6 +249,9 @@ async function sourceFor(read: NativeClickRead, sources: ClickSources): Promise<
   };
 }
 
+// The stage's window loads once, hidden, at launch: the PDF worker starts then, not on the first Alt-click.
+ReaderDocument.warm();
+
 export function OverlayWindow() {
   const t = useT();
   const [notice, setNotice] = useState<Notice | null>(null);
