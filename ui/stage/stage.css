@@ -1575,3 +1575,38 @@
   font-size: 17px;
   font-weight: 500;
 }
+
+/* «More below» (ScrollCue): a small round button at the foot of the stage while the work goes past the window. */
+.stage-scroll-cue {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 14%);
+  color: var(--stage-text);
+  cursor: pointer;
+  animation: stage-fade 200ms ease-in-out;
+}
+
+.stage-scroll-cue:hover {
+  background: rgb(255 255 255 / 24%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stage-scroll-cue svg {
+    animation: stage-scroll-nudge 1.6s ease-in-out 2;
+  }
+}
+
+@keyframes stage-scroll-nudge {
+  50% {
+    transform: translateY(3px);
+  }
+}

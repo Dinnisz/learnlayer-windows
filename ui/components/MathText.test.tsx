@@ -3,7 +3,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
-import { MathText } from "./Math";
+import { fitScale, MathText, smallestFit } from "./Math";
 
 describe("MathText with code", () => {
   test("an opened note with code renders, with the program kept line for line", () => {
@@ -20,5 +20,14 @@ describe("MathText with code", () => {
   test("text without code stays as it was", () => {
     const html = renderToStaticMarkup(<MathText text="f(x) = 2x + 1\nf(3) = 7" />);
     expect(html).not.toContain("code-block");
+  });
+});
+
+describe("a displayed formula wider than its column (Mac report I10)", () => {
+  test("is set smaller to fit, down to a floor past which it scrolls", () => {
+    expect(fitScale(400, 500)).toBe(1);
+    expect(fitScale(500, 400)).toBeCloseTo(0.8);
+    expect(fitScale(1000, 400)).toBe(smallestFit);
+    expect(fitScale(0, 400)).toBe(1);
   });
 });

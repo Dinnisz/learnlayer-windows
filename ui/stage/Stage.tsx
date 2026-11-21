@@ -411,6 +411,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
   }, [session, choose, close, stopLesson, stopVoice]);
 
   const [questionExpanded, setQuestionExpanded] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
   // The work's own height (the Mac's `panelHeight`), for the compact question to make room for it.
   const [workHeight, setWorkHeight] = useState(0);
   const measuredWork = useCallback((height: number) => setWorkHeight(Math.round(height)), []);
@@ -439,6 +440,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
         <VoiceContext.Provider value={voice.state}>
           <TalkContext.Provider value={{ begin: () => void voice.begin(), end: () => void voice.end() }}>
             <div
+              ref={stageRef}
               className="stage"
               style={{ "--stage-scale": stageScale } as React.CSSProperties}
               role="dialog"
@@ -500,11 +502,52 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
               ) : null}
               <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
               {session && <SelectionAskPill session={session} />}
+              <ScrollCue stage={stageRef} />
             </div>
           </TalkContext.Provider>
         </VoiceContext.Provider>
       </LessonContext.Provider>
     </PanelHeight.Provider>
+  );
+}
+
+/**
+ * A quiet «more below» at the foot of the stage while what is on it goes past the window's bottom: the stage has no
+ * scrollbar (base.css), and a long solution ran off the screen with nothing to say there was more (Mac report I10).
+ * A click scrolls down most of a window; the cue leaves once the end is in view.
+ */
+function ScrollCue({ stage }: { stage: React.RefObject<HTMLDivElement | null> }) {
+  const t = useT();
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const element = stage.current;
+    if (!element) return;
+    const check = () => setMore(element.scrollHeight - element.scrollTop - element.clientHeight > 24);
+    check();
+    element.addEventListener("scroll", check, { passive: true });
+    const observer = new ResizeObserver(check);
+    observer.observe(element);
+    for (const child of Array.from(element.children)) observer.observe(child);
+    // Steps arriving one by one change the height without resizing the stage itself.
+    const timer = window.setInterval(check, 600);
+    return () => {
+      element.removeEventListener("scroll", check);
+      observer.disconnect();
+      window.clearInterval(timer);
+    };
+  }, [stage]);
+  if (!more) return null;
+  return (
+    <button
+      type="button"
+      className="stage-scroll-cue"
+      aria-label={t("More below")}
+      onClick={() => stage.current?.scrollBy({ top: stage.current.clientHeight * 0.7, behavior: "smooth" })}
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path d="M4 7l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    </button>
   );
 }
 
@@ -2635,9 +2678,9 @@ type Shown = { kind: "waiting" } | { kind: "crop" } | { kind: "typeset"; transcr
 
 /**
  * A question read from the screen (`AnywhereController.opened`): its text typeset when it can be trusted; while the
- * model reads the picture, the computer's own reading (or soft bars), then the model's reading typeset. If that
- * reading fails, drops the numbers the computer read, or takes longer than `placeholderLimit`, the crop itself is
- * shown; a reading accepted later still replaces it.
+ * model reads the picture, the crop itself (with no picture, the computer's own reading or soft bars), then the
+ * model's reading typeset. If that reading fails or drops the numbers the computer read, the crop stays; a reading
+ * accepted later still replaces it.
  */
 function ScreenQuestionView({
   source,
@@ -2650,7 +2693,10 @@ function ScreenQuestionView({
 }) {
   const t = useT();
   const [shown, setShown] = useState<Shown>(() => {
-    if (source.transcribes) return { kind: "waiting" };
+    // While the model reads the picture, the picture itself: the question at once, and never wrong. The computer's
+    // own reading drops what OCR can't see (an exponent, «m/s²» read «m/s»), so it is shown only when there is no
+    // picture (Mac report I6, I7).
+    if (source.transcribes) return source.picture ? { kind: "crop" } : { kind: "waiting" };
     const plain = Transcriptions.fromPlainText(source.question.text);
     if (Transcriptions.isUsable(plain) && untypesetMath(plain.blocks) === null)
       return { kind: "typeset", transcription: plain };

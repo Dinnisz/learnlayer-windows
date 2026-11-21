@@ -3,7 +3,7 @@
 // never as an error.
 
 import katex from "katex";
-import { memo, useMemo } from "react";
+import { memo, useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { latexToUnicode, normalized } from "@core/math/latexText";
 import { CodeText } from "@core/code/codeText";
 import { NoteMath } from "@core/math/noteMath";
@@ -80,9 +80,43 @@ export const MathView = memo(function MathView({
   className?: string;
 }) {
   const html = useMemo(() => typeset(latex, display), [latex, display]);
+  const holder = useRef<HTMLSpanElement>(null);
+  useFitWidth(holder, display && html !== null, html);
   if (html === null) return <span className={className}>{latexToUnicode(latex)}</span>;
-  return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <span ref={holder} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 });
+
+/** The smallest share of its size a displayed formula is set at to fit its column; past that, it scrolls sideways. */
+export const smallestFit = 0.72;
+
+/** How much a formula `natural` wide is shrunk to fit `available`: 1 when it fits, never below `smallestFit`. */
+export function fitScale(natural: number, available: number): number {
+  if (natural <= 0 || available <= 0 || natural <= available + 0.5) return 1;
+  return Math.max(smallestFit, available / natural);
+}
+
+/**
+ * A displayed formula wider than its column is set smaller until it fits (Mac report I10: a long line of a solution
+ * was cut at the right edge, with nothing to show more was there). Measured at its own size each time the column
+ * changes width.
+ */
+function useFitWidth(holder: RefObject<HTMLSpanElement | null>, active: boolean, html: string | null) {
+  useLayoutEffect(() => {
+    const element = holder.current;
+    const column = element?.parentElement;
+    if (!active || !element || !column) return;
+    const fit = () => {
+      element.style.fontSize = "";
+      const formula = element.querySelector<HTMLElement>(".katex-display > .katex") ?? element;
+      const scale = fitScale(formula.scrollWidth, column.clientWidth);
+      if (scale < 1) element.style.fontSize = `${scale}em`;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(column);
+    return () => observer.disconnect();
+  }, [holder, active, html]);
+}
 
 /**
  * Text with inline maths between `$…$` or `\(…\)`, and programs kept line for line in their own block (the Mac's
