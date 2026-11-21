@@ -161,3 +161,10 @@ Local Signing», com o servidor de teste em `~/Library/Application Support/Learn
 ```
 EXAM_LABELS=1 npx vitest run scripts/exam-labels.test.ts --silent=false
 ```
+
+### 12. Transcrição rápida no Worker (2026-11-21, pedido teu)
+O `qwen/qwen3.8-flash` não está na lista de modelos dos planos. A lista é `chatModels` em `backend/src/config.ts`, e não em `routing.ts`. Por isso a transcrição rápida sai no Haiku, que é mais lento. A alteração está pronta em `docs/backend-qwen-transcricao.patch`: uma constante nova e o modelo acrescentado aos três planos.
+1. No repositório do backend: aplica as quatro linhas do patch em `backend/src/config.ts`.
+2. `cd backend && npm test` (os testes de `config`/`routing` devem passar).
+3. `npx wrangler deploy` (para o Worker de teste: `npx wrangler deploy --env test`, se for esse o nome do ambiente no teu `wrangler.toml`).
+Eu não o publiquei: a cópia do backend nesta pasta (`referencia-mac/`) é só de leitura e o deploy pede a tua conta da Cloudflare.
