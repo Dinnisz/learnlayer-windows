@@ -1636,10 +1636,11 @@
 }
 
 /* The question stays put and only the work under it scrolls (the Mac: when room runs out, the steps scroll; the
-   question never leaves the screen). The column is as tall as the stage (its zoom divided out), the work takes what
+   question never leaves the screen). The column is as tall as the stage, the work takes what
    the question leaves and scrolls inside it, with no scrollbar (base.css). */
 .stage-column {
-  height: calc(100% / var(--stage-scale, 1));
+  /* Not divided by the zoom: WebView2 resolves a zoomed element's percentage height against its parent as is. */
+  height: 100%;
   min-height: 0;
 }
 
