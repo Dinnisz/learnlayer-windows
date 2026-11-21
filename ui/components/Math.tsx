@@ -7,7 +7,7 @@ import { memo, useLayoutEffect, useMemo, useRef } from "react";
 import { latexToUnicode, normalized } from "@core/math/latexText";
 import { CodeText } from "@core/code/codeText";
 import { NoteMath } from "@core/math/noteMath";
-import { latexOperators } from "@core/math/operators";
+import { latexOperators, readableOperators } from "@core/math/operators";
 import { CodeBlockView } from "./CodeBlockView";
 
 const macros: Record<string, string> = {
@@ -179,7 +179,7 @@ const NoteWords = memo(function NoteWords({ text }: { text: string }) {
   if (!pieces.some((piece) => piece.isMath)) {
     // "$…$" maths as Unicode, never the marks themselves.
     const line = NoteMath.plainText(text);
-    return <span>{/\|\^\{|_\{/.test(line) ? latexToUnicode(line) : line}</span>;
+    return <span>{/\|\^\{|_\{/.test(line) ? latexToUnicode(line) : readableOperators(line)}</span>;
   }
   return (
     <span>
@@ -187,7 +187,7 @@ const NoteWords = memo(function NoteWords({ text }: { text: string }) {
         piece.isMath ? (
           <MathView key={index} latex={piece.isLatex ? piece.text : NoteMath.latex(piece.text)} />
         ) : (
-          <span key={index}>{piece.text}</span>
+          <span key={index}>{readableOperators(piece.text)}</span>
         ),
       )}
     </span>

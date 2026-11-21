@@ -1337,8 +1337,14 @@
   transition: opacity 0.35s ease-in-out;
 }
 
+/* While a lesson works the answer out, its box stays with the word «Answer» and nothing in it, so the steps don't
+   sit under an empty gap and nothing moves when the answer arrives. */
+.stage-answer.waiting .stage-answer-value {
+  visibility: hidden;
+}
+
 .stage-answer.waiting {
-  opacity: 0;
+  opacity: 0.55;
 }
 
 @media (forced-colors: active) {
@@ -1620,4 +1626,70 @@
 /* Maths inside the hint's sentence at the words' own size (KaTeX sets it 21 % larger, which stood out mid-line). */
 .stage-hint .katex {
   font-size: 1.04em;
+}
+
+/* A formula turning into the next one starts at the left edge, as every typeset line on the stage does (the morph's
+   frame was centred, so a step's line jumped to the middle while it changed; live test 2026-11-21). */
+.stage .morph-frame {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* The question stays put and only the work under it scrolls (the Mac: when room runs out, the steps scroll; the
+   question never leaves the screen). The column is as tall as the stage (its zoom divided out), the work takes what
+   the question leaves and scrolls inside it, with no scrollbar (base.css). */
+.stage-column {
+  height: calc(100% / var(--stage-scale, 1));
+  min-height: 0;
+}
+
+.stage-work {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the last row's descenders and for a step's ring drawn a little past its box. */
+  padding-bottom: 12px;
+}
+
+/* The solution's formulas and figure (FixedSide): in the stage's top-right corner, out of the work's scroll and not
+   lined up with the steps. No plates: the groups are told apart by space alone. They arrive one after the other. */
+.stage-side-slot {
+  min-height: 1px;
+}
+
+.stage-fixed-side {
+  zoom: var(--stage-scale, 1);
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 2;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.stage-card {
+  animation: stage-card-in 320ms var(--spring-arrive, ease-out) both;
+}
+
+.stage-figure-card {
+  animation-delay: 120ms;
+}
+
+.stage-formulas-card .stage-formulas-title {
+  margin: 0 0 8px;
+}
+
+@keyframes stage-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-card {
+    animation: stage-fade 200ms ease-in-out;
+  }
 }

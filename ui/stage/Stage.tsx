@@ -13,6 +13,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import { failureMessage, offersUpgrade } from "@core/ai/modelClient";
 import { compactStageHeight, FitToHeight, stageFitFloor } from "./FitToHeight";
 import { questionScale, StageGeometry } from "./questionScale";
@@ -414,6 +415,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
 
   const [questionExpanded, setQuestionExpanded] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+
   // The work's own height (the Mac's `panelHeight`), for the compact question to make room for it.
   const [workHeight, setWorkHeight] = useState(0);
   const measuredWork = useCallback((height: number) => setWorkHeight(Math.round(height)), []);
@@ -477,7 +479,10 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
                     onAsk={() => (session ? session.startAsking() : (pendingChoice.current = "followUp"))}
                   />
                 ) : (
-                  <ModeView session={session} extrasAtSide={extrasAtSide} />
+                  // The work scrolls under the question, which stays where it is (the Mac: only the steps scroll).
+                  <div className="stage-work">
+                    <ModeView session={session} extrasAtSide={extrasAtSide} />
+                  </div>
                 )}
               </div>
               {extrasAtSide && session && (
@@ -504,6 +509,7 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
               ) : null}
               <VoiceCaption state={voice.state} onScreen={session?.onScreenText ?? []} />
               {session && <SelectionAskPill session={session} />}
+
               <ScrollCue stage={stageRef} />
             </div>
           </TalkContext.Provider>
@@ -518,23 +524,25 @@ export function Stage({ source, close }: { source: StageSource; close: () => voi
  * scrollbar (base.css), and a long solution ran off the screen with nothing to say there was more (Mac report I10).
  * A click scrolls down most of a window; the cue leaves once the end is in view.
  */
+/** The scrolling work under the question on a stage (`.stage-work`); null before a mode is chosen. */
+const workOf = (stage: HTMLElement | null) => stage?.querySelector<HTMLElement>(".stage-work") ?? null;
+
 function ScrollCue({ stage }: { stage: React.RefObject<HTMLDivElement | null> }) {
   const t = useT();
   const [more, setMore] = useState(false);
+  // The stage stays still; the work under the question scrolls (`.stage-work`), and exists only once a mode is
+  // chosen, so it is looked up each time.
   useEffect(() => {
-    const element = stage.current;
-    if (!element) return;
-    const check = () => setMore(element.scrollHeight - element.scrollTop - element.clientHeight > 12);
+    const check = () => {
+      const element = workOf(stage.current);
+      setMore(element !== null && element.scrollHeight - element.scrollTop - element.clientHeight > 12);
+    };
     check();
-    element.addEventListener("scroll", check, { passive: true });
-    const observer = new ResizeObserver(check);
-    observer.observe(element);
-    for (const child of Array.from(element.children)) observer.observe(child);
-    // Steps arriving one by one change the height without resizing the stage itself.
-    const timer = window.setInterval(check, 600);
+    // Scrolls inside the work don't bubble: caught on the way down. Steps arriving one by one: read again often.
+    document.addEventListener("scroll", check, { capture: true, passive: true });
+    const timer = window.setInterval(check, 400);
     return () => {
-      element.removeEventListener("scroll", check);
-      observer.disconnect();
+      document.removeEventListener("scroll", check, { capture: true });
       window.clearInterval(timer);
     };
   }, [stage]);
@@ -544,7 +552,10 @@ function ScrollCue({ stage }: { stage: React.RefObject<HTMLDivElement | null> })
       type="button"
       className="stage-scroll-cue"
       aria-label={t("More below")}
-      onClick={() => stage.current?.scrollBy({ top: stage.current.clientHeight * 0.7, behavior: "smooth" })}
+      onClick={() => {
+        const element = workOf(stage.current);
+        element?.scrollBy({ top: element.clientHeight * 0.7, behavior: "smooth" });
+      }}
     >
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
         <path d="M4 7l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -1528,9 +1539,11 @@ function StageExtras({ session, atSide }: { session: QuestionSession; atSide: bo
   return (
     <>
       {session.showsIllustrationPanel && <IllustrationPanel session={session} />}
-      <div className="stage-formulas">
-        <FormulaList formulas={formulasAtHand(session)} />
-      </div>
+      {formulasAtHand(session).length > 0 && (
+        <div className="stage-formulas stage-card stage-formulas-card">
+          <FormulaList formulas={formulasAtHand(session)} />
+        </div>
+      )}
       {session.showsGraph && graph && session.hasGraph && (
         <div className={atSide ? "stage-side-graph" : undefined}>
           <CurveGraph graph={graph} session={session} height={atSide ? 280 : 260} />
@@ -1869,11 +1882,21 @@ function SolutionView({ session }: { session: QuestionSession }) {
                 </aside>
               )
             : (formulas.length > 0 || side) && (
-                <aside className="stage-formulas" aria-label={t("Formulas")}>
+                // The formulas and the figure keep their column but not the work's scroll: drawn fixed where the
+                // column is, they stay still while the steps scroll under the question (`FixedSide`).
+                <FixedSide label={t("Formulas")}>
                   {stacked && <SideFigures session={session} show="rest" />}
-                  <FormulaList formulas={formulas} />
-                  {side && !stacked && <SideFigures session={session} />}
-                </aside>
+                  {formulas.length > 0 && (
+                    <section className="stage-card stage-formulas-card">
+                      <FormulaList formulas={formulas} />
+                    </section>
+                  )}
+                  {side && !stacked && (
+                    <section className="stage-card stage-figure-card">
+                      <SideFigures session={session} />
+                    </section>
+                  )}
+                </FixedSide>
               )}
         </div>
         {shortWindow && (formulas.length > 0 || side) && (
@@ -1889,6 +1912,48 @@ function SolutionView({ session }: { session: QuestionSession }) {
         <Actions session={session} />
       </div>
     </FitToHeight>
+  );
+}
+
+/**
+ * The solution's right column (formulas, figure), out of the work's scroll: an empty slot keeps its place in the
+ * columns, and the content is drawn fixed on the stage where the slot was when the solution opened, so it stays still
+ * while the steps scroll under the question. Placed again when the window or the columns change size, never on scroll.
+ */
+function FixedSide({ label, children }: { label: string; children: React.ReactNode }) {
+  const slot = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState<{ host: HTMLElement; style: React.CSSProperties } | null>(null);
+  useLayoutEffect(() => {
+    const element = slot.current;
+    const host = element?.closest<HTMLElement>(".stage");
+    if (!element || !host) return;
+    const measure = () => {
+      const scale = Number.parseFloat(getComputedStyle(host).getPropertyValue("--stage-scale")) || 1;
+      // Its own place, the stage's top-right corner (as the side column before the solution), not lined up with
+      // any step: only the slot's width is taken, so the steps keep the room they were laid out in.
+      const width = element.getBoundingClientRect().width / scale;
+      setPlace({ host, style: { width, maxHeight: window.innerHeight / scale - 56 } });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+  return (
+    <>
+      <div ref={slot} className="stage-formulas stage-side-slot" aria-hidden="true" />
+      {place &&
+        createPortal(
+          <aside className="stage-fixed-side" aria-label={label} style={place.style}>
+            {children}
+          </aside>,
+          place.host,
+        )}
+    </>
   );
 }
 
